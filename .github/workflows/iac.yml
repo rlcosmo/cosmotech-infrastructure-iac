@@ -16,7 +16,6 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && vars.TERRAFORM_PLAN_ROLE_ARN != ''
     needs: validate
     runs-on: ubuntu-latest
-    environment: infra-sre
     permissions: {contents: read, id-token: write}
     steps:
       - uses: actions/checkout@v4
@@ -28,4 +27,4 @@ jobs:
           aws-region: us-east-1
       - run: python3 scripts/build_lambda_artifacts.py
       - run: terraform -chdir=terraform/environments/dev init -input=false
-      - run: terraform -chdir=terraform/environments/dev plan -input=false -no-color
+      - run: terraform -chdir=terraform/environments/dev plan -refresh=false -input=false -no-color

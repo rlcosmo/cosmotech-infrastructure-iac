@@ -54,8 +54,18 @@ def main() -> None:
     secret.unlink()
     key = ROOT / 'github-deploy-key'
     if not key.exists():
-        subprocess.run(['ssh-keygen', '-q', '-t', 'ed25519', '-N', '', '-C',
-                        'cosmotech-argocd-readonly', '-f', str(key)], check=True)
+        restored = subprocess.run(['aws', 'secretsmanager', 'get-secret-value', '--secret-id',
+            'cosmotech/argocd/github-deploy-key'], capture_output=True, text=True)
+        if restored.returncode == 0:
+            key.write_text(json.loads(restored.stdout)['SecretString'])
+            key.chmod(0o600)
+            public = subprocess.check_output(['ssh-keygen', '-y', '-f', str(key)], text=True)
+            key.with_suffix('.pub').write_text(public)
+        elif 'ResourceNotFoundException' in restored.stderr:
+            subprocess.run(['ssh-keygen', '-q', '-t', 'ed25519', '-N', '', '-C',
+                            'cosmotech-argocd-readonly', '-f', str(key)], check=True)
+        else:
+            raise SystemExit('Cannot restore existing deploy key; refusing key replacement')
     subprocess.run(['aws', 'secretsmanager', 'put-secret-value', '--secret-id',
                     'cosmotech/argocd/github-deploy-key', '--secret-string', 'file://' + str(key)],
                    check=True, stdout=subprocess.DEVNULL)

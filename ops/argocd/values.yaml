@@ -5,10 +5,10 @@ configs:
     url: https://argocd.cosmotechsolutions.com.br
     users.anonymous.enabled: 'false'
     exec.enabled: 'false'
+    resource.respectRBAC: strict
     application.instanceLabelKey: argocd.argoproj.io/instance
   params:
     server.insecure: true
-    controller.respectRBAC: strict
   ssh:
     knownHosts: |
       [ssh.github.com]:443 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
@@ -43,6 +43,6 @@ redis:
 dex:
   enabled: false
 applicationSet:
-  enabled: false
+  replicas: 0
 notifications:
   enabled: false
