@@ -1,3 +1,11 @@
+locals {
+  public_observability_hosts = [
+    "prometheus-aws-eks-istio-lab-dev.cosmotechsolutions.com.br",
+    "alertmanager.cosmotechsolutions.com.br",
+    "tempo.cosmotechsolutions.com.br",
+  ]
+}
+
 data "aws_security_group" "observability_alb" {
   filter {
     name   = "group-name"
@@ -57,25 +65,14 @@ resource "aws_lb_target_group_attachment" "itsm_public_proxy" {
   port             = 8088
 }
 
-resource "aws_lb_listener_rule" "itsm_public" {
-  listener_arn = data.aws_lb_listener.observability_https.arn
-  priority     = 100
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.itsm_public_proxy.arn
+# Listener rules belong to the ALB controller's observability IngressGroup.
+# See ops/kubernetes/public/management-tools-ingress.yaml. The former Terraform
+# listener rule was deleted by controller reconciliation on 2026-11-04.
+removed {
+  from = aws_lb_listener_rule.itsm_public
+  lifecycle {
+    destroy = false
   }
-
-  condition {
-    host_header {
-      values = [
-        "glpi.cosmotechsolutions.com.br",
-        "kestra.cosmotechsolutions.com.br",
-      ]
-    }
-  }
-
-  tags = merge(local.common_tags, { System = "itsm-public-proxy" })
 }
 
 resource "aws_wafv2_ip_set" "observability_admin" {
@@ -83,13 +80,17 @@ resource "aws_wafv2_ip_set" "observability_admin" {
   description        = "Administrator source address for existing observability dashboards."
   scope              = "REGIONAL"
   ip_address_version = "IPV4"
-  addresses          = data.aws_eks_cluster.lab.vpc_config[0].public_access_cidrs
-  tags               = merge(local.common_tags, { System = "public-ingress" })
+  # Additional Wi-Fi address authorized by the owner; this does not expand EKS API access.
+  addresses = distinct(concat(
+    tolist(data.aws_eks_cluster.lab.vpc_config[0].public_access_cidrs),
+    ["168.121.24.180/32"],
+  ))
+  tags = merge(local.common_tags, { System = "public-ingress" })
 }
 
 resource "aws_wafv2_web_acl" "public_ingress" {
   name        = "cosmotech-public-ingress"
-  description = "Expose authenticated ITSM and Grafana. Restrict other dashboards to the admin CIDR."
+  description = "Expose lab web tools by hostname with per-IP rate limits."
   scope       = "REGIONAL"
 
   default_action {
@@ -317,22 +318,134 @@ resource "aws_wafv2_web_acl" "public_ingress" {
     }
   }
   rule {
-    name     = "allow-admin-observability"
-    priority = 2
+    name     = "rate-limit-public-observability"
+    priority = 7
+
+    action {
+      block {}
+    }
+
+    statement {
+      rate_based_statement {
+        limit              = 1200
+        aggregate_key_type = "IP"
+        scope_down_statement {
+          or_statement {
+            dynamic "statement" {
+              for_each = local.public_observability_hosts
+              content {
+                byte_match_statement {
+                  search_string         = statement.value
+                  positional_constraint = "EXACTLY"
+                  field_to_match {
+                    single_header { name = "host" }
+                  }
+                  text_transformation {
+                    priority = 0
+                    type     = "LOWERCASE"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "cosmotech-observability-rate-limit"
+      sampled_requests_enabled   = false
+    }
+  }
+  rule {
+    name     = "allow-public-observability"
+    priority = 8
 
     action {
       allow {}
     }
 
     statement {
-      ip_set_reference_statement {
-        arn = aws_wafv2_ip_set.observability_admin.arn
+      or_statement {
+        dynamic "statement" {
+          for_each = local.public_observability_hosts
+          content {
+            byte_match_statement {
+              search_string         = statement.value
+              positional_constraint = "EXACTLY"
+              field_to_match {
+                single_header { name = "host" }
+              }
+              text_transformation {
+                priority = 0
+                type     = "LOWERCASE"
+              }
+            }
+          }
+        }
       }
     }
 
     visibility_config {
       cloudwatch_metrics_enabled = true
-      metric_name                = "cosmotech-admin-observability"
+      metric_name                = "cosmotech-public-observability"
+      sampled_requests_enabled   = false
+    }
+  }
+
+  rule {
+    name     = "orders-dev-rate"
+    priority = 20
+    action {
+      block {}
+    }
+    statement {
+      rate_based_statement {
+        limit              = 1200
+        aggregate_key_type = "IP"
+        scope_down_statement {
+          regex_match_statement {
+            regex_string = "^orders-(api|worker)-dev[.]cosmotechsolutions[.]com[.]br$"
+            field_to_match {
+              single_header { name = "host" }
+            }
+            text_transformation {
+              priority = 0
+              type     = "LOWERCASE"
+            }
+          }
+        }
+      }
+    }
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "cosmotech-orders-dev-rate"
+      sampled_requests_enabled   = false
+    }
+  }
+
+  rule {
+    name     = "orders-dev-allow"
+    priority = 21
+    action {
+      allow {}
+    }
+    statement {
+      regex_match_statement {
+        regex_string = "^orders-(api|worker)-dev[.]cosmotechsolutions[.]com[.]br$"
+        field_to_match {
+          single_header { name = "host" }
+        }
+        text_transformation {
+          priority = 0
+          type     = "LOWERCASE"
+        }
+      }
+    }
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "cosmotech-orders-dev-allow"
       sampled_requests_enabled   = false
     }
   }
