@@ -25,7 +25,7 @@ kubectl apply -f gitops/bootstrap/orders-project.yaml
 kubectl apply -f gitops/bootstrap/orders-application.yaml
 kubectl apply -f gitops/bootstrap/orders-worker-application.json
 for app in orders-api orders-worker; do
-  if [[ "$app" == orders-worker ]] && ! python3 -c 'import json; assert json.load(open("gitops/bootstrap/orders-worker-application.json"))["spec"]["syncPolicy"]["automated"]["enabled"]'; then
+  if [[ "$app" == orders-worker ]] && ! python3 -c 'import json,sys; sys.exit(0 if json.load(open("gitops/bootstrap/orders-worker-application.json"))["spec"]["syncPolicy"]["automated"]["enabled"] else 1)'; then
     echo 'Worker activation is pending its first health-enabled CI image.'
     continue
   fi

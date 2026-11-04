@@ -13,26 +13,41 @@ DNS is managed in Cloudflare outside Terraform: create CNAMEs orders-api-dev and
 orders-worker-dev targeting the current shared ALB DNS. Verify TLS and WAF before
 claiming endpoints are live. No extra ALB or DNS provider credentials are added.
 
-Deployment order:
-1. Review format, validate, security findings and a fresh refreshed Terraform plan
-   in this canonical repository. Current IaC CI is validate/plan only; it cannot
-   apply. Do not use the frozen lab snapshot or grant CI administrator access.
-2. Deploy the scoped role and WAF through an authorized infrastructure delivery
-   process. Set worker repo ECR_PUBLISH_ROLE_ARN to the new role ARN.
-3. Configure the GitOps App ID/private key through the approved secret-management
-   path for the worker repository, then enable DEV_AUTO_PROMOTE=true. No secret
-   values are stored in this change. Run worker-ci to build/scan/publish/promote.
-4. Install cosmotech-kubernetes-rbac namespaced roles and bindings. Add
-   orders-worker to the existing Argo cluster Secret namespaces while preserving
-   its renewable exec configuration. configure.py persists this list for bootstrap;
-   do not rerun all bootstrap credential generation to change the existing Secret.
-5. Apply the reviewed GitOps AppProject/Application on management K3s. Enable
-   worker automatic sync only after a health-enabled digest is promoted. API
-   bootstrap also needs HPA replica-ignore settings. No direct EKS image patches.
-6. Verify HPA metrics-server/ContainerResource support, ScalingActive/AbleToScale,
-   ready replicas, Argo Synced/Healthy, DNS/TLS and both external health endpoints.
-   Confirm existing queue age/DLQ/processing-error alerts and exercise a synthetic
-   lab event only when separately authorized.
+Automatic DEV delivery is enabled for both applications without human approval.
+Approval stages will be added later. Bootstrap prerequisites were deployed after
+reviewing a refreshed targeted plan, Terraform validation/formatting and IAM
+Access Analyzer findings. The existing WAF rules were compared and preserved
+exactly. Unrelated Lambda artifact and infrastructure changes were excluded.
+
+Worker CI owns its dedicated publisher role. The existing GitOps App credential
+was provisioned using a sealed box addressed to the worker repository public key;
+no plaintext key was downloaded or logged. Both app repositories enable
+DEV_AUTO_PROMOTE. Main source/workflow changes test, build, scan, publish immutable
+ECR images and automatically merge the validated image-only GitOps proposal.
+
+GitOps main runs deliver-dev with the independent cosmotech-gitops-github-sync
+OIDC role. It may invoke only CosmoTech-Sync-Orders-GitOps on the existing dedicated
+Argo host and read command status. The fixed document verifies an exact current
+main commit over the existing read-only SSH connection, validates manifests,
+preserves the cluster exec configuration while updating its namespace scope,
+reconciles the versioned AppProject/Applications and waits for Synced/Healthy at
+that exact revision. Actions checks external TLS health afterwards. Argo alone
+reconciles application images; no EKS image patch is performed by Actions.
+
+The scoped Argo RBAC was server dry-run validated and installed from the merged
+cosmotech-kubernetes-rbac source. It grants application resource writes in the two
+namespaces, workload/log reads and no Secrets. Worker automatic sync was enabled
+only after its first health-enabled digest was successfully published/promoted.
+
+Both DNS names already resolve to the shared ALB; no DNS credentials or mutation
+were needed. Current source preserves this external ownership. Verify HPA
+AbleToScale/ScalingActive, Argo Synced/Healthy, new pod readiness and the public
+/health/live and /health/ready routes on each release. Check queue-age/DLQ and
+processing-error alerts. No valid order is submitted by these health checks.
+
+The general Terraform workflow still validates/plans; application delivery is
+automatic through the dedicated GitOps workflow, not a general-purpose Terraform
+apply identity. Temporary bootstrap permissions are removed after verification.
 
 HPA caps 4 replicas per app and downscales one pod/minute after 300 seconds.
 Replicas may cause node scale-up and increased AWS calls; no new fixed compute or
