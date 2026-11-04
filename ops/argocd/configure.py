@@ -55,7 +55,7 @@ def main() -> None:
     key = ROOT / 'github-deploy-key'
     if not key.exists():
         restored = subprocess.run(['aws', 'secretsmanager', 'get-secret-value', '--secret-id',
-            'cosmotech/argocd/github-deploy-key'], capture_output=True, text=True)
+            'cosmotech/argocd/github-deploy-key'], check=False, capture_output=True, text=True)
         if restored.returncode == 0:
             key.write_text(json.loads(restored.stdout)['SecretString'])
             key.chmod(0o600)
