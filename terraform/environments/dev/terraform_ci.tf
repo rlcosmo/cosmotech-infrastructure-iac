@@ -33,6 +33,12 @@ resource "aws_iam_role_policy" "terraform_plan_ci" {
         "elasticloadbalancing:DescribeLoadBalancers", "elasticloadbalancing:DescribeListeners",
         "elasticloadbalancing:DescribeLoadBalancerAttributes", "elasticloadbalancing:DescribeTags"
       ], Resource = "*" },
+      { Effect = "Allow", Action = ["ec2:DescribeVpcAttribute"],
+      Resource = data.aws_vpc.eks_lab.arn },
+      { Effect = "Allow", Action = ["iam:GetPolicy", "iam:GetPolicyVersion"],
+      Resource = "arn:aws:iam::aws:policy/AmazonEBSCSIDriverPolicyV2" },
+      { Effect = "Allow", Action = ["dynamodb:DescribeTable"],
+      Resource = "arn:aws:dynamodb:us-east-1:414053644145:table/aws-serverless-lab-dev-orders" },
       { Effect = "Allow", Action = ["eks:DescribeCluster"], Resource = data.aws_eks_cluster.lab.arn },
       { Effect = "Allow", Action = ["ssm:GetParameter"],
       Resource = "arn:aws:ssm:us-east-1:*:parameter/aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id" }
