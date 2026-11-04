@@ -1,0 +1,27 @@
+{
+  "server": {
+    "image": "zabbix/zabbix-server-pgsql@sha256:ef5267cf0b6898ef704d1e72353c12fe5f94c55571ec494a090d21d2e47c8cc1",
+    "source_tag": "ubuntu-trunk",
+    "version": "8.0"
+  },
+  "web": {
+    "image": "zabbix/zabbix-web-nginx-pgsql@sha256:a5a71884542fe78d542bc32bf7ab95cc497b088ca01ea4c1db1ca67c654ef4e7",
+    "source_tag": "ubuntu-trunk",
+    "version": "8.0"
+  },
+  "proxy": {
+    "image": "zabbix/zabbix-proxy-sqlite3@sha256:a379f2f8b40eb83b700e0edcb30412107d8be4a35577be6b666dcfe91d419c06",
+    "source_tag": "ubuntu-trunk",
+    "version": "8.0"
+  },
+  "postgres": {
+    "image": "library/postgres@sha256:0b81cec82228160abfa753aeaad0609b709eb26eeb950f2e404ad2326e1cc370",
+    "source_tag": "17",
+    "version": "17.11-1.pgdg13+2"
+  },
+  "clickhouse": {
+    "image": "clickhouse/clickhouse-server@sha256:4ff0d6c199a9ebb906af75ae406496e8a96edd0187afdc16d51c0fb77ffca588",
+    "source_tag": "25.8",
+    "version": "22.04"
+  }
+}

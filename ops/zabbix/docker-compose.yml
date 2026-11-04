@@ -1,0 +1,145 @@
+name: cosmotech-zabbix
+services:
+  postgres:
+    image: library/postgres@sha256:0b81cec82228160abfa753aeaad0609b709eb26eeb950f2e404ad2326e1cc370
+    environment:
+      POSTGRES_USER: zabbix
+      POSTGRES_DB: zabbix
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    secrets:
+    - postgres_password
+    volumes:
+    - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U zabbix -d zabbix
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    mem_limit: 2g
+    restart: unless-stopped
+    networks:
+    - backend
+    logging: &id001
+      driver: local
+      options:
+        max-size: 10m
+        max-file: '3'
+  clickhouse:
+    image: clickhouse/clickhouse-server@sha256:4ff0d6c199a9ebb906af75ae406496e8a96edd0187afdc16d51c0fb77ffca588
+    environment:
+      CLICKHOUSE_DB: zabbix
+      CLICKHOUSE_USER: zabbix
+      CLICKHOUSE_PASSWORD_FILE: /run/secrets/clickhouse_password
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: '1'
+    secrets:
+    - clickhouse_password
+    volumes:
+    - clickhouse:/var/lib/clickhouse
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    mem_limit: 6g
+    restart: unless-stopped
+    networks:
+    - backend
+    logging: *id001
+  server:
+    image: zabbix/zabbix-server-pgsql@sha256:ef5267cf0b6898ef704d1e72353c12fe5f94c55571ec494a090d21d2e47c8cc1
+    environment:
+      DB_SERVER_HOST: postgres
+      POSTGRES_USER: zabbix
+      POSTGRES_DB: zabbix
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      ZBX_TELEMETRYPROVIDER_0: clickhouse;url=http://clickhouse:8123,db=zabbix
+      ZBX_TELEMETRYPROVIDER_0_USERNAME: zabbix
+      ZBX_TELEMETRYPROVIDER_0_PASSWORD_FILE: /run/secrets/clickhouse_password
+      ZBX_STARTTELEMETRYQUERYPOLLERS: '1'
+      ZBX_CACHESIZE: 64M
+    secrets:
+    - postgres_password
+    - clickhouse_password
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_started
+    mem_limit: 1g
+    restart: unless-stopped
+    networks:
+    - backend
+    logging: *id001
+  web:
+    image: zabbix/zabbix-web-nginx-pgsql@sha256:a5a71884542fe78d542bc32bf7ab95cc497b088ca01ea4c1db1ca67c654ef4e7
+    environment:
+      DB_SERVER_HOST: postgres
+      POSTGRES_USER: zabbix
+      POSTGRES_DB: zabbix
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      ZBX_TELEMETRYPROVIDER_0: clickhouse;url=http://clickhouse:8123,db=zabbix
+      ZBX_TELEMETRYPROVIDER_0_USERNAME: zabbix
+      ZBX_TELEMETRYPROVIDER_0_PASSWORD_FILE: /run/secrets/clickhouse_password
+      ZBX_SERVER_HOST: server
+      ZBX_SERVER_NAME: CosmoTech APM - Zabbix 8.0 pre-release
+      PHP_TZ: America/Sao_Paulo
+      ENABLE_WEB_ACCESS_LOG: 'false'
+    secrets:
+    - postgres_password
+    - clickhouse_password
+    ports:
+    - 8088:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+      server:
+        condition: service_started
+    mem_limit: 1g
+    restart: unless-stopped
+    networks:
+    - backend
+    logging: *id001
+  proxy:
+    image: zabbix/zabbix-proxy-sqlite3@sha256:a379f2f8b40eb83b700e0edcb30412107d8be4a35577be6b666dcfe91d419c06
+    environment:
+      ZBX_TELEMETRYPROVIDER_0: clickhouse;url=http://clickhouse:8123,db=zabbix
+      ZBX_TELEMETRYPROVIDER_0_USERNAME: zabbix
+      ZBX_TELEMETRYPROVIDER_0_PASSWORD_FILE: /run/secrets/clickhouse_password
+      ZBX_PROXYMODE: '0'
+      ZBX_SERVER_HOST: server
+      ZBX_HOSTNAME: aws-eks-istio-lab-dev-apm
+      ZBX_STARTAPMCOLLECTORS: '1'
+      ZBX_APMLISTENPORT: '4317'
+      ZBX_PROXYCONFIGFREQUENCY: '10'
+    secrets:
+    - clickhouse_password
+    ports:
+    - 4317:4317
+    volumes:
+    - proxy:/var/lib/zabbix/db_data
+    depends_on:
+      server:
+        condition: service_started
+      clickhouse:
+        condition: service_started
+    mem_limit: 1g
+    restart: unless-stopped
+    networks:
+    - backend
+    logging: *id001
+networks:
+  backend: {}
+volumes:
+  postgres:
+    name: cosmotech-zabbix-postgres
+  clickhouse:
+    name: cosmotech-zabbix-clickhouse
+  proxy:
+    name: cosmotech-zabbix-proxy
+secrets:
+  postgres_password:
+    file: /opt/cosmotech/zabbix/secrets/postgres_password
+  clickhouse_password:
+    file: /opt/cosmotech/zabbix/secrets/clickhouse_password
