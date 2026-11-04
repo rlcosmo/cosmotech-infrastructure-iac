@@ -337,6 +337,62 @@ resource "aws_wafv2_web_acl" "public_ingress" {
     }
   }
 
+  rule {
+    name     = "orders-dev-rate"
+    priority = 20
+    action {
+      block {}
+    }
+    statement {
+      rate_based_statement {
+        limit              = 1200
+        aggregate_key_type = "IP"
+        scope_down_statement {
+          regex_match_statement {
+            regex_string = "^orders-(api|worker)-dev[.]cosmotechsolutions[.]com[.]br$"
+            field_to_match {
+              single_header { name = "host" }
+            }
+            text_transformation {
+              priority = 0
+              type     = "LOWERCASE"
+            }
+          }
+        }
+      }
+    }
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "cosmotech-orders-dev-rate"
+      sampled_requests_enabled   = false
+    }
+  }
+
+  rule {
+    name     = "orders-dev-allow"
+    priority = 21
+    action {
+      allow {}
+    }
+    statement {
+      regex_match_statement {
+        regex_string = "^orders-(api|worker)-dev[.]cosmotechsolutions[.]com[.]br$"
+        field_to_match {
+          single_header { name = "host" }
+        }
+        text_transformation {
+          priority = 0
+          type     = "LOWERCASE"
+        }
+      }
+    }
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "cosmotech-orders-dev-allow"
+      sampled_requests_enabled   = false
+    }
+  }
+
   visibility_config {
     cloudwatch_metrics_enabled = true
     metric_name                = "cosmotech-public-ingress"
