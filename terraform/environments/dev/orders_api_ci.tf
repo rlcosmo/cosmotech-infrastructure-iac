@@ -8,7 +8,7 @@ resource "aws_iam_role" "orders_api_ci" {
       Action    = "sts:AssumeRoleWithWebIdentity"
       Condition = { StringEquals = {
         "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-        "token.actions.githubusercontent.com:sub" = "repo:rlcosmo/cosmotech-orders-api:ref:refs/heads/main"
+        "token.actions.githubusercontent.com:sub" = "repo:rlcosmo@124368446/cosmotech-orders-api@1445869622:ref:refs/heads/main"
       } }
     }]
   })
