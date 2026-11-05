@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import urllib.parse
 from pathlib import Path
@@ -133,9 +134,27 @@ def signal_coverage(z: Zabbix) -> dict[str, str]:
     return widgets
 
 
+def aws_vault_configuration(name: str) -> dict:
+    """Read optional configuration with a short-lived role, never persisting credentials."""
+    result = subprocess.run(['aws', '--region', 'us-east-1', 'sts', 'assume-role',
+                             '--role-arn', AWS_ROLE, '--role-session-name', 'zabbix-vault-reconciliation'],
+                            capture_output=True, text=True, timeout=40, check=False)
+    if result.returncode:
+        raise RuntimeError('Vault reconciliation role unavailable; sensitive diagnostics omitted')
+    credentials = json.loads(result.stdout)['Credentials']
+    env = {**os.environ, 'AWS_ACCESS_KEY_ID': credentials['AccessKeyId'],
+           'AWS_SECRET_ACCESS_KEY': credentials['SecretAccessKey'], 'AWS_SESSION_TOKEN': credentials['SessionToken']}
+    result = subprocess.run(['aws', '--region', 'us-east-1', 'backup', 'describe-backup-vault',
+                             '--backup-vault-name', name], env=env, capture_output=True, text=True,
+                            timeout=40, check=False)
+    if result.returncode:
+        raise RuntimeError('Vault configuration cannot be read; collection errors are not suppressed')
+    return json.loads(result.stdout)
+
+
 def configure_optional_vault_items(z: Zabbix) -> None:
     """Enable lock/retention fields only when the AWS response provides them."""
-    rows = z.api('host.get', {'output': ['hostid'], 'selectParentTemplates': ['name']})
+    rows = z.api('host.get', {'output': ['hostid', 'host'], 'selectParentTemplates': ['name']})
     mapping = {'aws.backup_vault.retention.min': 'MinRetentionDays',
                'aws.backup_vault.retention.max': 'MaxRetentionDays',
                'aws.backup_vault.lock.time_left': 'LockDate',
@@ -143,11 +162,7 @@ def configure_optional_vault_items(z: Zabbix) -> None:
     for host in rows:
         if not any(t['name'] == 'AWS Backup Vault by HTTP' for t in host['parentTemplates']):
             continue
-        master = z.api('item.get', {'hostids': [host['hostid']], 'filter': {'key_': 'aws.backup_vault.data.get'},
-                                   'output': ['lastvalue']})
-        if not master or not master[0].get('lastvalue'):
-            continue
-        data = json.loads(master[0]['lastvalue'])
+        data = aws_vault_configuration(host['host'])
         if 'error' in data or 'BackupVaultName' not in data:
             continue  # Never silence an authentication or collection failure.
         items = z.api('item.get', {'hostids': [host['hostid']], 'filter': {'key_': list(mapping)},
