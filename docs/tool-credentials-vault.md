@@ -11,7 +11,7 @@ Região `us-east-1`, conta `414053644145`. Metadados dos novos segredos são man
 | `cosmotech/argocd/laboratorio` | Conta `laboratorio`; referência ao segredo administrativo existente |
 | `cosmotech/argocd/admin` | Segredo existente do administrador, preservado |
 | `cosmotech/argocd/github-deploy-key` | Chave de deploy existente, preservada |
-| `cosmotech/github/app` | Proprietário `rlcosmo`, App ID `5615173` e referências da chave privada nas Actions |
+| `cosmotech/github/app` | Proprietário `rlcosmo`, App ID `5615173`, Client ID e chave privada PEM; referências existentes nas Actions preservadas |
 | `cosmotech/itsm/runtime` | Bancos GLPI/MariaDB e Kestra/PostgreSQL, materiais de bootstrap e chave de criptografia do Kestra público |
 | `cosmotech/kestra/automation-runtime` | Conta técnica, banco e chave de criptografia do engine privado |
 
@@ -23,7 +23,7 @@ O inventário anterior confirmou `laboratorio` no Grafana, GLPI e Argo CD. A con
 
 As contas `svc` foram importadas dos SecureStrings existentes, com os campos de OAuth do GLPI preservados. Os parâmetros SSM anteriores permanecem disponíveis para os consumidores em operação. A atualização do catálogo não altera o mecanismo de autenticação das esteiras nem suas permissões de aprovação.
 
-A chave privada da GitHub App não foi fornecida nesta solicitação e não foi recuperada das Actions. O segredo registra `private_key_stored_in_aws=false` e a referência `GITOPS_APP_PRIVATE_KEY` nos dois repositórios de aplicação. App ID não é senha ou token; não foi inventado um Client ID, token de instalação ou chave privada. Para colocar essa chave também na AWS, importar o arquivo original em uma sessão autorizada e atualizar o registro; não gerar outra chave ou substituir o segredo em uso apenas para completar o catálogo.
+A chave privada da GitHub App foi posteriormente fornecida pelo proprietário e importada no campo `private_key_pem` de `cosmotech/github/app`, com `private_key_stored_in_aws=true`. O arquivo de origem é `rlcosmo-cosmotech-gitops.2026-11-04.private-key.pem`. A integridade RSA foi verificada e a assinatura autenticada no endpoint `/app` do GitHub, confirmando App ID `5615173` e proprietário `rlcosmo`. A leitura de retorno na AWS confirmou a persistência. O Client ID foi adicionado ao mesmo segredo. As referências `GITOPS_APP_PRIVATE_KEY` existentes nas Actions foram preservadas. O PEM, tokens JWT e valores de senha não são registrados nesta documentação ou no Git.
 
 ## Operação
 
