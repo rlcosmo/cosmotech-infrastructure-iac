@@ -1,0 +1,10 @@
+{
+  "source": "https://github.com/zabbix/zabbix/tree/8.0.0rc3/database/clickhouse",
+  "upstream_sha256": {
+    "otel_logs_schema.sh": "5ccbc16b07e4738b27ca697029fee44df0f791d2f726570406e6100463dd1e1b",
+    "otel_traces_schema.sh": "2ec2a0922c989a88abec0ed78e56a75c62010f946adec99e2904532305d17b1d",
+    "otel_metrics_schema.sh": "ac0629d250050ee273a01baff47d2c11719c999243b598e4cf83bd605dd4d995"
+  },
+  "ttl_seconds": 259200,
+  "engine": "MergeTree()"
+}

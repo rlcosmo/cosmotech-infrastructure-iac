@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-ROOT = Path('/opt/cosmotech/pipeline-events')
+ROOT = Path('/var/lib/cosmotech-pipeline-events')
 NAMESPACE = 'cosmotech.clusters.aws_eks_istio_lab_dev'
 NAMESPACES = {'orders-api': NAMESPACE, 'orders-worker': NAMESPACE, 'gitops': 'cosmotech.clusters.argocd_management'}
 APPS = {'orders-api': 'cosmotech-orders-api', 'orders-worker': 'cosmotech-orders-worker', 'gitops': 'cosmotech-gitops'}
@@ -36,8 +36,8 @@ def evolve(record: dict, stage: str, state: str, now: str) -> dict:
     if record.get('state') in {'success', 'failure', 'cancelled'} or current.get('state') in {'success', 'failure', 'cancelled', 'skipped'}:
         return record
     record['stages'][stage] = {'state': state, 'started_at': current.get('started_at', now), 'updated_at': now}
-    if state in {'failure', 'cancelled'}:
-        record['state'] = state
+    if state in {'failure', 'cancelled', 'skipped'}:
+        record['state'] = 'failure' if state == 'skipped' else state
     elif all(record['stages'].get(s, {}).get('state') == 'success' for s in STAGES[record['app']]):
         record['state'] = 'success'
     else:
@@ -61,6 +61,22 @@ def save(path: Path, value: dict) -> None:
     temporary.replace(path)
 
 
+def inherited_success(app: str, run: str, attempt: str, sha: str) -> dict:
+    """Reuse recorded successful prerequisites of the same GitHub run/SHA on failed-job retries."""
+    stages = {}
+    previous = sorted(ROOT.glob(f'{app}-{run}-*.json'), key=lambda p: int(p.stem.rsplit('-', 1)[1]))
+    for path in previous:
+        value = json.loads(path.read_text())
+        if value['sha'] != sha or int(value['attempt']) >= int(attempt):
+            continue
+        for stage in STAGES[app]:
+            evidence = value.get('stages', {}).get(stage, {})
+            if evidence.get('state') != 'success':
+                break
+            stages[stage] = {**evidence, 'inherited_from_attempt': value['attempt']}
+    return stages
+
+
 def record(app: str, run: str, attempt: str, sha: str, stage: str, state: str) -> dict:
     validate(app, run, attempt, sha, stage, state)
     ROOT.mkdir(parents=True, exist_ok=True)
@@ -79,7 +95,7 @@ def record(app: str, run: str, attempt: str, sha: str, stage: str, state: str) -
                 raise ValueError('Commit mismatch for existing pipeline execution')
         else:
             value = {'app': app, 'run_id': run, 'attempt': attempt, 'sha': sha,
-                     'cluster': 'argocd-management-k3s' if app == 'gitops' else 'aws-eks-istio-lab-dev', 'state': 'running', 'stages': {},
+                     'cluster': 'argocd-management-k3s' if app == 'gitops' else 'aws-eks-istio-lab-dev', 'state': 'running', 'stages': inherited_success(app, run, attempt, sha),
                      'url': f'https://github.com/rlcosmo/{APPS[app]}/actions/runs/{run}/attempts/{attempt}'}
         value = evolve(value, stage, state, now)
         if not value.get('execution_id'):
@@ -93,7 +109,9 @@ def record(app: str, run: str, attempt: str, sha: str, stage: str, state: str) -
             execution = request('/executions/' + NAMESPACES[app] + '/' + app.replace('-', '_') + '_ci_cd', method='POST', data=body.encode(), content_type='multipart/form-data; boundary=' + boundary)
             value['execution_id'] = execution['id']
         save(path, value)
-        index.write_text(run + ' ' + attempt)
+        previous = tuple(map(int, index.read_text().split())) if index.exists() else (0, 0)
+        if (int(run), int(attempt)) >= previous:
+            index.write_text(run + ' ' + attempt)
         return {'app': app, 'run_id': run, 'stage': stage, 'state': state, 'execution_id': value['execution_id']}
 
 

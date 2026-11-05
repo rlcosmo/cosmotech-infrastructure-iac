@@ -1,0 +1,62 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadBillingAndFreeTierBalance",
+      "Effect": "Allow",
+      "Action": [
+        "ce:GetCostAndUsage",
+        "freetier:GetAccountPlanState"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ListLabInventoryWithoutReadingSecretsOrData",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListAllMyBuckets",
+        "ecr:DescribeRepositories",
+        "dynamodb:ListTables",
+        "elasticloadbalancing:DescribeLoadBalancers",
+        "rds:DescribeDBInstances",
+        "sns:ListTopics",
+        "secretsmanager:ListSecrets",
+        "kms:ListKeys",
+        "acm:ListCertificates",
+        "codepipeline:ListPipelines",
+        "codebuild:ListProjects",
+        "wafv2:ListWebACLs"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ReadApplicationStatus",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:SendCommand"
+      ],
+      "Resource": [
+        "arn:aws:ssm:us-east-1:414053644145:document/CosmoTech-Read-Application-Health",
+        "arn:aws:ec2:us-east-1:414053644145:instance/i-0def4e806c49cf60e",
+        "arn:aws:ec2:us-east-1:414053644145:instance/i-0b33fdd51332e04e5",
+        "arn:aws:ec2:us-east-1:414053644145:instance/i-02878f35eed1572d0"
+      ]
+    },
+    {
+      "Sid": "ReadProbeResult",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetCommandInvocation"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ReadSanitizedCodexQuota",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetParameter"
+      ],
+      "Resource": "arn:aws:ssm:us-east-1:414053644145:parameter/cosmotech/monitoring/codex-usage"
+    }
+  ]
+}

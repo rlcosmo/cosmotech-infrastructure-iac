@@ -45,9 +45,16 @@ def main() -> None:
     version = api('apiinfo.version', {}, False)
     if not version.startswith('8.0'):
         raise RuntimeError('Expected Zabbix 8.0 pre-release')
+    api('settings.update', {'apm_global_db': {'status': 1, 'url': 'http://clickhouse:8123', 'db': 'zabbix',
+        'authentication_type': 0, 'username': 'zabbix',
+        'password': Path('/opt/cosmotech/zabbix/secrets/clickhouse_password').read_text().strip()}})
     proxies = api('proxy.get', {'output': ['proxyid', 'name'], 'filter': {'name': 'aws-eks-istio-lab-dev-apm'}})
     if not proxies:
-        api('proxy.create', {'name': 'aws-eks-istio-lab-dev-apm', 'operating_mode': 0})
+        api('proxy.create', {'name': 'aws-eks-istio-lab-dev-apm', 'operating_mode': 0,
+                             'apm': {'data_collection_status': 1, 'max_messages_per_second': 1000}})
+    else:
+        api('proxy.update', {'proxyid': proxies[0]['proxyid'],
+                             'apm': {'data_collection_status': 1, 'max_messages_per_second': 1000}})
     api('user.logout', [])
     print(json.dumps({'api_version': version, 'admin_password_rotated': True, 'guest_disabled': True, 'apm_proxy': 'aws-eks-istio-lab-dev-apm'}))
 

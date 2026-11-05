@@ -54,7 +54,7 @@ services:
       POSTGRES_USER: zabbix
       POSTGRES_DB: zabbix
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
-      ZBX_TELEMETRYPROVIDER_0: clickhouse;url=http://clickhouse:8123,db=zabbix
+      ZBX_TELEMETRYPROVIDER_0: '{"provider":"clickhouse","url":"http://clickhouse:8123","db":"zabbix"}'
       ZBX_TELEMETRYPROVIDER_0_USERNAME: zabbix
       ZBX_TELEMETRYPROVIDER_0_PASSWORD_FILE: /run/secrets/clickhouse_password
       ZBX_STARTTELEMETRYQUERYPOLLERS: '1'
@@ -79,7 +79,7 @@ services:
       POSTGRES_USER: zabbix
       POSTGRES_DB: zabbix
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
-      ZBX_TELEMETRYPROVIDER_0: clickhouse;url=http://clickhouse:8123,db=zabbix
+      ZBX_TELEMETRYPROVIDER_0: '{"provider":"clickhouse","url":"http://clickhouse:8123","db":"zabbix"}'
       ZBX_TELEMETRYPROVIDER_0_USERNAME: zabbix
       ZBX_TELEMETRYPROVIDER_0_PASSWORD_FILE: /run/secrets/clickhouse_password
       ZBX_SERVER_HOST: server
@@ -104,19 +104,19 @@ services:
   proxy:
     image: zabbix/zabbix-proxy-sqlite3@sha256:a379f2f8b40eb83b700e0edcb30412107d8be4a35577be6b666dcfe91d419c06
     environment:
-      ZBX_TELEMETRYPROVIDER_0: clickhouse;url=http://clickhouse:8123,db=zabbix
+      ZBX_TELEMETRYPROVIDER_0: '{"provider":"clickhouse","url":"http://clickhouse:8123","db":"zabbix"}'
       ZBX_TELEMETRYPROVIDER_0_USERNAME: zabbix
       ZBX_TELEMETRYPROVIDER_0_PASSWORD_FILE: /run/secrets/clickhouse_password
       ZBX_PROXYMODE: '0'
       ZBX_SERVER_HOST: server
       ZBX_HOSTNAME: aws-eks-istio-lab-dev-apm
-      ZBX_STARTAPMCOLLECTORS: '1'
+      ZBX_STARTAPMCOLLECTOR: '1'
       ZBX_APMLISTENPORT: '4317'
       ZBX_PROXYCONFIGFREQUENCY: '10'
     secrets:
     - clickhouse_password
     ports:
-    - 4317:4317
+    - 127.0.0.1:14317:4317
     volumes:
     - proxy:/var/lib/zabbix/db_data
     depends_on:
@@ -129,6 +129,28 @@ services:
     networks:
     - backend
     logging: *id001
+  telemetry:
+    image: otel/opentelemetry-collector-contrib@sha256:989669581ee1f89184f3fd9dd5adfc6615ed6c9692c026aaea89e07a20dfb177
+    command:
+    - --config=/etc/otelcol/config.yaml
+    volumes:
+    - /opt/cosmotech/zabbix/telemetry-collector.yaml:/etc/otelcol/config.yaml:ro
+    secrets:
+    - clickhouse_password_otel
+    ports:
+    - 4317:4317
+    depends_on:
+      clickhouse:
+        condition: service_started
+    mem_limit: 384m
+    restart: unless-stopped
+    networks:
+    - backend
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: '3'
 networks:
   backend: {}
 volumes:
@@ -143,3 +165,5 @@ secrets:
     file: /opt/cosmotech/zabbix/secrets/postgres_password
   clickhouse_password:
     file: /opt/cosmotech/zabbix/secrets/clickhouse_password
+  clickhouse_password_otel:
+    file: /opt/cosmotech/zabbix/secrets/clickhouse_password_otel

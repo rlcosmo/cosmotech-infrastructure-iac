@@ -16,6 +16,7 @@ if ! command -v aws >/dev/null; then
   rm -rf /tmp/zabbix-awscliv2.zip /tmp/zabbix-awscli
 fi
 install -m 0600 "$source_dir/docker-compose.yml" /opt/cosmotech/zabbix/docker-compose.yml
+install -m 0644 "$source_dir/telemetry-collector.yaml" /opt/cosmotech/zabbix/telemetry-collector.yaml
 install -m 0600 "$source_dir/images.json" /opt/cosmotech/zabbix/images.json
 python3 - <<'PY'
 import json,secrets
@@ -23,7 +24,12 @@ from pathlib import Path
 root=Path('/opt/cosmotech/zabbix/secrets')
 for name in ('postgres_password','clickhouse_password'):
  p=root/name
- if not p.exists():p.write_text(secrets.token_hex(32)+'\n');p.chmod(0o600)
+ if not p.exists():p.write_text(secrets.token_hex(32)+'\n')
+ # File secrets are bind-mounted; non-root Zabbix UIDs must read only their assigned mounts.
+ # The host parent directory remains root-only (0700).
+ p.chmod(0o444)
+p=root/'clickhouse_password_otel'
+p.write_text((root/'clickhouse_password').read_text().strip());p.chmod(0o444)
 p=root/'credentials.json'
 if not p.exists():p.write_text(json.dumps({'username':'Admin','password':secrets.token_urlsafe(36),'url':'https://zabbix.cosmotechsolutions.com.br'}));p.chmod(0o600)
 PY
@@ -35,6 +41,7 @@ for attempt in $(seq 1 90); do
   if docker compose exec -T postgres psql -U zabbix -d zabbix -Atc "SELECT 1 FROM users WHERE username='Admin'" 2>/dev/null | grep -qx 1; then break; fi
   sleep 5
 done
+python3 "$source_dir/initialize_telemetry.py"
 python3 "$source_dir/configure.py"
 aws ssm put-parameter --name /cosmotech/zabbix/credentials --type SecureString --overwrite \
   --value file:///opt/cosmotech/zabbix/secrets/credentials.json >/dev/null

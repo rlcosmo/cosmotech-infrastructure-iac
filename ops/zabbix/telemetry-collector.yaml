@@ -1,0 +1,39 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+    spike_limit_mib: 64
+  batch:
+    timeout: 2s
+    send_batch_size: 256
+exporters:
+  clickhouse:
+    endpoint: tcp://clickhouse:9000
+    database: zabbix
+    username: zabbix
+    password: ${file:/run/secrets/clickhouse_password_otel}
+    create_schema: false
+    async_insert: false
+    timeout: 10s
+    traces_table_name: otel_traces
+    sending_queue:
+      enabled: true
+      queue_size: 256
+    retry_on_failure:
+      enabled: true
+      max_elapsed_time: 300s
+service:
+  pipelines:
+    traces:
+      receivers:
+      - otlp
+      processors:
+      - memory_limiter
+      - batch
+      exporters:
+      - clickhouse
