@@ -133,6 +133,31 @@ def signal_coverage(z: Zabbix) -> dict[str, str]:
     return widgets
 
 
+def configure_optional_vault_items(z: Zabbix) -> None:
+    """Enable lock/retention fields only when the AWS response provides them."""
+    rows = z.api('host.get', {'output': ['hostid'], 'selectParentTemplates': ['name']})
+    mapping = {'aws.backup_vault.retention.min': 'MinRetentionDays',
+               'aws.backup_vault.retention.max': 'MaxRetentionDays',
+               'aws.backup_vault.lock.time_left': 'LockDate',
+               'aws.backup_vault.lock.date': 'LockDate'}
+    for host in rows:
+        if not any(t['name'] == 'AWS Backup Vault by HTTP' for t in host['parentTemplates']):
+            continue
+        master = z.api('item.get', {'hostids': [host['hostid']], 'filter': {'key_': 'aws.backup_vault.data.get'},
+                                   'output': ['lastvalue']})
+        if not master or not master[0].get('lastvalue'):
+            continue
+        data = json.loads(master[0]['lastvalue'])
+        if 'error' in data or 'BackupVaultName' not in data:
+            continue  # Never silence an authentication or collection failure.
+        items = z.api('item.get', {'hostids': [host['hostid']], 'filter': {'key_': list(mapping)},
+                                  'output': ['itemid', 'key_', 'status']})
+        for item in items:
+            status = 1 if data.get(mapping[item['key_']]) is None else 0
+            if int(item['status']) != status:
+                z.api('item.update', {'itemid': item['itemid'], 'status': status})
+
+
 def dashboards(z: Zabbix, controller: str, signals: dict[str, str]) -> dict[str, str]:
     signal_tiles = [tile(title, item, i) for i, (title, item) in enumerate(signals.items())]
     apm_id = save_dashboard(z, 'CosmoTech | APM - Traces Metrics Logs', [
@@ -181,6 +206,7 @@ def main() -> None:
     try:
         controller = native_discovery(z)
         signals = signal_coverage(z)
+        configure_optional_vault_items(z)
         ids = dashboards(z, controller, signals)
         print(json.dumps({'aws_controller': controller, 'dashboards': ids, 'auth': 'short-lived instance-role AssumeRole'}))
     finally:
