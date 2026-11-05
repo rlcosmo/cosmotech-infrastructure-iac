@@ -31,6 +31,13 @@ def fix_backup_script(script: str) -> str:
                           "AWS.request('GET', '/', AWS.params.sts_region, 'sts', AWS.prepareParams(payload))")
 
 
+def optional_preprocessing(steps: list[dict]) -> list[dict]:
+    """Discard only absent/null optional fields; preserve transforms with fixed error semantics."""
+    return [{**step, 'error_handler': 1, 'error_handler_params': ''}
+            if index == 0 or str(step.get('error_handler', 0)) == '2' else dict(step)
+            for index, step in enumerate(steps)]
+
+
 def repair_aws_template_defaults(z: Zabbix, group: str) -> None:
     """Correct rc3 HTTP-only prototype interfaces, unique names and missing role parameter."""
     template = z.api('template.get', {'filter': {'host': 'AWS by HTTP'}, 'output': ['templateid']})[0]['templateid']
@@ -62,11 +69,11 @@ def repair_aws_template_defaults(z: Zabbix, group: str) -> None:
 
     if backup:
         optional_keys = ['aws.backup_vault.state', 'aws.backup_vault.retention.min',
-                         'aws.backup_vault.retention.max', 'aws.backup_vault.lock.time_left']
+                         'aws.backup_vault.retention.max', 'aws.backup_vault.lock.time_left', 'aws.backup_vault.lock.date']
         optional = z.api('item.get', {'templateids': [backup[0]['templateid']],
                          'filter': {'key_': optional_keys}, 'output': ['itemid'], 'selectPreprocessing': 'extend'})
         for item in optional:
-            steps = [{**step, 'error_handler': 1, 'error_handler_params': ''} for step in item['preprocessing']]
+            steps = optional_preprocessing(item['preprocessing'])
             # An ordinary unlocked vault legitimately omits air-gapped/retention-lock fields.
             # Discard absent optional values; keep the independent master API-error trigger.
             z.api('item.update', {'itemid': item['itemid'], 'preprocessing': steps})
