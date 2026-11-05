@@ -464,10 +464,9 @@ resource "aws_wafv2_web_acl" "public_ingress" {
         limit              = 1200
         aggregate_key_type = "IP"
         scope_down_statement {
-          byte_match_statement {
+          regex_match_statement {
 
-            search_string         = "zabbix.cosmotechsolutions.com.br"
-            positional_constraint = "EXACTLY"
+            regex_string = "^zab{1,2}ix[.]cosmotechsolutions[.]com[.]br(:443)?$"
             field_to_match {
               single_header {
                 name = "host"
@@ -499,10 +498,9 @@ resource "aws_wafv2_web_acl" "public_ingress" {
       }
     }
     statement {
-      byte_match_statement {
+      regex_match_statement {
 
-        search_string         = "zabbix.cosmotechsolutions.com.br"
-        positional_constraint = "EXACTLY"
+        regex_string = "^zab{1,2}ix[.]cosmotechsolutions[.]com[.]br(:443)?$"
         field_to_match {
           single_header {
             name = "host"
