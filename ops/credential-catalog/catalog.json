@@ -9,5 +9,6 @@
   "kestra-runtime": "cosmotech/kestra/automation-runtime",
   "zabbix-agent-itsm": "cosmotech/zabbix/agents/cosmotech-itsm-dev",
   "zabbix-agent-argocd": "cosmotech/zabbix/agents/cosmotech-argocd-dev",
-  "zabbix-agent-server": "cosmotech/zabbix/agents/cosmotech-zabbix-dev"
+  "zabbix-agent-server": "cosmotech/zabbix/agents/cosmotech-zabbix-dev",
+  "grafana-command-center": "cosmotech/grafana/command-center"
 }
