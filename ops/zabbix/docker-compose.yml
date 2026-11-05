@@ -48,6 +48,8 @@ services:
     - backend
     logging: *id001
   server:
+    ports:
+    - 10051:10051
     image: zabbix/zabbix-server-pgsql@sha256:ef5267cf0b6898ef704d1e72353c12fe5f94c55571ec494a090d21d2e47c8cc1
     environment:
       DB_SERVER_HOST: postgres

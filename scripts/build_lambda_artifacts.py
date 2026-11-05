@@ -45,6 +45,16 @@ def build() -> None:
         print(f"Created {destination.relative_to(ROOT)} ({destination.stat().st_size} bytes)")
 
 
+    destination = DIST / "external-http-probe.zip"
+    with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+        info = zipfile.ZipInfo("lambda_function.py")
+        info.date_time = (2020, 1, 1, 0, 0, 0)
+        info.compress_type = zipfile.ZIP_DEFLATED
+        info.external_attr = 0o644 << 16
+        archive.writestr(info, (SOURCE / "synthetic_probe/lambda_function.py").read_bytes())
+    print(f"Created {destination.relative_to(ROOT)} ({destination.stat().st_size} bytes)")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.parse_args()
