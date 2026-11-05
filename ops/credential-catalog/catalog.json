@@ -1,0 +1,10 @@
+{
+  "grafana": "cosmotech/grafana/credentials",
+  "glpi": "cosmotech/glpi/credentials",
+  "kestra": "cosmotech/kestra/credentials",
+  "zabbix": "cosmotech/zabbix/credentials",
+  "argocd-laboratorio": "cosmotech/argocd/laboratorio",
+  "github-app": "cosmotech/github/app",
+  "itsm-runtime": "cosmotech/itsm/runtime",
+  "kestra-runtime": "cosmotech/kestra/automation-runtime"
+}

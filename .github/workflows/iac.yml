@@ -8,6 +8,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
         with: {terraform_version: 1.17.1, terraform_wrapper: false}
+      - run: python3 -m unittest discover -s tests -p test_tool_secret_publisher.py -v
       - run: python3 scripts/build_lambda_artifacts.py
       - run: terraform -chdir=terraform fmt -check -recursive
       - run: terraform -chdir=terraform/environments/dev init -backend=false -input=false
