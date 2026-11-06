@@ -76,3 +76,19 @@ Reversão: usar o backup do Compose e retirar o bind mount numa manutenção
 controlada; não apagar tokens para contornar o erro. O patch deve ser reavaliado
 ao atualizar a imagem GLPI. O teste operacional usa sessões isoladas, repete login
 com lembrar-me e abre uma Change real; não aprova GMUDs.
+
+### Canary SQS — falha de drenagem e IAM
+
+RCL000005/Worker1.0.3 revelou `AccessDenied` em ChangeMessageVisibility ao retornar
+uma mensagem recebida durante expiração do lease; dois processos reiniciaram.
+O backlog ultrapassou o limite120s durante promoção, e o controlador restaurou
+stable1.0.2, drenou candidatas e restaurou HPA. Não registrar a GMUD como sucesso.
+A política inline existente `eks_orders_checkpoints` recebeu somente
+`sqs:ChangeMessageVisibility` na fila EKS principal. Terraform alvo:0 adições,
+1 atualização,0 exclusões; backup privado de estado e plano preservados;
+Access Analyzer sem findings. Simulação IAM permitiu a fila exata e negou a DLQ.
+Nenhum recurso de computação novo ou operação NLB/CloudTrail.
+
+A release corretiva Worker1.0.4 trata falha de devolução sem processar/apagar a
+mensagem e sem encerrar o processo; expõe contador próprio. Prova integrada dessa
+release deve ser consultada no índice de evidências, sem inferir sucesso do CI.

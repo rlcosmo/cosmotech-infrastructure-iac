@@ -108,6 +108,10 @@ resource "aws_iam_role_policy" "eks_orders_checkpoints" {
       Effect   = "Allow"
       Action   = ["dynamodb:GetItem", "dynamodb:UpdateItem"]
       Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/aws-eks-istio-lab-dev-orders-data"
+      }, {
+      Effect   = "Allow"
+      Action   = ["sqs:ChangeMessageVisibility"]
+      Resource = "arn:aws:sqs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:aws-eks-istio-lab-dev-orders-eks"
     }]
   })
 }
