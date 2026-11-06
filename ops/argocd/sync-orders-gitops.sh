@@ -10,7 +10,12 @@ source /etc/cosmotech/promotion/enforcement.env
 export GNUPGHOME=/opt/cosmotech/promotion/gnupg-public
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 exec 9>/run/cosmotech-orders-gitops.lock
-flock -w 60 9
+# The release gate and GitHub observer may reconcile the same revision together.
+# A healthy rollout can hold this lock for longer than one minute.
+if ! flock -w 180 9; then
+  echo 'Another Argo reconciliation still owns the lock after 180 seconds; retry this immutable revision.' >&2
+  exit 75
+fi
 work_dir="$(mktemp -d /opt/cosmotech/argocd/sync.XXXXXX)"
 trap 'rm -rf "$work_dir"' EXIT
 kubectl -n argocd get configmap argocd-ssh-known-hosts-cm -o jsonpath='{.data.ssh_known_hosts}' > "$work_dir/known_hosts"
