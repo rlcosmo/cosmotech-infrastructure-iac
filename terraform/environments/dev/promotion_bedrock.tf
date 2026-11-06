@@ -47,7 +47,8 @@ resource "aws_iam_role_policy" "promotion_evidence_read" {
       { Effect = "Allow", Action = ["ssm:GetCommandInvocation"], Resource = "*" },
       { Effect = "Allow", Action = ["eks:DescribeCluster"], Resource = "arn:aws:eks:us-east-1:${data.aws_caller_identity.current.account_id}:cluster/aws-eks-istio-lab-dev" },
       # Metric reads have no resource-level authorization; only the fixed collector uses them.
-      { Effect = "Allow", Action = ["cloudwatch:GetMetricStatistics"], Resource = "*" }
+      { Effect = "Allow", Action = ["cloudwatch:GetMetricStatistics"], Resource = "*" },
+      { Effect = "Allow", Action = ["sqs:GetQueueAttributes"], Resource = ["arn:aws:sqs:us-east-1:${data.aws_caller_identity.current.account_id}:aws-eks-istio-lab-dev-orders-eks", "arn:aws:sqs:us-east-1:${data.aws_caller_identity.current.account_id}:aws-eks-istio-lab-dev-orders-eks-dlq"] }
     ]
   })
 }

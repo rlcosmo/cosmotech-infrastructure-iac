@@ -11,3 +11,9 @@ Não houve rollout, restart ou alteração das imagens/GMUDs das aplicações. N
 A configuração do injector recarrega sem restart do plano de controle. Upgrade/reinstalação Istio pode regenerar ConfigMap: revisar o template novo e manter o ajuste na configuração da instalação; o script bloqueia versões diferentes. Referência oficial: https://istio.io/latest/docs/setup/additional-setup/sidecar-injection/ .
 
 Deploys anteriores aprovados: GMUD3/API RollingUpdate; GMUD4/Worker bootstrap rolling. Nenhuma candidata Canary ativa. GLPI em Review8/OBSERVING; não encerrar como sucesso antes das12h reais.
+
+## Canary e RCL
+
+O ajuste de5s também cobre `app=orders-worker-canary`, para manter a correção nos pods candidatos. ConfigMap atualizado com CAS/server dry-run e snapshot privado, sem restart das aplicações. Canary da RCL000003 iniciou sem o Warning15021; a primeira tentativa RCL000001 precedeu esse complemento e foi cancelada por evidência inicial insuficiente.
+
+A política de leitura de evidências foi ampliada somente com sqs:GetQueueAttributes nas filas Orders EKS e sua DLQ existentes. Plano revisado:0 adições,1 atualização,0 destruições; Access Analyzer sem findings; fmt/validate passaram. Sem permissão de enviar/purgar/excluir mensagens no papel do gate, sem recurso AWS novo e sem NLB/CloudTrail.
