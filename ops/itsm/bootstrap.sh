@@ -47,6 +47,7 @@ if [ ! -s "$APP_CONFIG" ]; then
   chmod 0440 "$APP_CONFIG"
 fi
 
+bash "$SCRIPT_DIR/prepare-glpi-session-fix.sh"
 "${COMPOSE[@]}" config --quiet
 "${COMPOSE[@]}" up -d
 

@@ -60,3 +60,19 @@ The generated environment file and Kestra config are root-owned and mode-restric
 AWS Backup creates daily EC2 recovery points and retains them for 14 days in a private vault. A recovery point includes the encrypted root EBS volume. To recover, restore an EC2 recovery point into the existing private subnet, preserve the restored volume, verify SSM registration and Compose health, then use the restored instance ID for SSM port forwarding. Keep the original instance and recovery point until application login, database health, and ticket/flow data have been verified.
 
 The deployment is reproduced by `terraform/environments/dev/itsm.tf`, `terraform/modules/itsm_host`, `terraform/bootstrap/state_backend`, and the files in this directory. The bootstrap assumes the public `main` branch contains these files before Terraform creates the instance.
+
+### Login GLPI com cookie lembrar-me (06/11/2026)
+
+O erro nativo `Duplicate entry ... token_uid` ao abrir uma GMUD ocorria porque
+`Session::init()` reutilizava o UID do cookie também em um novo login por senha.
+`prepare-glpi-session-fix.sh` extrai somente o `Session.php` da imagem fixada,
+confere SHA256, aplica a condição `Auth::COOKIE`, valida PHP e prepara o bind mount
+somente leitura. Login explícito recebe UID aleatório novo; autenticação pelo
+cookie conserva seu UID. Não altera senha, autorização, CSRF, cookies seguros,
+índice único ou registros existentes. O bootstrap prepara o arquivo antes do
+Compose. Imagem/arquivo divergente bloqueia a aplicação do patch para revisão.
+
+Reversão: usar o backup do Compose e retirar o bind mount numa manutenção
+controlada; não apagar tokens para contornar o erro. O patch deve ser reavaliado
+ao atualizar a imagem GLPI. O teste operacional usa sessões isoladas, repete login
+com lembrar-me e abre uma Change real; não aprova GMUDs.
