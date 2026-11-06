@@ -1,0 +1,18 @@
+[
+  {
+    "application_label": "orders-api",
+    "test_pod": "cosmotech-startup-check-orders-api",
+    "startup_delay": 5,
+    "ready": true,
+    "restarts": 0,
+    "warnings": []
+  },
+  {
+    "application_label": "orders-worker",
+    "test_pod": "cosmotech-startup-check-orders-worker",
+    "startup_delay": 5,
+    "ready": true,
+    "restarts": 0,
+    "warnings": []
+  }
+]
