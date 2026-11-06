@@ -16,8 +16,8 @@ ROOT = Path('/var/lib/cosmotech-pipeline-events')
 NAMESPACE = 'cosmotech.clusters.aws_eks_istio_lab_dev'
 NAMESPACES = {'orders-api': NAMESPACE, 'orders-worker': NAMESPACE, 'gitops': 'cosmotech.clusters.argocd_management'}
 APPS = {'orders-api': 'cosmotech-orders-api', 'orders-worker': 'cosmotech-orders-worker', 'gitops': 'cosmotech-gitops'}
-STAGES = {'orders-api': ['tests', 'build_scan', 'publish', 'gitops', 'rollout', 'health'],
-          'orders-worker': ['tests', 'build_scan', 'publish', 'gitops', 'rollout', 'health'],
+STAGES = {'orders-api': ['tests', 'build_scan', 'publish'],
+          'orders-worker': ['tests', 'build_scan', 'publish'],
           'gitops': ['validate', 'rollout', 'health']}
 
 
