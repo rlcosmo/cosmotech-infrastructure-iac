@@ -147,7 +147,7 @@ resource "aws_eks_access_entry" "this" {
   cluster_name      = var.eks_cluster_name
   principal_arn     = aws_iam_role.instance.arn
   type              = "STANDARD"
-  kubernetes_groups = ["cosmotech-tempo-backup"]
+  kubernetes_groups = concat(["cosmotech-tempo-backup"], var.additional_kubernetes_groups)
   tags              = var.tags
 }
 

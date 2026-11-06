@@ -1,0 +1,53 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cosmotech-promotion-worker-control
+  namespace: orders-worker
+rules:
+  - apiGroups: [apps]
+    resources: [deployments/scale]
+    resourceNames: [orders-worker-canary]
+    verbs: [get, patch]
+  - apiGroups: ['']
+    resources: [configmaps]
+    resourceNames: [orders-worker-canary-control, orders-worker-stable-control]
+    verbs: [get, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cosmotech-promotion-worker-control
+  namespace: orders-worker
+subjects:
+  - kind: Group
+    name: cosmotech:promotion
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: cosmotech-promotion-worker-control
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cosmotech-promotion-metrics-read
+  namespace: observability
+rules:
+  - apiGroups: ['']
+    resources: [services/proxy]
+    resourceNames: [prometheus-kube-prometheus-prometheus:9090]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cosmotech-promotion-metrics-read
+  namespace: observability
+subjects:
+  - kind: Group
+    name: cosmotech:promotion
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: cosmotech-promotion-metrics-read
+  apiGroup: rbac.authorization.k8s.io

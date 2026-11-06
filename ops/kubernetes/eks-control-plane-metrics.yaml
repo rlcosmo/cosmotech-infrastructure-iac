@@ -1,0 +1,64 @@
+# EKS exposes managed component metrics through its aggregated API, not node ports.
+# https://docs.aws.amazon.com/eks/latest/userguide/view-raw-metrics.html
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cosmotech-prometheus-eks-control-plane
+rules:
+  - apiGroups: [metrics.eks.amazonaws.com]
+    resources: [kcm/metrics, ksh/metrics]
+    resourceNames: [container]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cosmotech-prometheus-eks-control-plane
+subjects:
+  - kind: ServiceAccount
+    name: prometheus-kube-prometheus-prometheus
+    namespace: observability
+roleRef:
+  kind: ClusterRole
+  name: cosmotech-prometheus-eks-control-plane
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: cosmotech-eks-control-plane
+  namespace: observability
+  labels:
+    release: prometheus
+spec:
+  namespaceSelector:
+    matchNames: [default]
+  selector:
+    matchLabels:
+      component: apiserver
+      provider: kubernetes
+  endpoints:
+    - port: https
+      scheme: https
+      path: /apis/metrics.eks.amazonaws.com/v1/ksh/container/metrics
+      interval: 30s
+      scrapeTimeout: 15s
+      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      tlsConfig:
+        caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        serverName: kubernetes.default.svc
+      relabelings:
+        - targetLabel: job
+          replacement: kube-scheduler
+    - port: https
+      scheme: https
+      path: /apis/metrics.eks.amazonaws.com/v1/kcm/container/metrics
+      interval: 30s
+      scrapeTimeout: 15s
+      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      tlsConfig:
+        caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        serverName: kubernetes.default.svc
+      relabelings:
+        - targetLabel: job
+          replacement: kube-controller-manager

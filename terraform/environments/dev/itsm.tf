@@ -35,6 +35,7 @@ module "itsm_host" {
   vpc_cidr                       = data.aws_vpc.eks_lab.cidr_block
   subnet_id                      = data.aws_subnet.private_a.id
   eks_cluster_name               = data.aws_eks_cluster.lab.name
+  additional_kubernetes_groups   = ["cosmotech:promotion"]
   bootstrap_parameter_arn_prefix = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/cosmotech/itsm/*"
   state_bucket_arn               = "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1"
   state_object_arn               = "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1/aws-serverless-lab/dev/terraform.tfstate"

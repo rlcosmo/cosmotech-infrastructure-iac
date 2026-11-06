@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-gpg-keys-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: argocd
+data:
+  6C140B9EE5CA76A6: '-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+
+    mDMEau0pbRYJKwYBBAHaRw8BAQdARMe+bEW603K229rKn7DkajkGOd4A9AV1lnLp
+
+    IfFo61W0KUNvc21vVGVjaCBQcm9tb3Rpb24gPHByb21vdGlvbkBsb2NhbGhvc3Q+
+
+    iJkEExYKAEEWIQQAAlz6pB7uEQlvxY5sFAue5cp2pgUCau0pbQIbAwUJAeEzgAUL
+
+    CQgHAgIiAgYVCgkICwIEFgIDAQIeBwIXgAAKCRBsFAue5cp2pkynAQDzURLvv0Lw
+
+    6wvZtXy+SeTEonZbVk1kZuYl2Lx5t7xZdAD9GywJo7HiC9XxL0w8PdQx14kjLXZk
+
+    YLSOmtjiRJ2khAw=
+
+    =RlKh
+
+    -----END PGP PUBLIC KEY BLOCK-----
+
+    '
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: orders-dev
+  namespace: argocd
+spec:
+  description: Orders API and Worker DEV. Namespaced GitOps delivery with HPA and
+    HTTPS hosts.
+  sourceRepos:
+  - ssh://git@ssh.github.com:443/rlcosmo/cosmotech-gitops.git
+  destinations:
+  - server: https://4A29FB418B3281BEF628A7122A8CAEDD.gr7.us-east-1.eks.amazonaws.com
+    namespace: orders-api
+  - server: https://4A29FB418B3281BEF628A7122A8CAEDD.gr7.us-east-1.eks.amazonaws.com
+    namespace: orders-worker
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+  - group: apps
+    kind: Deployment
+  - group: ''
+    kind: ConfigMap
+  - group: ''
+    kind: Service
+  - group: apps
+    kind: ReplicaSet
+  - group: ''
+    kind: Pod
+  - group: autoscaling
+    kind: HorizontalPodAutoscaler
+  - group: networking.k8s.io
+    kind: Ingress
+  signatureKeys:
+  - keyID: 6C140B9EE5CA76A6

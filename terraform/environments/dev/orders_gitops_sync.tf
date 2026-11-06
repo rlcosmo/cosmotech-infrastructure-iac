@@ -44,6 +44,8 @@ resource "aws_ssm_document" "orders_gitops_sync" {
         timeoutSeconds = "900"
         runCommand = [
           "#!/bin/bash", "set -Eeuo pipefail", "umask 077",
+          "install -d -m 0700 /opt/cosmotech/promotion",
+          "printf '%s' '${base64encode(file("${path.module}/../../../ops/argocd/validate_app_manifests.py"))}' | base64 --decode > /opt/cosmotech/promotion/validate_app_manifests.py",
           "printf '%s' '${base64encode(file("${path.module}/../../../ops/argocd/sync-orders-gitops.sh"))}' | base64 --decode > /opt/cosmotech/argocd/sync-orders-gitops.sh",
           "bash /opt/cosmotech/argocd/sync-orders-gitops.sh '{{ GitRevision }}'"
         ]

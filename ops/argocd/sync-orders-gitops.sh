@@ -4,6 +4,10 @@ set -Eeuo pipefail
 umask 077
 revision="${1:?Exact GitOps commit is required}"
 [[ "$revision" =~ ^[a-f0-9]{40}$ ]] || exit 2
+source /etc/cosmotech/promotion/enforcement.env
+[[ "${PROMOTION_ENFORCEMENT_READY:-false}" == true ]] || exit 3
+[[ "${PROMOTION_GPG_FINGERPRINT:-}" =~ ^([A-F0-9]{40}|[A-F0-9]{64})$ ]] || exit 3
+export GNUPGHOME=/opt/cosmotech/promotion/gnupg-public
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 exec 9>/run/cosmotech-orders-gitops.lock
 flock -w 60 9
@@ -18,12 +22,16 @@ if [[ "$(git rev-parse origin/main)" != "$revision" ]]; then
   exit 0
 fi
 git checkout --quiet --detach "$revision"
-python3 scripts/validate_app_manifests.py
-kubectl -n argocd patch secret cosmotech-eks --type merge \
-  -p '{"stringData":{"namespaces":"orders-api,orders-worker"}}' >/dev/null
-kubectl apply -f gitops/bootstrap/orders-project.yaml
-kubectl apply -f gitops/bootstrap/orders-application.yaml
-kubectl apply -f gitops/bootstrap/orders-worker-application.json
+git -c core.hooksPath=/dev/null verify-commit --raw "$revision" 2>"$work_dir/signature-status"
+python3 - "$work_dir/signature-status" "$PROMOTION_GPG_FINGERPRINT" <<'VERIFY'
+import pathlib,sys
+records=[line.split() for line in pathlib.Path(sys.argv[1]).read_text().splitlines()
+         if line.startswith('[GNUPG:] VALIDSIG ')]
+if not any(sys.argv[2] in (record[2],record[-1]) for record in records):
+    raise SystemExit('GitOps revision is not signed by the promotion authority')
+VERIFY
+# This validator and the AppProject are managed outside the delivery repository.
+python3 /opt/cosmotech/promotion/validate_app_manifests.py
 for app in orders-api orders-worker; do
   if [[ "$app" == orders-worker ]] && ! python3 -c 'import json,sys; sys.exit(0 if json.load(open("gitops/bootstrap/orders-worker-application.json"))["spec"]["syncPolicy"]["automated"]["enabled"] else 1)'; then
     echo 'Worker activation is pending its first health-enabled CI image.'

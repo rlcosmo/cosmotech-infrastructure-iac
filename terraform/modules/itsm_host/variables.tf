@@ -69,3 +69,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "additional_kubernetes_groups" {
+  description = "Additional scoped groups on the existing access entry; preserve the backup identity."
+  type        = list(string)
+  default     = []
+}
