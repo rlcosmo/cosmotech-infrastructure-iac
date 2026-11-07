@@ -1,5 +1,13 @@
 name: terraform
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      evidence:
+        description: Collect live read-only evidence on main instead of the source-only plan
+        type: boolean
+        default: false
 permissions: {contents: read}
 jobs:
   validate:
@@ -13,8 +21,11 @@ jobs:
       - run: terraform -chdir=terraform fmt -check -recursive
       - run: terraform -chdir=terraform/environments/dev init -backend=false -input=false
       - run: terraform -chdir=terraform/environments/dev validate
+      - run: terraform -chdir=terraform/environments/dr init -backend=false -input=false
+      - run: terraform -chdir=terraform/environments/dr validate
+      - run: terraform -chdir=terraform/environments/dr test
   plan:
-    if: github.event_name == 'workflow_dispatch' && vars.TERRAFORM_PLAN_ROLE_ARN != ''
+    if: github.event_name == 'workflow_dispatch' && !inputs.evidence && vars.TERRAFORM_PLAN_ROLE_ARN != ''
     needs: validate
     runs-on: ubuntu-latest
     permissions: {contents: read, id-token: write}
@@ -29,3 +40,8 @@ jobs:
       - run: python3 scripts/build_lambda_artifacts.py
       - run: terraform -chdir=terraform/environments/dev init -input=false
       - run: terraform -chdir=terraform/environments/dev plan -refresh=false -input=false -no-color
+  evidence:
+    if: github.event_name == 'workflow_dispatch' && inputs.evidence
+    needs: validate
+    permissions: {contents: read, id-token: write}
+    uses: ./.github/workflows/iac-evidence.yml
