@@ -69,3 +69,5 @@ Thumbs.db
 /change-evidence.json
 /deploy-evidence.json
 /external-security-evidence.json
+
+.private/
