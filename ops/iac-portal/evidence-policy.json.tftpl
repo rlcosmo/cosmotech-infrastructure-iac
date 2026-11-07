@@ -159,7 +159,8 @@
         "lambda:GetFunctionCodeSigningConfig",
         "lambda:GetFunctionConcurrency",
         "lambda:GetPolicy",
-        "lambda:ListTags"
+        "lambda:ListTags",
+        "lambda:ListVersionsByFunction"
       ],
       "Resource": [
         "arn:aws:lambda:${region}:${account}:function:cosmotech-*",
@@ -226,6 +227,7 @@
       "Effect": "Allow",
       "Action": [
         "cloudwatch:DescribeAlarms",
+        "cloudwatch:GetDashboard",
         "cloudwatch:ListTagsForResource"
       ],
       "Resource": [
@@ -308,6 +310,7 @@
       "Action": [
         "kms:DescribeKey",
         "kms:GetKeyPolicy",
+        "kms:GetKeyRotationStatus",
         "kms:ListResourceTags"
       ],
       "Resource": [
@@ -362,6 +365,8 @@
       "Action": [
         "wafv2:GetIPSet",
         "wafv2:GetWebACL",
+        "wafv2:GetLoggingConfiguration",
+        "wafv2:GetWebACLForResource",
         "wafv2:ListTagsForResource"
       ],
       "Resource": [
@@ -495,6 +500,21 @@
         "ssm:GetParameter"
       ],
       "Resource": "arn:aws:ssm:${region}:${account}:parameter/cosmotech/lab-v2/evidence-public-key"
+    },
+    {
+      "Sid": "ExistingALBWAFMetadata",
+      "Effect": "Allow",
+      "Action": [
+        "elasticloadbalancing:GetLoadBalancerWebACL"
+      ],
+      "Resource": [
+        "arn:aws:elasticloadbalancing:${region}:${account}:loadbalancer/app/k8s-observability-633f55bc55/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "${region}"
+        }
+      }
     }
   ]
 }
