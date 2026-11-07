@@ -112,3 +112,20 @@ O preflight distingue agora `yes`, `no`, `Unauthorized` e falhas de transporte o
 exec, mantendo stderr bruto fora da saída. A origem do profile Kubernetes precisa
 ser explícita e temporária; não se deve corrigir o erro alargando trusts OIDC,
 criando cluster-admin ou substituindo silenciosamente a identidade.
+
+Para a autorização explícita de sessão STS do usuário EKS existente, usar:
+
+```bash
+python3 scripts/bootstrap_lab_v2_admin.py --profile serverless-lab \
+  --kubernetes-session-profile serverless-lab-static \
+  --preserve-cluster-access --rbac-checkout /tmp/cosmotech-v2-rbac --apply
+```
+
+O profile secundário é usado somente em GetCallerIdentity e GetSessionToken.
+A sessão temporária fica em memória; os profiles persistentes não são alterados.
+O preflight verifica a identidade exata e o dry-run server dos quatro objetos antes
+do apply administrativo. `--preserve-cluster-access` limita o plano às quatro
+roles/policies IAM administrativas e rejeita mudanças EKS. Nesse modo a entrega
+RBAC ocorre com a sessão temporária autorizada e o workflow RBAC OIDC permanece
+pendente, pois sua nova role não recebe um mapeamento de acesso ao cluster.
+Os workflows de publicação/evidências continuam usando OIDC normalmente.
