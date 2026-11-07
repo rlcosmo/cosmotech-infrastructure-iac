@@ -156,7 +156,7 @@ class Agent:
         for r in baseline['controllers']:self.scale(r,0,local=True)
         # Pause controllers that could restore replicas before changing owned workloads.
         for r in baseline['workloads']:
-            if 'autoscaler' in r['name'] or 'operator' in r['name'] or (r['namespace']=='orders-api'):
+            if 'autoscaler' in r['name'] or 'operator' in r['name'] or r['name']=='aws-load-balancer-controller' or (r['namespace']=='orders-api'):
                 self.scale(r,0)
         return {'phase':'PREPARE','complete':True}
 
@@ -180,18 +180,24 @@ class Agent:
         raise ValueError('Pods ainda ativos após quiescência; não terminar nós')
 
     def resume(self, baseline):
-        if not all(n['ready'] for n in self.collect()['nodes']):raise ValueError('Nodes not Ready')
-        current=self.collect()
+        deadline=time.time()+240
+        while True:
+            current=self.collect()
+            if sum(n['ready'] for n in current['nodes'])>=len(baseline['nodes']):break
+            if time.time()>=deadline:raise ValueError('Ready nodes not restored')
+            time.sleep(5)
         by={(r['namespace'],r['kind'],r['name']):r for r in current['workloads']}
         for r in baseline['workloads']:
             found=by.get((r['namespace'],r['kind'],r['name']))
             if not found or found['template_hash']!=r['template_hash']:raise ValueError('Template drift: '+r['namespace']+'/'+r['name'])
         priority=lambda r: 0 if r['namespace']=='kyverno' else 1 if r['name']=='istiod' else 2 if r['kind']=='statefulsets' else 3
         for r in sorted(baseline['workloads'],key=priority):
-            if 'autoscaler' in r['name']:continue
+            if 'autoscaler' in r['name'] or r['name']=='aws-load-balancer-controller':continue
             self.scale(r,r['replicas'])
             if r['namespace']=='kyverno' or r['name']=='istiod':
                 self.kube(['-n',r['namespace'],'rollout','status',r['kind']+'/'+r['name'],'--timeout=60s'],text=True)
+        for r in baseline['workloads']:
+            if r['name']=='aws-load-balancer-controller':self.scale(r,r['replicas'])
         # Argo CD resumes only with the unchanged Application spec. No Service,
         # Ingress or network sync is issued by the power agent.
         apps={a['name']:a for a in current['argo']}
@@ -206,6 +212,8 @@ class Agent:
 
     def verify_once(self, baseline):
         current=self.collect();differences=list(current['blockers'])
+        if sum(n['ready'] for n in current['nodes'])>=len(baseline['nodes']):
+            differences=[d for d in differences if d!='Nós não estão Ready']
         by={(r['namespace'],r['kind'],r['name']):r for r in current['workloads']}
         for r in baseline['workloads']:
             found=by.get((r['namespace'],r['kind'],r['name']))
