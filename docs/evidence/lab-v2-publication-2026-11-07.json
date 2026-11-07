@@ -1,0 +1,104 @@
+{
+  "date": "2026-11-07",
+  "iac_merge": {
+    "commit": "ed9a8256f377c557b625ca4e4377943a8d51a36b",
+    "pr": "https://github.com/rlcosmo/cosmotech-infrastructure-iac/pull/4"
+  },
+  "rbac_merges": {
+    "reader": "178d6d07edff929815f771102eaf205845cf2271",
+    "delivery": "29a25f4af1ac9d5c57d1bf38bd00c6669d10d26c",
+    "dispatch_fix": "55b27f7d84a152db5e673c35b4fa6fa17d31030e"
+  },
+  "configuration": {
+    "github_variables_configured": [
+      "IAC_EVIDENCE_ROLE_ARN",
+      "LAB_V2_DEPLOY_ROLE_ARN",
+      "LAB_V2_ITSM_INSTANCE_ID"
+    ],
+    "instance_target_verified_live": true,
+    "gpg_public_recipient": "optional repository variable or runtime Standard SSM parameter; not created before authorized host installation",
+    "private_key_generated_by_this_execution": false
+  },
+  "scoped_plan": {
+    "url": "https://github.com/rlcosmo/cosmotech-infrastructure-iac/actions/runs/42371160117",
+    "phase": "bootstrap-plan",
+    "passed": true,
+    "refresh": false,
+    "applied": false,
+    "scope_gate_passed": true
+  },
+  "outside_scope_existing_changes": [
+    "aws_lambda_function.external_http_probe",
+    "aws_ssm_document.argocd_bootstrap",
+    "aws_ssm_document.command_center_install",
+    "aws_ssm_document.orders_gitops_sync",
+    "aws_ssm_document.pipeline_console_install",
+    "aws_wafv2_ip_set.observability_admin",
+    "module.consumer_lambda.aws_lambda_function.this",
+    "module.producer_lambda.aws_lambda_function.this"
+  ],
+  "bootstrap_apply": {
+    "url": "https://github.com/rlcosmo/cosmotech-infrastructure-iac/actions/runs/42371385384",
+    "started_aws_mutation": false,
+    "blocker": "LAB_V2_BOOTSTRAP_ROLE_ARN missing; no permanent-admin-key fallback"
+  },
+  "evidence_collection": {
+    "url": "https://github.com/rlcosmo/cosmotech-infrastructure-iac/actions/runs/42371592134",
+    "blocker": "sts:AssumeRoleWithWebIdentity denied; declared evidence role not provisioned by this execution"
+  },
+  "rbac_delivery": {
+    "url": "https://github.com/rlcosmo/cosmotech-kubernetes-rbac/actions/runs/42371788098",
+    "dispatch_http_422_fixed": true,
+    "started_kubernetes_mutation": false,
+    "blocker": "LAB_V2_RBAC_BOOTSTRAP_ROLE_ARN missing"
+  },
+  "cloudwatch": {
+    "observed_at": "2026-11-07T12:17:56.377482+00:00",
+    "credentials": "temporary role; memory only",
+    "metrics": [
+      {
+        "queue": "source",
+        "metric": "ApproximateNumberOfMessagesVisible",
+        "latest_utc": "2026-11-07T12:16:00+00:00",
+        "value": 0.0,
+        "status": "observed"
+      },
+      {
+        "queue": "source",
+        "metric": "ApproximateNumberOfMessagesNotVisible",
+        "latest_utc": "2026-11-07T12:16:00+00:00",
+        "value": 0.0,
+        "status": "observed"
+      },
+      {
+        "queue": "source",
+        "metric": "ApproximateAgeOfOldestMessage",
+        "latest_utc": "2026-11-07T12:16:00+00:00",
+        "value": 0.0,
+        "status": "observed"
+      },
+      {
+        "queue": "dlq",
+        "metric": "ApproximateNumberOfMessagesVisible",
+        "latest_utc": "2026-11-07T12:16:00+00:00",
+        "value": 0.0,
+        "status": "observed"
+      }
+    ]
+  },
+  "published": {
+    "portal": false,
+    "grafana_dashboard_authenticated_validation": false,
+    "new_aws_resources_by_this_execution": 0
+  },
+  "backlog": {
+    "V2-003": "disabled; no provisioning",
+    "V2-004": "backlog",
+    "V2-005": "backlog",
+    "V2-006": "backlog"
+  },
+  "costs": {
+    "new_fixed_cost_resources": 0,
+    "ci_and_api_usage": "subject to existing quotas/tariffs; not measured as zero"
+  }
+}
