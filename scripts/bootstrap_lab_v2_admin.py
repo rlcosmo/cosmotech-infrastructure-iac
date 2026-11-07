@@ -47,6 +47,22 @@ def aws(env: dict, service: str, operation: str, *options: str) -> dict:
     return json.loads(command(['aws', '--region', 'us-east-1', '--output', 'json', service, operation, *options], env=env) or b'{}')
 
 
+def check_kubernetes_authority(env: dict, verb: str, resource: str) -> None:
+    arguments = ['kubectl', '--request-timeout=20s', 'auth', 'can-i', verb,
+                 resource, '-n', 'observability']
+    response = subprocess.run(arguments, env=env, capture_output=True, timeout=90)
+    if response.returncode == 0 and response.stdout.strip() == b'yes':
+        return
+    error = response.stderr.decode(errors='replace')
+    if 'Unauthorized' in error or 'must be logged in' in error:
+        raise RuntimeError('EKS authentication failed for the explicit temporary bootstrap identity; '
+                           'the ambient kubeconfig/profile is not used. Verify the IAM principal EKS mapping')
+    if response.stdout.strip() == b'no' or 'Forbidden' in error:
+        raise RuntimeError(f'Kubernetes permission required: {verb} {resource} in observability')
+    raise RuntimeError(f'Kubernetes authorization check failed: {verb} {resource} in observability; '
+                       'check API connectivity and the exec credential provider; raw output withheld')
+
+
 def gh_json(*arguments: str) -> object:
     return json.loads(command(['gh', *arguments]))
 
@@ -143,7 +159,7 @@ def main() -> None:
         env['KUBECONFIG'] = str(kubeconfig)
         for resource in ['roles.rbac.authorization.k8s.io', 'rolebindings.rbac.authorization.k8s.io']:
             for verb in ['get', 'create', 'patch', 'update']:
-                command(['kubectl','--request-timeout=20s','auth','can-i',verb,resource,'-n','observability','--quiet'], env=env)
+                check_kubernetes_authority(env, verb, resource)
         manifests = []
         for filename in ['lab-v2-observability-reader.yaml', 'lab-v2-bootstrap-authority.json']:
             data = command(['kubectl','--request-timeout=20s','apply','--dry-run=client','-f',str(rbac/'ops/kubernetes'/filename),'-o','json'],env=env)

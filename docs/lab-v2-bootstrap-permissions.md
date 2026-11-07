@@ -97,3 +97,18 @@ Reexecuções preservam o state separado e reutilizam o prazo enquanto houver ao
 menos uma hora restante; renovação requer a mesma sessão administrativa autorizada.
 Nenhum recurso computacional novo ou custo fixo relevante é previsto neste stack.
 As chamadas API, S3/SSM e Actions usam cobrança/quotas existentes.
+
+## Diagnóstico complementar — identidade efetiva do kubectl
+
+A reprodução com o profile temporário `serverless-lab` confirmou falha de
+**autenticação** EKS (`Unauthorized`), antes da avaliação de RBAC. O comando já
+continha `auth can-i`; a mensagem anterior truncava os argumentos em `auth`.
+O kubeconfig ambiente define `AWS_PROFILE=serverless-lab-static` no exec plugin,
+portanto os testes manuais com esse kubeconfig não demonstram acesso Kubernetes
+da sessão root temporária. O script gera um kubeconfig isolado e não herda essa
+sobrescrita. Nenhuma permissão RBAC foi inferida da identidade root.
+
+O preflight distingue agora `yes`, `no`, `Unauthorized` e falhas de transporte ou
+exec, mantendo stderr bruto fora da saída. A origem do profile Kubernetes precisa
+ser explícita e temporária; não se deve corrigir o erro alargando trusts OIDC,
+criando cluster-admin ou substituindo silenciosamente a identidade.
