@@ -94,7 +94,9 @@ def publisher_token() -> str:
     if account['role'] != 'Viewer' or account.get('isDisabled'):
         raise ValueError('Publisher must be Viewer with folder-scoped edit only')
     try:
-        api('/api/folders/' + FOLDER, admin)
+        folder = api('/api/folders/' + FOLDER, admin)
+        if folder.get('title') != 'CosmoTech Lab V2':
+            raise ValueError('Folder ownership mismatch')
     except urllib.error.HTTPError as error:
         if error.code != 404:
             raise
@@ -207,13 +209,18 @@ def install() -> None:
     home = ROOT / 'gnupg'
     home.mkdir(mode=0o700, exist_ok=True)
     gpg = ['gpg', '--homedir', str(home), '--batch', '--yes']
+    previous_recipient = parameter('evidence-public-key')
     if b'\nsec:' not in b'\n' + run(gpg + ['--list-secret-keys', '--with-colons']):
+        if previous_recipient is not None:
+            raise ValueError('Restore the existing private key; automatic replacement is forbidden')
         run(gpg + ['--pinentry-mode', 'loopback', '--passphrase', '', '--quick-generate-key',
                    'CosmoTech Lab V2 Evidence', 'rsa2048', 'encr', '0'])
     public = run(gpg + ['--armor', '--export', 'CosmoTech Lab V2 Evidence']).decode()
     if not public.startswith('-----BEGIN PGP PUBLIC KEY BLOCK-----'):
         raise ValueError('No evidence recipient')
-    put_parameter('evidence-public-key', {'public_key': public}, overwrite=True, public=True)
+    if previous_recipient is not None and previous_recipient.get('public_key') != public:
+        raise ValueError('Existing evidence recipient cannot be rotated implicitly')
+    put_parameter('evidence-public-key', {'public_key': public}, overwrite=previous_recipient is not None, public=True)
     auth = parameter('portal-auth')
     if auth is None:
         auth = {'username': 'iac-reader', 'password': secrets.token_urlsafe(32)}
@@ -242,10 +249,18 @@ def install() -> None:
     include = '    include /etc/nginx/cosmotech-iac-portal-locations.conf;'
     if original.count(marker) != 1:
         raise ValueError('Expected exactly one existing Kestra proxy server')
-    Path('/etc/nginx/cosmotech-kestra-viewer-http-iac.conf').write_text('limit_req_zone $binary_remote_addr zone=iac_auth:1m rate=5r/s;\n')
+    Path('/etc/nginx/cosmotech-iac-portal-http.conf').write_text('limit_req_zone $binary_remote_addr zone=iac_auth:1m rate=5r/s;\n')
     Path('/etc/nginx/cosmotech-iac-portal-locations.conf').write_text('location = /iac { return 308 /iac/; }\nlocation /iac/ { limit_req zone=iac_auth burst=10 nodelay; proxy_pass http://127.0.0.1:8091/; proxy_set_header Authorization $http_authorization; proxy_set_header Host $host; add_header Cache-Control "no-store" always; }\n')
-    if include not in original:
-        proxy.write_text(original.replace(marker, marker + '\n' + include))
+    updated = original
+    http_include = 'include /etc/nginx/cosmotech-iac-portal-http.conf;'
+    if http_include not in updated:
+        updated = http_include + '\n' + updated
+    if include not in updated:
+        updated = updated.replace(marker, marker + '\n' + include)
+    temporary_proxy = proxy.with_suffix('.lab-v2.tmp')
+    temporary_proxy.write_text(updated)
+    temporary_proxy.chmod(proxy.stat().st_mode & 0o777)
+    temporary_proxy.replace(proxy)
     try:
         run(['nginx', '-t'])
     except RuntimeError:
