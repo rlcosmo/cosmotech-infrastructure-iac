@@ -196,6 +196,9 @@ def validate_real_data(token: str) -> dict:
     samples = freshness.get('data', {}).get('result', [])
     if not samples or any(not 0 <= float(s['value'][1]) <= 180 for s in samples):
         FAILURE.update(reason='queue_evidence_stale_or_missing')
+        ages = [float(s['value'][1]) for s in samples]
+        if ages and all(math.isfinite(age) for age in ages):
+            FAILURE['queue_data_max_age_seconds'] = round(max(ages))
         raise ValueError('Queue evidence is stale')
     return counts
 
@@ -340,9 +343,18 @@ def validate() -> None:
     token = publisher_token()
     STAGE = 'validate-grafana'
     api('/api/dashboards/uid/cosmotech-v2-sqs-workers', 'Bearer ' + token)
+    print(json.dumps({'portal_authenticated': True, 'grafana_authenticated': True}), flush=True)
     STAGE = 'validate-metrics'
+    for attempt in range(4):
+        try:
+            metrics = validate_real_data(token)
+            break
+        except ValueError:
+            if FAILURE.get('reason') != 'queue_evidence_stale_or_missing' or attempt == 3:
+                raise
+            time.sleep(30)
     print(json.dumps({'portal_authenticated': True, 'grafana_authenticated': True,
-                      'live_metric_series': validate_real_data(token)}))
+                      'live_metric_series': metrics}))
 
 
 if __name__ == '__main__':
