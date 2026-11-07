@@ -55,8 +55,19 @@ def write_snapshot(value):
 def observe(role_arn):
     source={'repository':REPOSITORY,'branch':BRANCH,'directory':DIRECTORY,'commit':None}
     stage='identity'
-    write_snapshot({'schema_version':2,'state':'checking','source':source,
-                    'attempted_at':datetime.now(timezone.utc).isoformat(),'resources':[],'coverage':[]})
+    attempted_at=datetime.now(timezone.utc).isoformat()
+    try:
+        previous=json.loads((PUBLIC/'current.json').read_text())
+        if previous.get('schema_version')!=2 or not previous.get('observed_at'):
+            previous={}
+    except (OSError,ValueError):
+        previous={}
+    def progress(current_stage):
+        value=previous.copy() if previous else {'schema_version':2,'source':source,'resources':[],'coverage':[]}
+        value.update(state='checking',current_stage=current_stage,pending_source=source,attempted_at=attempted_at)
+        write_snapshot(value)
+        print(json.dumps({'state':'checking','stage':current_stage,'commit':source.get('commit')}),flush=True)
+    progress(stage)
     try:
         env={k:v for k,v in os.environ.items() if k not in {'AWS_ACCESS_KEY_ID','AWS_SECRET_ACCESS_KEY','AWS_SESSION_TOKEN','AWS_PROFILE','AWS_DEFAULT_PROFILE','TF_LOG','TF_LOG_PATH','GIT_CONFIG','GIT_CONFIG_GLOBAL'}}
         env['PATH'] = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin'
@@ -76,6 +87,7 @@ def observe(role_arn):
         if identity['Account']!=host['Account'] or ':assumed-role/cosmotech-iac-observer/' not in identity['Arn']:
             raise ObservationError('unexpected_observer_identity')
         stage='git'
+        progress(stage)
         HOME.mkdir(mode=0o700,parents=True,exist_ok=True)
         # Raw plan/state/checkout are private and deleted after every attempt.
         with tempfile.TemporaryDirectory(prefix='comparison-',dir=HOME) as temporary:
@@ -85,13 +97,16 @@ def observe(role_arn):
             if not re.fullmatch('[a-f0-9]{40}',source['commit']):
                 raise ObservationError('invalid_git_revision')
             stage='source_artifacts'
+            progress(stage)
             # Artifact preparation is local code from the canonical reviewed main; no apply.
             command(['/usr/bin/python3','scripts/build_lambda_artifacts.py'],env,cwd=checkout)
             command(['/usr/bin/python3','scripts/build_lab_v2_bundle.py'],env,cwd=checkout)
             stage='terraform_init'
+            progress(stage)
             stack=checkout/DIRECTORY
             command(['terraform','init','-input=false','-lockfile=readonly'],env,cwd=stack,timeout=300)
             stage='git_vs_aws_plan'
+            progress(stage)
             plan=Path(temporary)/'comparison.plan'
             command(['terraform','plan','-input=false','-refresh=true','-lock=false','-detailed-exitcode','-out='+str(plan)],env,cwd=stack,timeout=600,codes=(0,2))
             payload=json.loads(command(['terraform','show','-json',str(plan)],env,cwd=stack,timeout=120))
@@ -101,6 +116,7 @@ def observe(role_arn):
             admin='terraform/bootstrap/lab_v2_admin'
             if (checkout/admin).is_dir():
                 stage='bootstrap_git_evaluation'
+                progress(stage)
                 trust=aws(env,'us-east-1','iam','get-role','--role-name','cosmotech-lab-v2-bootstrap')['Role']['AssumeRolePolicyDocument']
                 expiry=trust['Statement'][0]['Condition']['DateLessThan']['aws:CurrentTime']
                 live=flatten(payload.get('prior_state',{}).get('values',{}).get('root_module',{}))
@@ -116,6 +132,7 @@ def observe(role_arn):
             backend='terraform/bootstrap/state_backend'
             if (checkout/backend).is_dir():
                 stage='backend_git_evaluation'
+                progress(stage)
                 command(['terraform','init','-input=false','-lockfile=readonly'],env,cwd=checkout/backend,timeout=300)
                 backend_plan=Path(temporary)/'backend.plan'
                 command(['terraform','plan','-input=false','-refresh=true','-lock=false','-detailed-exitcode','-out='+str(backend_plan)],env,cwd=checkout/backend,timeout=300,codes=(0,2))
@@ -132,8 +149,10 @@ def observe(role_arn):
                 combined['resource_changes'] += [{**row,'address':root+'::'+row['address']} for row in part.get('resource_changes',[])]
             source['directories']=[root for root,_ in plans]
             stage='aws_inventory'
+            progress(stage)
             discovered=inventory(lambda region,service,operation,*args:aws(env,region,service,operation,*args),identity['Account'],identity['Arn'].split(':')[1])
             stage='comparison'
+            progress(stage)
             report=compare(combined,discovered,source)
             write_snapshot(report)
             print(json.dumps({'state':'ready','commit':source['commit'],'resources':len(report['resources']),
