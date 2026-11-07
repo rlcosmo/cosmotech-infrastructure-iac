@@ -14,6 +14,7 @@ import secrets
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.parse
@@ -27,6 +28,7 @@ FOLDER = 'cosmotech-lab-v2'
 PARAM = '/cosmotech/lab-v2/'
 STAGE = 'identity'
 FAILURE = {}
+REQUEST_DIRECTORY = Path('/run/cosmotech-lab-v2')
 
 
 def run(args: list[str], value: dict | None = None) -> bytes:
@@ -57,8 +59,17 @@ def aws(service: str, operation: str, *args: str, value: dict | None = None) -> 
     command = ['aws', '--region', 'us-east-1', '--output', 'json', '--cli-connect-timeout', '5',
                '--cli-read-timeout', '20', service, operation, *args]
     if value is not None:
-        command += ['--cli-input-json', 'file:///dev/stdin']
-    return json.loads(run(command, value) or b'{}')
+        directory = REQUEST_DIRECTORY
+        directory.mkdir(mode=0o700, exist_ok=True)
+        directory.chmod(0o700)
+        descriptor, path = tempfile.mkstemp(prefix='request-', suffix='.json', dir=directory)
+        try:
+            with os.fdopen(descriptor, 'w') as request:
+                json.dump(value, request)
+            return json.loads(run(command + ['--cli-input-json', 'file://' + path]) or b'{}')
+        finally:
+            Path(path).unlink(missing_ok=True)
+    return json.loads(run(command) or b'{}')
 
 
 def parameter(name: str) -> dict | None:
