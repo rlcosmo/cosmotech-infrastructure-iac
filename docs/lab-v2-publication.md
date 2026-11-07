@@ -57,3 +57,17 @@ V2-003 segue desabilitado e sem provisionamento. V2-004, V2-005 e V2-006 permane
 ## Limite técnico de bootstrap
 
 Na última verificação, apenas TERRAFORM_PLAN_ROLE_ARN estava configurada. A role de manutenção existente assume corretamente STS, porém não tem IAM write nem permissão para instalar o RoleBinding em observability. A role de plan aceita main e não tem apply/IAM write. O pipeline recusa bootstrap-apply sem LAB_V2_BOOTSTRAP_ROLE_ARN; autorização conversacional não cria essas permissões técnicas. Código, plano separado e CI tornam a mudança revisável, mas não autorizam contornar um AccessDenied ou usar credencial permanente para elevar privilégios.
+
+## Resultado verificado desta execução
+
+Esta seção substitui o retrato de configuração inicial acima. Código IaC #4 integrado em ed9a825; RBAC #2/#3/#4 integrados em 178d6d0, 29a25f4 e 55b27f7. CI IaC passou com 27 testes Python, fmt/validate dev/DR e testes Terraform mock; CI RBAC passou com validação de escopo e contexto de workflow. O erro real HTTP 422 do runner.temp em jobs.env foi corrigido e o dispatch foi aceito.
+
+Configuradas IAC_EVIDENCE_ROLE_ARN e LAB_V2_DEPLOY_ROLE_ARN para as identidades declaradas, sem afirmar que já foram provisionadas. LAB_V2_ITSM_INSTANCE_ID foi confirmado por EC2 DescribeInstances usando STS de 900s antes de configurar. Nenhuma credencial foi persistida/exposta. O GPG público pode vir do parâmetro runtime; chave privada não foi gerada/exportada neste executor.
+
+`bootstrap-plan` executou com sucesso na role existente de plan, passou pelo gate de escopo e manteve as oito mudanças anteriores fora da publicação. Não é plano com refresh para apply. `bootstrap-apply` foi acionado e recusado no preflight por ausência de LAB_V2_BOOTSTRAP_ROLE_ARN, antes de qualquer mutação AWS. A coleta de evidências já encontra a variável configurada, mas AWS negou sts:AssumeRoleWithWebIdentity para a identidade que ainda não foi provisionada nesta execução.
+
+A entrega RBAC também foi acionada e bloqueada no preflight por ausência de LAB_V2_RBAC_BOOTSTRAP_ROLE_ARN, antes de qualquer mutação Kubernetes. Não se reutilizou a manutenção read-only para conceder sua própria autorização; nenhuma política obrigatória foi contornada. Os pipelines agora estão registrados, mas publicação e auth can-i real seguem dependentes dessas identidades técnicas.
+
+CloudWatch real em 07/11/2026, amostra de 12:16 UTC: origem com visible/in-flight/idade zero **medidos** e DLQ agora com uma amostra explícita de visible=0. Isso difere da observação anterior sem datapoints. Ausência continua desconhecida nos coletores/testes, não é convertida em zero. Não houve envio, recebimento, exclusão, redrive ou alteração das filas.
+
+Portal e dashboard não foram declarados publicados/validados autenticadamente. Nenhum apply ou recurso AWS novo. V2-003 segue sem provisionamento; V2-004/005/006 continuam backlog. URLs, bloqueios e medições sanitizadas em `docs/evidence/lab-v2-publication-2026-11-07.json`.
