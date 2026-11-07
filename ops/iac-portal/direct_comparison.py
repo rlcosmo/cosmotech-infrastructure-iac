@@ -41,6 +41,8 @@ def changed_paths(before, after, sensitive_before=None, sensitive_after=None, pr
 
 
 def compare(plan, discovered, source, region='us-east-1'):
+    if not isinstance(plan.get('planned_values'),dict):
+        raise ValueError('Git configuration was not evaluated')
     if plan.get('errored') or plan.get('deferred_changes') or plan.get('complete') is False:
         raise ValueError('Incomplete Git evaluation cannot establish comparison')
     rows=[]; owned=set();typed=set(); inherited_ids=set(); seen=set(); declared_untracked=[]
