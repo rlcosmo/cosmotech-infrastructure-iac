@@ -47,3 +47,53 @@ Sem uma identidade temporária com essas permissões efetivas e as autorizaçõe
 ## Resultado
 
 Nenhum recurso publicado/alterado nesta verificação; portal, inventário automatizado e validação autenticada Grafana permanecem pendentes. Nenhuma alteração WAF/Lambda. Sem novos recursos pagos; uso de API/CI sujeito às quotas/tarifas existentes. Evidências sanitizadas em `docs/evidence/lab-v2-bootstrap-permissions-2026-11-07.json`. Nenhum token, senha, private key, conta AWS ou endereço privado foi incluído nessa evidência.
+
+## Procedimento administrativo único (versionado)
+
+Implementação: `scripts/bootstrap_lab_v2_admin.py`; stack independente em
+`terraform/bootstrap/lab_v2_admin`, no bucket existente, chave
+`lab-v2/admin-bootstrap/terraform.tfstate`. Não inicializa nem aplica o root dev
+completo. O gate admite cinco recursos IAM/EKS, sem delete, import ou replacement.
+As duas roles OIDC exigem audience STS e subjects imutáveis repo/main; trust e
+permissões de escrita expiram em duas horas (limite de quatro horas no gate).
+Nenhuma policy AdministratorAccess, bind/escalate ou permissão Secrets é concedida.
+
+Pré-requisito humano quando não houver sessão administrativa temporária: autenticar
+no console AWS com uma identidade autorizada para a matriz acima, criação/leitura
+das duas roles de bootstrap e suas inline policies, criação/leitura do EKS access
+entry e leitura/escrita do state/lock separado. Essa identidade também deve possuir
+RBAC para reconciliar os quatro objetos revisados de observability, incluindo os
+próprios privilégios concedidos (controle anti-escalada). Não tentar novamente com
+a role de manutenção já negada. Não criar access keys para esse procedimento.
+
+Usar AWS CLI com `aws login`, uma sessão temporária de role, ou perfil temporário
+existente. O procedimento rejeita AKIA, token ausente e sessão expirada. Credenciais
+são encaminhadas apenas pelo pipe privado de credential_process ao SDK, nunca
+no plano, state, arquivo de configuração ou saída humana. O kubeconfig contém
+apenas metadata e comando exec para token efêmero.
+
+```bash
+aws login --profile serverless-lab
+# Ambos os checkouts devem estar limpos no main revisado atual.
+python3 scripts/bootstrap_lab_v2_admin.py \
+  --profile serverless-lab \
+  --rbac-checkout /tmp/cosmotech-v2-rbac
+# Omitir --apply acima valida sessão, RBAC e plano sem aplicar.
+python3 scripts/bootstrap_lab_v2_admin.py \
+  --profile serverless-lab \
+  --rbac-checkout /tmp/cosmotech-v2-rbac --apply
+```
+
+O apply utiliza exatamente o plano salvo aprovado pelo gate; reconcilia os manifests
+RBAC do repositório canônico e configura variables a partir dos outputs reais.
+Em seguida executa RBAC, publicação bootstrap-apply e evidências pelos workflows
+oficiais main, correlacionados por request_id. Uma negação interrompe sem repetição.
+A chave pública GPG é copiada do parâmetro SSM existente/criado pelo publisher;
+nenhuma chave privada ou credencial de terceiro é substituída pelo bootstrap.
+A saída de sucesso dos jobs ainda exige inspeção dos resultados de validação e
+evidências reais para declarar a publicação concluída.
+
+Reexecuções preservam o state separado e reutilizam o prazo enquanto houver ao
+menos uma hora restante; renovação requer a mesma sessão administrativa autorizada.
+Nenhum recurso computacional novo ou custo fixo relevante é previsto neste stack.
+As chamadas API, S3/SSM e Actions usam cobrança/quotas existentes.

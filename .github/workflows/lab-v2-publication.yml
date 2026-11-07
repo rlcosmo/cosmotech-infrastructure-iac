@@ -1,7 +1,12 @@
 name: Lab V2 scoped publication
+run-name: "Lab V2 publication · ${{ inputs.phase }} · ${{ inputs.request_id || github.run_id }}"
 on:
   workflow_dispatch:
     inputs:
+      request_id:
+        type: string
+        required: false
+        default: ""
       phase:
         description: Bootstrap requires a separately authorized write role; publication cannot edit IAM
         type: choice
@@ -21,6 +26,7 @@ jobs:
       contents: read
       id-token: write
     env:
+      BOOTSTRAP_EXPIRY: ${{ vars.LAB_V2_BOOTSTRAP_EXPIRES_AT }}
       PHASE: ${{ inputs.phase }}
       BOOTSTRAP_ROLE: ${{ vars.LAB_V2_BOOTSTRAP_ROLE_ARN }}
       DEPLOY_ROLE: ${{ vars.LAB_V2_DEPLOY_ROLE_ARN }}
@@ -40,6 +46,14 @@ jobs:
             deploy) role="$DEPLOY_ROLE" ;;
             *) exit 2 ;;
           esac
+          if [[ "$PHASE" == bootstrap-apply ]]; then
+            python3 - <<'TTL'
+          import datetime, os
+          value = datetime.datetime.fromisoformat(os.environ['BOOTSTRAP_EXPIRY'].replace('Z', '+00:00'))
+          if value < datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=30):
+              raise SystemExit('Renew the bounded administrative bootstrap before taking a state lock')
+          TTL
+          fi
           test -n "$role" || { echo 'The selected phase requires an existing authorized role; no admin-key fallback'; exit 1; }
           if [[ "$PHASE" == deploy || "$PHASE" == bootstrap-apply ]]; then
             [[ "$ITSM_INSTANCE" =~ ^i-[0-9a-f]{17}$ ]] || { echo 'A configured fixed ITSM instance is required before apply'; exit 1; }
