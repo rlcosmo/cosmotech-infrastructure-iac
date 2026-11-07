@@ -64,8 +64,9 @@ jobs:
         run: |
           set -euo pipefail
           state_machine=$(terraform -chdir=power_manager/terraform output -raw state_machine_arn)
-          execution=$(aws stepfunctions start-execution --state-machine-arn "$state_machine" --name "certify-${{ github.run_id }}-${{ github.run_attempt }}" --input '{"mode":"safe_test"}' --query executionArn --output text)
-          for attempt in {1..24}; do
+          job_id=$(python3 -c 'import uuid; print(uuid.uuid4())')
+          execution=$(aws stepfunctions start-execution --state-machine-arn "$state_machine" --name "certify-${{ github.run_id }}-${{ github.run_attempt }}" --input "{\"mode\":\"safe_test\",\"job_id\":\"$job_id\"}" --query executionArn --output text)
+          for attempt in {1..120}; do
             status=$(aws stepfunctions describe-execution --execution-arn "$execution" --query status --output text)
             if [[ "$status" == SUCCEEDED ]]; then break; fi
             [[ "$status" == RUNNING ]] || { echo "Certification failed: $execution"; exit 1; }

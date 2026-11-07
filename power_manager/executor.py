@@ -307,7 +307,7 @@ def fail(op,reason):
 def handler(event,context):
     if event.get('mode')=='safe_test':
         if event.get('failure'):return {'state':'failed','error':'Safe test failed'}
-        return {'state':'done',**safe_test()}
+        return certify(event)
     op=table().get_item(Key={'pk':'OP#'+event['opid']},ConsistentRead=True)['Item']
     lock=table().get_item(Key={'pk':'LOCK'},ConsistentRead=True).get('Item',{})
     if op['state'] in {'OFF','ON'}:
@@ -365,5 +365,47 @@ def safe_test():
     unchanged=digest(before)==digest(canonical_network()) and states=={i:state_instance(i)['State']['Name'] for i in STANDALONE}
     result={'pk':'CERTIFICATION','agent_hash':os.environ['AGENT_HASH'],'complete':unchanged,'aws_dry_run':True,
             'mutated':False,'checks':checks,'identity':identity,'checked_at':int(time.time())}
-    table().put_item(Item=result)
     return result
+
+
+def certify(event):
+    """Live read/dry-run certificate. Both execute documents run VERIFY only."""
+    import uuid
+    jobid=str(uuid.UUID(event['job_id']))
+    pk='CERTJOB#'+jobid
+    job=table().get_item(Key={'pk':pk},ConsistentRead=True).get('Item')
+    if job is None:
+        if table().get_item(Key={'pk':'LOCK'},ConsistentRead=True).get('Item'):raise ValueError('Power operation active; do not run certification')
+        report=safe_test()
+        commands={}
+        command=client('ssm').send_command(InstanceIds=[HOST],DocumentName=os.environ['READ_DOCUMENT'],Parameters={'Phase':['SAFE_TEST'],'PlanId':[jobid],'OperationId':[jobid]},TimeoutSeconds=600,Comment='Safe DOWN and UP Kubernetes dry-run')
+        commands['kube']=command['Command']['CommandId']
+        for iid in sorted(STANDALONE):
+            sent=client('ssm').send_command(InstanceIds=[iid],DocumentName=os.environ['HOST_READ_DOCUMENT'],Parameters={'Mode':['SAFE_TEST'],'PlanId':[jobid],'OperationId':[jobid]},TimeoutSeconds=600,Comment='Read-only process recovery validation')
+            commands[iid]=sent['Command']['CommandId']
+        job={'pk':pk,'id':jobid,'phase':'READ','report':report,'commands':commands,'expires':int(time.time())+86400}
+        table().put_item(Item=job)
+        return {'state':'wait','phase':'safe_read'}
+    outputs={}
+    for name,identifier in job['commands'].items():
+        iid=HOST if name=='kube' else name
+        try:r=client('ssm').get_command_invocation(CommandId=identifier,InstanceId=iid)
+        except client('ssm').exceptions.InvocationDoesNotExist:return {'state':'wait','phase':'safe_'+job['phase']}
+        if r['Status'] in ('Pending','InProgress','Delayed'):return {'state':'wait','phase':'safe_'+job['phase']}
+        if r['Status']!='Success':raise ValueError('Safe validation failed: '+name+' '+r['Status'])
+        outputs[name]=json.loads(r['StandardOutputContent'].strip().splitlines()[-1])
+    if job['phase']=='READ':
+        if outputs['kube'].get('blockers'):raise ValueError('Safe Kubernetes preflight: '+ '; '.join(outputs['kube']['blockers'])[:600])
+        commands={}
+        command=client('ssm').send_command(InstanceIds=[HOST],DocumentName=os.environ['AGENT_DOCUMENT'],Parameters={'Phase':['VERIFY'],'PlanId':[jobid],'OperationId':[jobid],'SnapshotVersion':[outputs['kube']['version']]},TimeoutSeconds=600,Comment='Verify current state against recovery snapshot; no power changes')
+        commands['kube']=command['Command']['CommandId']
+        for iid in sorted(STANDALONE):
+            sent=client('ssm').send_command(InstanceIds=[iid],DocumentName=os.environ['HOST_EXECUTE_DOCUMENT'],Parameters={'Mode':['VERIFY'],'PlanId':[jobid],'OperationId':[jobid],'SnapshotVersion':[outputs[iid]['reference']['version']]},TimeoutSeconds=600,Comment='Verify original processes; do not start or stop')
+            commands[iid]=sent['Command']['CommandId']
+        job.update(phase='VERIFY',commands=commands);table().put_item(Item=job)
+        return {'state':'wait','phase':'safe_verify'}
+    if any(not value.get('complete') for value in outputs.values()):raise ValueError('Snapshot/health comparison did not pass')
+    report=job['report'];report.update(complete=True,kubernetes_dry_run=True,host_recovery_validation=True,checked_at=int(time.time()),job_id=jobid)
+    table().put_item(Item=report)
+    job['phase']='COMPLETE';table().put_item(Item=job)
+    return {'state':'done','certificate':report}
