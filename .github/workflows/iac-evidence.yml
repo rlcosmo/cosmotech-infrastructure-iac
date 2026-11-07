@@ -13,8 +13,6 @@ on:
         type: string
         required: false
         default: ""
-  schedule:
-    - cron: '17 */6 * * *'
 permissions:
   contents: read
 concurrency:

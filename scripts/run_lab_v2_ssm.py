@@ -52,9 +52,14 @@ for _ in range(130):
                     safe['failure_identifiers']['http_status'] = identifiers['http_status']
                 if type(identifiers.get('queue_data_max_age_seconds')) is int:
                     safe['failure_identifiers']['queue_data_max_age_seconds'] = identifiers['queue_data_max_age_seconds']
-            for name in ['portal_authenticated', 'grafana_authenticated']:
+            for name in ['portal_authenticated', 'grafana_authenticated', 'git_aws_comparison_ready']:
                 if type(evidence.get(name)) is bool:
                     safe[name] = evidence[name]
+            for name in ['compared_resources','detected_drift']:
+                if type(evidence.get(name)) is int and evidence[name]>=0:
+                    safe[name]=evidence[name]
+            if isinstance(evidence.get('git_commit'),str) and re.fullmatch('[a-f0-9]{40}',evidence['git_commit']):
+                safe['git_commit']=evidence['git_commit']
             if type(evidence.get('portal_reports_available')) is int and evidence['portal_reports_available'] >= 0:
                 safe['portal_reports_available'] = evidence['portal_reports_available']
             metrics = evidence.get('live_metric_series', {})
