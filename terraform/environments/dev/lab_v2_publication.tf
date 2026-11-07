@@ -97,3 +97,11 @@ resource "aws_ssm_document" "lab_v2_publication" {
 output "iac_evidence_role_arn" { value = aws_iam_role.iac_evidence.arn }
 output "lab_v2_deploy_role_arn" { value = aws_iam_role.lab_v2_deploy.arn }
 output "lab_v2_portal_url" { value = "https://kestra.cosmotechsolutions.com.br/iac/" }
+
+output "lab_v2_publication_document" {
+  value = {
+    version   = aws_ssm_document.lab_v2_publication.document_version
+    hash      = aws_ssm_document.lab_v2_publication.hash
+    hash_type = aws_ssm_document.lab_v2_publication.hash_type
+  }
+}

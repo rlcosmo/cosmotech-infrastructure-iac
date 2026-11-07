@@ -10,7 +10,7 @@ A publicação reutiliza a EC2 ITSM, o ALB, DNS, certificado, proxy HTTPS e Graf
 - `bootstrap-apply`: exige uma **role temporária já autorizada a criar os recursos IAM do bootstrap**, cria somente os recursos da lista permitida e instala/valida o publisher fixo.
 - `deploy`: usa a nova role de publicação para atualizar somente `aws_ssm_document.lab_v2_publication`, executar esse documento na EC2 ITSM fixa e validar os serviços. Não pode editar IAM, inclusive sua própria policy.
 
-Apply sempre usa o plano binário gerado no mesmo job, com refresh=true, lock e gate de endereços/ações. O gate rejeita WAF, Lambda, DR, exclusões, replacements, imports, mudanças adiadas e qualquer endereço fora do escopo. Não usa `-auto-approve` em plano aberto. Um plan sem refresh não autoriza deploy. Os logs/JSON/binário brutos ficam somente no diretório privado do runner e não são publicados.
+Apply sempre usa o plano binário gerado no mesmo job, com refresh=true, lock e gate de endereços/ações. O gate rejeita WAF, Lambda, DR, exclusões, replacements, imports, mudanças adiadas e qualquer endereço fora do escopo. Não usa `-auto-approve` em plano aberto. Execução SSM exige a versão numérica e SHA256 do documento aplicado, sem usar `$LATEST`. Um plan sem refresh não autoriza deploy. Os logs/JSON/binário brutos ficam somente no diretório privado do runner e não são publicados.
 
 As oito alterações anteriores permanecem fora dessa aplicação: três Lambdas, os documentos Argo bootstrap/Orders GitOps/console, Command Center e IP set WAF. A publicação usa um documento SSM separado; não aplica essas atualizações pendentes por associação.
 

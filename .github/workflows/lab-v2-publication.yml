@@ -88,14 +88,25 @@ jobs:
           set -euo pipefail
           terraform -chdir=terraform/environments/dev apply -input=false "$PUBLICATION_WORK/publication.plan" > "$PUBLICATION_WORK/apply.log" 2>&1
           echo "Scoped Terraform apply completed for $GITHUB_SHA / $GITHUB_RUN_ID" >> "$GITHUB_STEP_SUMMARY"
+      - name: Pin the applied document version and content hash
+        if: inputs.phase == 'deploy' || inputs.phase == 'bootstrap-apply'
+        run: |
+          python3 - <<'PINDOC'
+          import json, os, re, subprocess
+          document = json.loads(subprocess.check_output(['terraform', '-chdir=terraform/environments/dev', 'output', '-json', 'lab_v2_publication_document']))
+          if document['hash_type'] != 'Sha256' or not re.fullmatch(r'[1-9][0-9]*', document['version']) or not re.fullmatch(r'[a-fA-F0-9]{64}', document['hash']):
+              raise SystemExit('Applied document identity is not a verifiable SHA256 version')
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              output.write('PUBLICATION_DOCUMENT_VERSION=' + document['version'] + '\nPUBLICATION_DOCUMENT_SHA256=' + document['hash'] + '\n')
+          PINDOC
       - name: Install fixed portal and dashboard publisher
         if: inputs.phase == 'deploy' || inputs.phase == 'bootstrap-apply'
         run: |
           test -n "$ITSM_INSTANCE" || { echo 'LAB_V2_ITSM_INSTANCE_ID is required'; exit 1; }
-          python3 scripts/run_lab_v2_ssm.py --instance-id "$ITSM_INSTANCE" --mode install
+          python3 scripts/run_lab_v2_ssm.py --instance-id "$ITSM_INSTANCE" --document-version "$PUBLICATION_DOCUMENT_VERSION" --document-sha256 "$PUBLICATION_DOCUMENT_SHA256" --mode install
       - name: Validate authenticated services and real metrics
         if: inputs.phase == 'deploy' || inputs.phase == 'bootstrap-apply'
-        run: python3 scripts/run_lab_v2_ssm.py --instance-id "$ITSM_INSTANCE" --mode validate
+        run: python3 scripts/run_lab_v2_ssm.py --instance-id "$ITSM_INSTANCE" --document-version "$PUBLICATION_DOCUMENT_VERSION" --document-sha256 "$PUBLICATION_DOCUMENT_SHA256" --mode validate
       - name: Remove raw state/plan workspace
         if: always()
         shell: bash

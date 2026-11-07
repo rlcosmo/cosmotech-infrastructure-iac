@@ -1,13 +1,18 @@
 """Invoke only the fixed Terraform-managed publisher and print safe status."""
 import argparse
 import json
+import re
 import subprocess
 import time
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--instance-id', required=True)
+parser.add_argument('--document-version', required=True)
+parser.add_argument('--document-sha256', required=True)
 parser.add_argument('--mode', choices=('install', 'validate'), required=True)
 args = parser.parse_args()
+if not re.fullmatch(r'[1-9][0-9]*', args.document_version) or not re.fullmatch(r'[a-fA-F0-9]{64}', args.document_sha256):
+    raise SystemExit('An immutable numeric document version and SHA256 are required')
 
 
 def aws(*arguments):
@@ -18,7 +23,7 @@ def aws(*arguments):
 
 
 command = aws('ssm', 'send-command', '--document-name', 'CosmoTech-Publish-Lab-V2',
-              '--document-version', '$LATEST', '--instance-ids', args.instance_id,
+              '--document-version', args.document_version, '--document-hash', args.document_sha256, '--document-hash-type', 'Sha256', '--instance-ids', args.instance_id,
               '--parameters', json.dumps({'Mode': [args.mode]}))['Command']['CommandId']
 print(json.dumps({'command_id': command, 'mode': args.mode}), flush=True)
 for _ in range(130):
