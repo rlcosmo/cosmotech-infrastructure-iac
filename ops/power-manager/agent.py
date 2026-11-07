@@ -151,6 +151,18 @@ class Agent:
         result=self.write(f'plans/{self.plan_id}/kubernetes.json',data)
         return {'phase':'SNAPSHOT','blockers':data['blockers'],'version':result.get('VersionId'),'workloads':len(data['workloads']),'safe_test':safe_test}
 
+    def wait_workload(self,r,replicas,timeout=120):
+        deadline=time.time()+timeout
+        while True:
+            live=self.kube(['-n',r['namespace'],'get',r['kind'],r['name'],'-o','json'])
+            if replicas==0:
+                selector=','.join(k+'='+v for k,v in live['spec']['selector']['matchLabels'].items())
+                pods=self.kube(['-n',r['namespace'],'get','pods','-l',selector,'-o','json'])['items']
+                if all(p.get('status',{}).get('phase') in ('Succeeded','Failed') for p in pods):return
+            elif live.get('status',{}).get('readyReplicas',0)>=replicas:return
+            if time.time()>=deadline:raise ValueError('Workload did not reach requested state: '+r['namespace']+'/'+r['name'])
+            time.sleep(3)
+
     def prepare(self, baseline):
         if baseline['blockers']:raise ValueError('Preflight blockers')
         for r in baseline['controllers']:self.scale(r,0,local=True)
@@ -158,6 +170,7 @@ class Agent:
         for r in baseline['workloads']:
             if 'autoscaler' in r['name'] or 'operator' in r['name'] or r['name']=='aws-load-balancer-controller' or (r['namespace']=='orders-api'):
                 self.scale(r,0)
+                if r['name']=='aws-load-balancer-controller':self.wait_workload(r,0)
         return {'phase':'PREPARE','complete':True}
 
     def quiesce(self, baseline):
@@ -195,7 +208,7 @@ class Agent:
             if 'autoscaler' in r['name'] or r['name']=='aws-load-balancer-controller':continue
             self.scale(r,r['replicas'])
             if r['namespace']=='kyverno' or r['name']=='istiod':
-                self.kube(['-n',r['namespace'],'rollout','status',r['kind']+'/'+r['name'],'--timeout=60s'],text=True)
+                self.wait_workload(r,r['replicas'])
         for r in baseline['workloads']:
             if r['name']=='aws-load-balancer-controller':self.scale(r,r['replicas'])
         # Argo CD resumes only with the unchanged Application spec. No Service,
