@@ -1,0 +1,54 @@
+name: IaC read-only evidence
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 */6 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: iac-readonly-evidence
+  cancel-in-progress: false
+jobs:
+  evidence:
+    if: vars.TERRAFORM_PLAN_ROLE_ARN != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.17.1
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.TERRAFORM_PLAN_ROLE_ARN }}
+          aws-region: us-east-1
+      - run: python3 -m unittest discover -s tests -v
+      - run: python3 scripts/build_lambda_artifacts.py
+      - run: terraform -chdir=terraform/environments/dev init -input=false
+      - name: Observe drift without persisting refreshed state
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          evidence_dir="$(mktemp -d)"
+          echo "EVIDENCE_DIR=$evidence_dir" >> "$GITHUB_ENV"
+          terraform -chdir=terraform/environments/dev show -json > "$evidence_dir/state.json"
+          terraform -chdir=terraform/environments/dev plan -refresh-only -lock=false -input=false -out="$evidence_dir/drift.plan" > "$evidence_dir/plan.log" 2>&1
+          terraform -chdir=terraform/environments/dev show -json "$evidence_dir/drift.plan" > "$evidence_dir/plan.json"
+          python3 scripts/collect_iac_inventory.py --region us-east-1 --output "$evidence_dir/inventory.json"
+          python3 scripts/build_iac_portal.py --state "$evidence_dir/state.json" --plan "$evidence_dir/plan.json" --inventory "$evidence_dir/inventory.json" --region us-east-1 --output "$evidence_dir/report.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iac-evidence-${{ github.run_id }}
+          path: ${{ env.EVIDENCE_DIR }}/report.json
+          retention-days: 14
+          if-no-files-found: error
+      - name: Remove sensitive temporary evidence
+        if: always()
+        shell: bash
+        run: |
+          if [ -n "${EVIDENCE_DIR:-}" ]; then rm -rf -- "$EVIDENCE_DIR"; fi
