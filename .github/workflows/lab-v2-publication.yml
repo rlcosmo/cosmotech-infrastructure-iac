@@ -73,6 +73,9 @@ jobs:
       - run: terraform -chdir=terraform fmt -check -recursive
       - run: terraform -chdir=terraform/environments/dev init -input=false
       - run: terraform -chdir=terraform/environments/dev validate
+      - name: Recover only a verified document after a failed post-create read
+        if: inputs.phase == 'bootstrap-apply' || inputs.phase == 'deploy'
+        run: python3 scripts/recover_lab_v2_document.py
       - name: Create and gate an isolated saved plan
         shell: bash
         run: |
