@@ -37,6 +37,21 @@ for _ in range(130):
         print(json.dumps({'command_id': command, 'mode': args.mode, 'status': 'Success'}))
         break
     if response['Status'] in ('Failed', 'Cancelled', 'TimedOut', 'Cancelling'):
+        for line in response.get('StandardOutputContent', '').splitlines():
+            try:
+                evidence = json.loads(line)
+            except ValueError:
+                continue
+            if not isinstance(evidence, dict):
+                continue
+            safe = {}
+            for field, names in {'runtime_tools': ['aws','gpg','nginx','systemctl','docker'],
+                                 'prerequisite_paths': ['host_proxy','monitoring_directory','docker_proxy']}.items():
+                value = evidence.get(field, {})
+                if isinstance(value, dict):
+                    safe[field] = {name: value[name] for name in names if type(value.get(name)) is bool}
+            if safe:
+                print(json.dumps(safe), flush=True)
         raise SystemExit('Fixed publisher failed; inspect only its sanitized runtime evidence')
     time.sleep(5)
 else:

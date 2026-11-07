@@ -307,5 +307,10 @@ if __name__ == '__main__':
         {'install': install, 'validate': validate, 'sync-reports': sync_reports}[mode]()
     except Exception as error:
         print(json.dumps({'publication_failed': True, 'error_type': type(error).__name__,
+                          'runtime_tools': {name: shutil.which(name) is not None for name in ['aws','gpg','nginx','systemctl','docker']},
+                          'prerequisite_paths': {name: Path(path).exists() for name, path in {
+                              'host_proxy': '/etc/nginx/conf.d/cosmotech-itsm-public.conf',
+                              'monitoring_directory': '/opt/cosmotech/monitoring',
+                              'docker_proxy': '/opt/cosmotech/public-proxy'}.items()},
                           'details': 'Values withheld; verify IAM, runtime prerequisites and authenticated service access'}))
         raise SystemExit(1)
