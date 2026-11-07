@@ -23,3 +23,9 @@ SQS não replica mensagens automaticamente entre regiões. Continuidade requer o
 ## Validação desta entrega
 
 `python3 -m unittest discover -s tests -v`: oito testes aprovados, incluindo drift recursivo, redação de valores sensíveis, inventário ausente, cobertura parcial e isolamento de região. Sem mudanças Terraform, IAM, dados ou runtime do V1. Sem recursos cloud novos. Custo de recursos novos: US$ 0; minutos/artefatos GitHub e chamadas AWS do workflow dependem da quota/uso existente, não estimados como gratuitos. Não houve validação de navegador ou integração AWS.
+
+## Evidência remota e bloqueio de ativação
+
+CI do commit inicial aprovado: https://github.com/rlcosmo/cosmotech-infrastructure-iac/actions/runs/42366279454 — testes, build dos artefatos Lambda, fmt, init sem backend e validate Terraform concluídos com sucesso.
+
+PR de revisão: https://github.com/rlcosmo/cosmotech-infrastructure-iac/pull/2 (draft). A tentativa de acionar `iac-evidence.yml` na branch retornou HTTP 404: o novo workflow ainda não está registrado na branch padrão. Sua ativação depende da incorporação pelo fluxo de revisão existente; nenhum merge ou alteração de proteção foi realizado. A variável do papel OIDC de plan existe; isso não comprova permissão de refresh/inventário. A execução autenticada e a URL do portal permanecem pendentes. A ordem V2-001 → V2-002 → V2-003 foi preservada.
