@@ -1,0 +1,114 @@
+name: Lab V2 scoped publication
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: Bootstrap requires a separately authorized write role; publication cannot edit IAM
+        type: choice
+        options: [plan, deploy, bootstrap-plan, bootstrap-apply]
+        default: plan
+permissions:
+  contents: read
+concurrency:
+  group: lab-v2-scoped-publication
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      PHASE: ${{ inputs.phase }}
+      BOOTSTRAP_ROLE: ${{ vars.LAB_V2_BOOTSTRAP_ROLE_ARN }}
+      DEPLOY_ROLE: ${{ vars.LAB_V2_DEPLOY_ROLE_ARN }}
+      PLAN_ROLE: ${{ vars.TERRAFORM_PLAN_ROLE_ARN }}
+      ITSM_INSTANCE: ${{ vars.LAB_V2_ITSM_INSTANCE_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select existing authorized identity without escalation
+        id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$PHASE" in
+            bootstrap-plan) role="$PLAN_ROLE" ;;
+            bootstrap-apply) role="$BOOTSTRAP_ROLE" ;;
+            plan) role="$PLAN_ROLE" ;;
+            deploy) role="$DEPLOY_ROLE" ;;
+            *) exit 2 ;;
+          esac
+          test -n "$role" || { echo 'The selected phase requires an existing authorized role; no admin-key fallback'; exit 1; }
+          if [[ "$PHASE" == deploy || "$PHASE" == bootstrap-apply ]]; then
+            [[ "$ITSM_INSTANCE" =~ ^i-[0-9a-f]{17}$ ]] || { echo 'A configured fixed ITSM instance is required before apply'; exit 1; }
+          fi
+          echo "role=$role" >> "$GITHUB_OUTPUT"
+      - uses: hashicorp/setup-terraform@v3
+        with: {terraform_version: 1.17.1, terraform_wrapper: false}
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ steps.identity.outputs.role }}
+          aws-region: us-east-1
+          retry-max-attempts: 2
+          role-session-name: LabV2-${{ github.run_id }}
+      - run: python3 -m unittest discover -s tests -v
+      - run: python3 scripts/build_lambda_artifacts.py
+      - run: python3 scripts/build_lab_v2_bundle.py
+      - run: terraform -chdir=terraform fmt -check -recursive
+      - run: terraform -chdir=terraform/environments/dev init -input=false
+      - run: terraform -chdir=terraform/environments/dev validate
+      - name: Create and gate an isolated saved plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          work="$(mktemp -d)"
+          echo "PUBLICATION_WORK=$work" >> "$GITHUB_ENV"
+          targets=(-target=aws_ssm_document.lab_v2_publication)
+          gate=()
+          refresh=true
+          case "$PHASE" in
+            bootstrap-*)
+              targets+=(-target=aws_iam_role.iac_evidence -target=aws_iam_role_policy.iac_evidence -target=aws_iam_role.lab_v2_deploy -target=aws_iam_role_policy.lab_v2_deploy -target=aws_iam_role_policy.lab_v2_runtime -target=aws_iam_role_policy.lab_v2_maintenance)
+              gate+=(--bootstrap)
+              if [[ "$PHASE" == bootstrap-plan ]]; then refresh=false; fi
+              ;;
+            plan) refresh=false ;;
+          esac
+          terraform -chdir=terraform/environments/dev plan -input=false -refresh="$refresh" -out="$work/publication.plan" "${targets[@]}" > "$work/plan.log" 2>&1
+          terraform -chdir=terraform/environments/dev show -json "$work/publication.plan" > "$work/plan.json"
+          python3 scripts/check_lab_v2_plan.py "$work/plan.json" "${gate[@]}" | tee "$work/scope.json" >> "$GITHUB_STEP_SUMMARY"
+          echo "Plan refresh=$refresh; apply uses only this saved, gated plan" >> "$GITHUB_STEP_SUMMARY"
+      - name: Apply only the gated saved plan
+        if: inputs.phase == 'deploy' || inputs.phase == 'bootstrap-apply'
+        shell: bash
+        run: |
+          set -euo pipefail
+          terraform -chdir=terraform/environments/dev apply -input=false "$PUBLICATION_WORK/publication.plan" > "$PUBLICATION_WORK/apply.log" 2>&1
+          echo "Scoped Terraform apply completed for $GITHUB_SHA / $GITHUB_RUN_ID" >> "$GITHUB_STEP_SUMMARY"
+      - name: Pin the applied document version and content hash
+        if: inputs.phase == 'deploy' || inputs.phase == 'bootstrap-apply'
+        run: |
+          python3 - <<'PINDOC'
+          import json, os, re, subprocess
+          document = json.loads(subprocess.check_output(['terraform', '-chdir=terraform/environments/dev', 'output', '-json', 'lab_v2_publication_document']))
+          if document['hash_type'] != 'Sha256' or not re.fullmatch(r'[1-9][0-9]*', document['version']) or not re.fullmatch(r'[a-fA-F0-9]{64}', document['hash']):
+              raise SystemExit('Applied document identity is not a verifiable SHA256 version')
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              output.write('PUBLICATION_DOCUMENT_VERSION=' + document['version'] + '\nPUBLICATION_DOCUMENT_SHA256=' + document['hash'] + '\n')
+          PINDOC
+      - name: Install fixed portal and dashboard publisher
+        if: inputs.phase == 'deploy' || inputs.phase == 'bootstrap-apply'
+        run: |
+          test -n "$ITSM_INSTANCE" || { echo 'LAB_V2_ITSM_INSTANCE_ID is required'; exit 1; }
+          python3 scripts/run_lab_v2_ssm.py --instance-id "$ITSM_INSTANCE" --document-version "$PUBLICATION_DOCUMENT_VERSION" --document-sha256 "$PUBLICATION_DOCUMENT_SHA256" --mode install
+      - name: Validate authenticated services and real metrics
+        if: inputs.phase == 'deploy' || inputs.phase == 'bootstrap-apply'
+        run: python3 scripts/run_lab_v2_ssm.py --instance-id "$ITSM_INSTANCE" --document-version "$PUBLICATION_DOCUMENT_VERSION" --document-sha256 "$PUBLICATION_DOCUMENT_SHA256" --mode validate
+      - name: Remove raw state/plan workspace
+        if: always()
+        shell: bash
+        run: |
+          if [ -n "${PUBLICATION_WORK:-}" ]; then rm -rf -- "$PUBLICATION_WORK"; fi

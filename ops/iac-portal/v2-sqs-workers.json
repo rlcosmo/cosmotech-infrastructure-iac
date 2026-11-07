@@ -1,0 +1,571 @@
+{
+  "uid": "cosmotech-v2-sqs-workers",
+  "title": "CosmoTech · V2 SQS e Workers",
+  "schemaVersion": 39,
+  "version": 1,
+  "tags": [
+    "cosmotech",
+    "v2",
+    "sqs"
+  ],
+  "refresh": "30s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Backlog",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "cosmotech_sqs_visible",
+          "legendFormat": "{{channel}} {{result}} {{metric}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list"
+        }
+      },
+      "description": "Sem amostras significa desconhecido; não substituir por zero. Percentis medem processamento, não latência ponta a ponta."
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Mensagens in-flight · SQS",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "cosmotech_sqs_inflight",
+          "legendFormat": "{{channel}} {{result}} {{metric}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list"
+        }
+      },
+      "description": "Sem amostras significa desconhecido; não substituir por zero. Percentis medem processamento, não latência ponta a ponta."
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Idade da mensagem mais antiga",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "cosmotech_sqs_oldest_age_seconds",
+          "legendFormat": "{{channel}} {{result}} {{metric}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list"
+        }
+      },
+      "description": "Sem amostras significa desconhecido; não substituir por zero. Percentis medem processamento, não latência ponta a ponta."
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "DLQ",
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "cosmotech_sqs_dlq_visible",
+          "legendFormat": "{{channel}} {{result}} {{metric}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list"
+        }
+      },
+      "description": "Sem amostras significa desconhecido; não substituir por zero. Percentis medem processamento, não latência ponta a ponta."
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Throughput de processamento confirmado",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(channel)(rate(cosmotech_worker_messages_total{result=\"success\"}[5m]))",
+          "legendFormat": "{{channel}} {{result}} {{metric}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list"
+        }
+      },
+      "description": "Sem amostras significa desconhecido; não substituir por zero. Percentis medem processamento, não latência ponta a ponta."
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Taxa de entrada SQS · amostra de 60s",
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "cosmotech_sqs_sent_per_second",
+          "legendFormat": "{{channel}} {{result}} {{metric}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list"
+        }
+      },
+      "description": "Sem amostras significa desconhecido; não substituir por zero. Percentis medem processamento, não latência ponta a ponta."
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Taxa de recebimento SQS · inclui reentregas",
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "cosmotech_sqs_received_per_second",
+          "legendFormat": "{{channel}} {{result}} {{metric}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list"
+        }
+      },
+      "description": "Sem amostras significa desconhecido; não substituir por zero. Percentis medem processamento, não latência ponta a ponta."
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Retries",
+      "gridPos": {
+        "x": 12,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(channel)(rate(cosmotech_worker_retries_total[5m]))",
+          "legendFormat": "{{channel}} {{result}} {{metric}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list"
+        }
+      },
+      "description": "Sem amostras significa desconhecido; não substituir por zero. Percentis medem processamento, não latência ponta a ponta."
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Falhas de processamento e ACK",
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(channel,result)(rate(cosmotech_worker_messages_total{result=~\"error|ack_error\"}[5m]))",
+          "legendFormat": "{{channel}} {{result}} {{metric}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list"
+        }
+      },
+      "description": "Sem amostras significa desconhecido; não substituir por zero. Percentis medem processamento, não latência ponta a ponta."
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Processamento P50",
+      "gridPos": {
+        "x": 12,
+        "y": 32,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.5, sum by (le,channel) (rate(cosmotech_worker_processing_seconds_bucket[5m])))",
+          "legendFormat": "{{channel}} {{result}} {{metric}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list"
+        }
+      },
+      "description": "Sem amostras significa desconhecido; não substituir por zero. Percentis medem processamento, não latência ponta a ponta."
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Processamento P95",
+      "gridPos": {
+        "x": 0,
+        "y": 40,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le,channel) (rate(cosmotech_worker_processing_seconds_bucket[5m])))",
+          "legendFormat": "{{channel}} {{result}} {{metric}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list"
+        }
+      },
+      "description": "Sem amostras significa desconhecido; não substituir por zero. Percentis medem processamento, não latência ponta a ponta."
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Processamento P99",
+      "gridPos": {
+        "x": 12,
+        "y": 40,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.99, sum by (le,channel) (rate(cosmotech_worker_processing_seconds_bucket[5m])))",
+          "legendFormat": "{{channel}} {{result}} {{metric}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list"
+        }
+      },
+      "description": "Sem amostras significa desconhecido; não substituir por zero. Percentis medem processamento, não latência ponta a ponta."
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Idade da última amostra SQS",
+      "gridPos": {
+        "x": 0,
+        "y": 48,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "time() - cosmotech_sqs_data_timestamp_seconds",
+          "legendFormat": "{{channel}} {{result}} {{metric}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list"
+        }
+      },
+      "description": "Sem amostras significa desconhecido; não substituir por zero. Percentis medem processamento, não latência ponta a ponta."
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Coleta SQS válida",
+      "gridPos": {
+        "x": 12,
+        "y": 48,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "lab_collection_success{group=\"sqs\"}",
+          "legendFormat": "{{channel}} {{result}} {{metric}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list"
+        }
+      },
+      "description": "Sem amostras significa desconhecido; não substituir por zero. Percentis medem processamento, não latência ponta a ponta."
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Contadores SQS disponíveis",
+      "gridPos": {
+        "x": 0,
+        "y": 56,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "cosmotech_sqs_counter_available",
+          "legendFormat": "{{channel}} {{result}} {{metric}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list"
+        }
+      },
+      "description": "Sem amostras significa desconhecido; não substituir por zero. Percentis medem processamento, não latência ponta a ponta."
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Workloads scrapeáveis",
+      "gridPos": {
+        "x": 12,
+        "y": 56,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "up{namespace=\"orders-worker\"}",
+          "legendFormat": "{{channel}} {{result}} {{metric}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list"
+        }
+      },
+      "description": "Sem amostras significa desconhecido; não substituir por zero. Percentis medem processamento, não latência ponta a ponta."
+    }
+  ]
+}
