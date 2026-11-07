@@ -8,6 +8,7 @@ import hashlib
 import json
 import math
 import os
+import re
 from pathlib import Path
 import secrets
 import shutil
@@ -24,12 +25,18 @@ GRAFANA = 'https://grafana.cosmotechsolutions.com.br'
 PORTAL = 'https://kestra.cosmotechsolutions.com.br/iac/'
 FOLDER = 'cosmotech-lab-v2'
 PARAM = '/cosmotech/lab-v2/'
+STAGE = 'identity'
+FAILURE = {}
 
 
 def run(args: list[str], value: dict | None = None) -> bytes:
     result = subprocess.run(args, input=json.dumps(value).encode() if value is not None else None,
                             capture_output=True, timeout=120, check=False)
     if result.returncode:
+        FAILURE.update(binary=Path(args[0]).name, returncode=result.returncode)
+        match = re.search(rb'\(([A-Za-z0-9]+)\) when calling the ([A-Za-z0-9]+) operation', result.stderr)
+        if match:
+            FAILURE.update(aws_error_code=match[1].decode(), aws_operation=match[2].decode())
         raise RuntimeError('Command failed; output withheld')
     return result.stdout
 
@@ -49,6 +56,9 @@ def parameter(name: str) -> dict | None:
     if result.returncode:
         if b'ParameterNotFound' in result.stderr:
             return None
+        match = re.search(rb'\(([A-Za-z0-9]+)\) when calling the ([A-Za-z0-9]+) operation', result.stderr)
+        if match:
+            FAILURE.update(binary='aws', aws_error_code=match[1].decode(), aws_operation=match[2].decode())
         raise RuntimeError('Parameter read denied or unavailable')
     return json.loads(json.loads(result.stdout)['Parameter']['Value'])
 
@@ -195,6 +205,8 @@ def sync_reports() -> None:
 
 
 def install() -> None:
+    global STAGE
+    STAGE = 'prerequisites'
     os.umask(0o077)
     for binary in ['aws', 'gpg', 'nginx', 'systemctl']:
         if shutil.which(binary) is None:
@@ -210,6 +222,7 @@ def install() -> None:
     home.mkdir(mode=0o700, exist_ok=True)
     gpg = ['gpg', '--homedir', str(home), '--batch', '--yes']
     previous_recipient = parameter('evidence-public-key')
+    STAGE = 'evidence-key'
     if b'\nsec:' not in b'\n' + run(gpg + ['--list-secret-keys', '--with-colons']):
         if previous_recipient is not None:
             raise ValueError('Restore the existing private key; automatic replacement is forbidden')
@@ -221,6 +234,7 @@ def install() -> None:
     if previous_recipient is not None and previous_recipient.get('public_key') != public:
         raise ValueError('Existing evidence recipient cannot be rotated implicitly')
     put_parameter('evidence-public-key', {'public_key': public}, overwrite=previous_recipient is not None, public=True)
+    STAGE = 'portal-auth'
     auth = parameter('portal-auth')
     if auth is None:
         auth = {'username': 'iac-reader', 'password': secrets.token_urlsafe(32)}
@@ -243,6 +257,7 @@ def install() -> None:
     Path('/etc/systemd/system/cosmotech-iac-reports.timer').write_text('[Timer]\nOnCalendar=hourly\nPersistent=true\n[Install]\nWantedBy=timers.target\n')
     run(['systemctl', 'daemon-reload'])
     run(['systemctl', 'enable', '--now', 'cosmotech-iac-portal.service', 'cosmotech-iac-reports.timer'])
+    STAGE = 'nginx'
     proxy = Path('/etc/nginx/conf.d/cosmotech-itsm-public.conf')
     original = proxy.read_text()
     marker = '    server_name kestra.cosmotechsolutions.com.br;'
@@ -267,11 +282,13 @@ def install() -> None:
         proxy.write_text(original)
         raise
     run(['systemctl', 'reload', 'nginx'])
+    STAGE = 'monitoring'
     for name in ['lab_monitoring.py', 'sqs_canary_metrics.py']:
         target = Path('/opt/cosmotech/monitoring') / name
         shutil.copyfile(SOURCE / name, target)
         target.chmod(0o644)
     run(['systemctl', 'start', 'cosmotech-monitoring.service'])
+    STAGE = 'grafana'
     publish_dashboard(publisher_token())
     print(json.dumps({'portal_url': PORTAL, 'grafana_url': GRAFANA + '/d/cosmotech-v2-sqs-workers',
                       'recipient_parameter': PARAM + 'evidence-public-key', 'authenticated_live_validation': 'pending'}))
@@ -307,6 +324,7 @@ if __name__ == '__main__':
         {'install': install, 'validate': validate, 'sync-reports': sync_reports}[mode]()
     except Exception as error:
         print(json.dumps({'publication_failed': True, 'error_type': type(error).__name__,
+                          'stage': STAGE, 'failure_identifiers': FAILURE,
                           'runtime_tools': {name: shutil.which(name) is not None for name in ['aws','gpg','nginx','systemctl','docker']},
                           'prerequisite_paths': {name: Path(path).exists() for name, path in {
                               'host_proxy': '/etc/nginx/conf.d/cosmotech-itsm-public.conf',

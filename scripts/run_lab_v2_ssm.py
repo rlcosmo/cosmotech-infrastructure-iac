@@ -45,6 +45,13 @@ for _ in range(130):
             if not isinstance(evidence, dict):
                 continue
             safe = {}
+            if evidence.get('stage') in ['identity','prerequisites','evidence-key','portal-auth','nginx','monitoring','grafana']:
+                safe['stage'] = evidence['stage']
+            identifiers = evidence.get('failure_identifiers', {})
+            if isinstance(identifiers, dict):
+                safe['failure_identifiers'] = {key: value for key, value in identifiers.items()
+                    if key in ['binary','aws_error_code','aws_operation'] and isinstance(value, str)
+                    and re.fullmatch(r'[A-Za-z0-9_-]{1,80}', value)}
             for field, names in {'runtime_tools': ['aws','gpg','nginx','systemctl','docker'],
                                  'prerequisite_paths': ['host_proxy','monitoring_directory','docker_proxy']}.items():
                 value = evidence.get(field, {})
