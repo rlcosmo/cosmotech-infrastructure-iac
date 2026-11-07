@@ -34,6 +34,18 @@ def run(args: list[str], value: dict | None = None) -> bytes:
                             capture_output=True, timeout=120, check=False)
     if result.returncode:
         FAILURE.update(binary=Path(args[0]).name, returncode=result.returncode)
+        for marker, code in [(b'Error parsing parameter', 'parameter_input'),
+                             (b'Parameter validation failed', 'parameter_schema'),
+                             (b'Unknown options', 'unknown_option'),
+                             (b'Unable to locate credentials', 'credentials_unavailable'),
+                             (b'Could not connect', 'connection_failed'),
+                             (b'No such file', 'input_file_missing'),
+                             (b'No such device', 'input_device_unavailable'),
+                             (b'Invalid JSON', 'invalid_json')]:
+            if marker in result.stderr:
+                FAILURE['cli_error'] = code
+        if args[0] == 'aws' and len(args) > 10:
+            FAILURE.update(aws_service=args[9], aws_operation=args[10])
         match = re.search(rb'\(([A-Za-z0-9]+)\) when calling the ([A-Za-z0-9]+) operation', result.stderr)
         if match:
             FAILURE.update(aws_error_code=match[1].decode(), aws_operation=match[2].decode())

@@ -50,7 +50,7 @@ for _ in range(130):
             identifiers = evidence.get('failure_identifiers', {})
             if isinstance(identifiers, dict):
                 safe['failure_identifiers'] = {key: value for key, value in identifiers.items()
-                    if key in ['binary','aws_error_code','aws_operation'] and isinstance(value, str)
+                    if key in ['binary','aws_error_code','aws_operation','aws_service','cli_error'] and isinstance(value, str)
                     and re.fullmatch(r'[A-Za-z0-9_-]{1,80}', value)}
             for field, names in {'runtime_tools': ['aws','gpg','nginx','systemctl','docker'],
                                  'prerequisite_paths': ['host_proxy','monitoring_directory','docker_proxy']}.items():
