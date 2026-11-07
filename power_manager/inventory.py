@@ -49,7 +49,7 @@ def discover(session):
                 lab = tags.get('Name') in {'cosmotech-itsm-dev', 'cosmotech-argocd-dev', 'cosmotech-zabbix-dev'}
                 elastic = any(a.get('InstanceId') == i['InstanceId'] for a in addresses)
                 safe = lab and not managed_node and i['RootDeviceType'] == 'ebs' and (not i.get('PublicIpAddress') or elastic)
-                add('EC2', i['InstanceId'], tags.get('Name'), i['State']['Name'], 'LAB' if safe or managed_node else 'PROTECTED',
+                add('EC2', i['InstanceId'], tags.get('Name'), i['State']['Name'], 'LAB' if safe or (managed_node and tags.get('aws:autoscaling:groupName') in managed) else 'PROTECTED',
                     'stop' if safe else 'none', public_ip=bool(i.get('PublicIpAddress')), elastic_ip=elastic,
                     capacity_type=i.get('InstanceLifecycle', 'on-demand'), instance_type=i['InstanceType'],
                     control_host=tags.get('Name') == 'cosmotech-argocd-dev', managed_node=managed_node,

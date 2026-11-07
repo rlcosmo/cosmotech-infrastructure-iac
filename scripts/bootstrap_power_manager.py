@@ -38,6 +38,7 @@ def documents():
               statement(['lambda:CreateFunction', 'lambda:GetFunction', 'lambda:GetFunctionConfiguration', 'lambda:UpdateFunctionCode', 'lambda:UpdateFunctionConfiguration', 'lambda:ListVersionsByFunction', 'lambda:ListTags', 'lambda:TagResource', 'lambda:UntagResource', 'lambda:PutFunctionConcurrency', 'lambda:GetFunctionConcurrency', 'lambda:AddPermission', 'lambda:GetPolicy', 'lambda:RemovePermission'], f'arn:aws:lambda:{REGION}:{ACCOUNT}:function:cosmotech-power-api'),
               statement(['dynamodb:CreateTable', 'dynamodb:DescribeTable', 'dynamodb:DescribeContinuousBackups', 'dynamodb:UpdateContinuousBackups', 'dynamodb:UpdateTable', 'dynamodb:DescribeTimeToLive', 'dynamodb:ListTagsOfResource', 'dynamodb:TagResource', 'dynamodb:DescribeContributorInsights', 'dynamodb:DescribeKinesisStreamingDestination', 'dynamodb:DescribeTableReplicaAutoScaling', 'dynamodb:GetResourcePolicy'], f'arn:aws:dynamodb:{REGION}:{ACCOUNT}:table/cosmotech-power-control'),
               statement(['logs:CreateLogGroup', 'logs:PutRetentionPolicy', 'logs:ListTagsLogGroup', 'logs:ListTagsForResource', 'logs:TagResource', 'logs:TagLogGroup'], f'arn:aws:logs:{REGION}:{ACCOUNT}:log-group:/aws/lambda/cosmotech-power-api:*'),
+              statement(['logs:ListTagsForResource', 'logs:TagResource'], f'arn:aws:logs:{REGION}:{ACCOUNT}:log-group:/aws/lambda/cosmotech-power-api'),
               statement(['logs:DescribeLogGroups'], '*'),
               statement(['apigateway:GET', 'apigateway:POST', 'apigateway:PATCH', 'apigateway:PUT'], ['arn:aws:apigateway:us-east-1::/apis', 'arn:aws:apigateway:us-east-1::/apis/*', 'arn:aws:apigateway:us-east-1::/tags/*']),
               statement(['s3:GetBucketLocation'], 'arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1'),
@@ -64,6 +65,9 @@ def main():
     existing_ids = [v['ApiId'] for page in api.get_paginator('get_apis').paginate() for v in page['Items'] if v['Name'] != 'cosmotech-power-api']
     if existing_ids:
         policies['deploy']['Statement'].append({'Effect': 'Deny', 'Action': ['apigateway:POST', 'apigateway:PUT', 'apigateway:PATCH', 'apigateway:DELETE'], 'Resource': [f'arn:aws:apigateway:us-east-1::/apis/{i}*' for i in existing_ids]})
+    power_ids = [v['ApiId'] for page in api.get_paginator('get_apis').paginate() for v in page['Items'] if v['Name'] == 'cosmotech-power-api']
+    if power_ids:
+        policies['deploy']['Statement'].append(statement(['apigateway:TagResource', 'apigateway:UntagResource'], [f'arn:aws:apigateway:us-east-1::/apis/{i}*' for i in power_ids]))
     expiry = (datetime.now(timezone.utc) + timedelta(hours=6)).isoformat()
     trusts = {
         'runtime': {'Version': '2012-10-17', 'Statement': [{'Effect': 'Allow', 'Principal': {'Service': 'lambda.amazonaws.com'}, 'Action': 'sts:AssumeRole'}]},
