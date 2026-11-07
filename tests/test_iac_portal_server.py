@@ -55,3 +55,20 @@ class AuthenticationTests(unittest.TestCase):
     def test_missing_credential_fails_closed(self):
         with self.assertRaises(ValueError):
             handler(self.directory, self.page, "")
+
+    def test_direct_comparison_is_authenticated_and_refresh_only_queues_work(self):
+        import importlib.util
+        spec=importlib.util.spec_from_file_location('direct_server',Path(__file__).parents[1]/'ops/iac-portal/portal_server.py')
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        comparison=self.directory/'comparison';comparison.mkdir()
+        queue=self.directory/'queue';queue.mkdir()
+        (comparison/'current.json').write_text(json.dumps({'schema_version':2,'state':'checking','resources':[],'source':{'commit':'a'*40}}))
+        self.server.RequestHandlerClass=module.handler(self.directory,self.page,hashlib.sha256(self.secret).hexdigest(),comparison,queue)
+        self.assertEqual(self.request('/api/comparison',authenticated=False)[0],401)
+        status,body,_=self.request('/api/comparison')
+        self.assertEqual(status,200)
+        self.assertEqual(json.loads(body)['state'],'checking')
+        self.assertEqual(self.request('/api/refresh',authenticated=False,method='POST')[0],401)
+        self.assertEqual(self.request('/api/refresh',method='POST')[0],202)
+        self.assertTrue((queue/'refresh.request').exists())
+        self.assertEqual(self.request('/api/refresh',method='POST')[0],202)

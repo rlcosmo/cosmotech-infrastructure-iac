@@ -8,6 +8,7 @@ import hashlib
 import json
 import math
 import os
+import pwd
 import re
 from pathlib import Path
 import secrets
@@ -252,6 +253,39 @@ def validate_alerts(token: str) -> dict:
             'unhealthy': sum(r.get('health') != 'ok' for r in rules)}
 
 
+def install_direct_observer() -> None:
+    username = 'cosmotech-iac-observer'
+    try:
+        account = pwd.getpwnam(username)
+    except KeyError:
+        run(['useradd', '--system', '--user-group', '--home-dir', '/var/lib/cosmotech-iac-observer',
+             '--shell', '/usr/sbin/nologin', username])
+        account = pwd.getpwnam(username)
+    group = grp.getgrnam('www-data').gr_gid
+    for path, mode in [('/var/lib/cosmotech-iac-observer',0o700),
+                       ('/var/lib/cosmotech-iac/comparison',0o750),
+                       ('/run/cosmotech-iac-observer',0o2770)]:
+        directory = Path(path)
+        directory.mkdir(parents=True,exist_ok=True)
+        os.chown(directory,account.pw_uid,group)
+        directory.chmod(mode)
+    app = Path('/opt/cosmotech/iac-observer')
+    app.mkdir(mode=0o755,exist_ok=True)
+    for name in ['direct_observer.py','direct_inventory.py','direct_comparison.py']:
+        shutil.copyfile(SOURCE / name,app / name)
+        (app / name).chmod(0o644)
+    identity = aws('sts','get-caller-identity')
+    role = 'arn:aws:iam::' + identity['Account'] + ':role/cosmotech-iac-observer'
+    configuration = Path('/etc/cosmotech-iac-observer.conf')
+    configuration.write_text('IAC_OBSERVER_ROLE=' + role + '\n')
+    configuration.chmod(0o600)
+    unit = '[Unit]\nDescription=Compare canonical Git IaC to AWS metadata without applying changes\nAfter=network-online.target\n[Service]\nUser=cosmotech-iac-observer\nGroup=www-data\nEnvironmentFile=/etc/cosmotech-iac-observer.conf\nEnvironment=HOME=/var/lib/cosmotech-iac-observer\nExecStart=/usr/bin/python3 /opt/cosmotech/iac-observer/direct_observer.py --role-arn ${IAC_OBSERVER_ROLE}\nRestart=on-failure\nRestartSec=15\nUMask=0027\nRuntimeDirectory=cosmotech-iac-observer\nRuntimeDirectoryMode=2770\nProtectSystem=strict\nProtectHome=true\nPrivateTmp=true\nReadWritePaths=/var/lib/cosmotech-iac-observer /var/lib/cosmotech-iac/comparison /run/cosmotech-iac-observer\n[Install]\nWantedBy=multi-user.target\n'
+    Path('/etc/systemd/system/cosmotech-iac-observer.service').write_text(unit)
+    run(['systemctl','daemon-reload'])
+    run(['systemctl','enable','--now','cosmotech-iac-observer.service'])
+    run(['systemctl','restart','cosmotech-iac-observer.service'])
+
+
 def install() -> None:
     global STAGE
     STAGE = 'prerequisites'
@@ -304,7 +338,8 @@ def install() -> None:
     Path('/etc/systemd/system/cosmotech-iac-reports.service').write_text('[Service]\nType=oneshot\nUMask=0077\nExecStart=/usr/bin/python3 /opt/cosmotech/lab-v2-source/publication_runtime.py sync-reports\n')
     Path('/etc/systemd/system/cosmotech-iac-reports.timer').write_text('[Timer]\nOnCalendar=hourly\nPersistent=true\n[Install]\nWantedBy=timers.target\n')
     run(['systemctl', 'daemon-reload'])
-    run(['systemctl', 'enable', '--now', 'cosmotech-iac-portal.service', 'cosmotech-iac-reports.timer'])
+    run(['systemctl', 'enable', '--now', 'cosmotech-iac-portal.service'])
+    run(['systemctl', 'disable', '--now', 'cosmotech-iac-reports.timer'])
     STAGE = 'nginx'
     proxy = Path('/etc/nginx/conf.d/cosmotech-itsm-public.conf')
     original = proxy.read_text()
@@ -330,6 +365,8 @@ def install() -> None:
         proxy.write_text(original)
         raise
     run(['systemctl', 'reload', 'nginx'])
+    install_direct_observer()
+    run(['systemctl','restart','cosmotech-iac-portal.service'])
     STAGE = 'monitoring'
     for name in ['lab_monitoring.py', 'sqs_canary_metrics.py']:
         target = Path('/opt/cosmotech/monitoring') / name
@@ -345,7 +382,6 @@ def install() -> None:
 def validate() -> None:
     global STAGE
     STAGE = 'validate-portal'
-    sync_reports()
     auth = parameter('portal-auth')
     if auth is None:
         raise ValueError('Portal not installed')
@@ -361,16 +397,28 @@ def validate() -> None:
     with urllib.request.urlopen(request, timeout=20) as response:
         if response.status != 200:
             raise ValueError('Authenticated portal failed')
-    request = urllib.request.Request(PORTAL + 'api/history', headers=request.headers)
-    with urllib.request.urlopen(request, timeout=20) as response:
-        history = json.load(response)
-    if not isinstance(history, list) or any(r.get('schema_version') != 1 for r in history):
-        raise ValueError('Portal history is not validated CI evidence')
+    request = urllib.request.Request(PORTAL + 'api/comparison', headers=request.headers)
+    comparison = {}
+    for attempt in range(100):
+        with urllib.request.urlopen(request, timeout=20) as response:
+            comparison = json.load(response)
+        if comparison.get('state') == 'ready':
+            break
+        if comparison.get('state') == 'unavailable':
+            raise ValueError('Direct Git AWS observer failed')
+        time.sleep(5)
+    else:
+        raise ValueError('Direct Git AWS observation not ready')
+    if comparison.get('source',{}).get('repository') != 'https://github.com/rlcosmo/cosmotech-infrastructure-iac.git' or not comparison.get('source',{}).get('commit'):
+        raise ValueError('Canonical Git revision unavailable')
+    print(json.dumps({'git_aws_comparison_ready': True, 'git_commit': comparison['source']['commit'],
+                      'compared_resources': len(comparison.get('resources',[])),
+                      'detected_drift': comparison.get('drift_count')}),flush=True)
     token = publisher_token()
     STAGE = 'validate-grafana'
     api('/api/dashboards/uid/cosmotech-v2-sqs-workers', 'Bearer ' + token)
     print(json.dumps({'portal_authenticated': True, 'grafana_authenticated': True,
-                      'portal_reports_available': len(history)}), flush=True)
+                      'portal_reports_available': 0}), flush=True)
     STAGE = 'validate-metrics'
     for attempt in range(4):
         try:
@@ -381,7 +429,7 @@ def validate() -> None:
                 raise
             time.sleep(30)
     print(json.dumps({'portal_authenticated': True, 'grafana_authenticated': True,
-                      'portal_reports_available': len(history),
+                      'portal_reports_available': 0,
                       'live_metric_series': metrics, 'live_alert_rules': validate_alerts(token)}))
 
 

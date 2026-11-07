@@ -4,6 +4,7 @@ from __future__ import annotations
 PUBLICATION = frozenset({"aws_ssm_document.lab_v2_publication"})
 BOOTSTRAP = PUBLICATION | {
     "aws_iam_role.iac_evidence", "aws_iam_role_policy.iac_evidence",
+    "aws_iam_role.iac_observer", "aws_iam_role_policy.iac_observer",
     "aws_iam_role.lab_v2_deploy", "aws_iam_role_policy.lab_v2_deploy",
     "aws_iam_role_policy.lab_v2_runtime", "aws_iam_role_policy.lab_v2_maintenance",
 }

@@ -88,7 +88,7 @@ jobs:
           refresh=true
           case "$PHASE" in
             bootstrap-*)
-              targets+=(-target=aws_iam_role.iac_evidence -target=aws_iam_role_policy.iac_evidence -target=aws_iam_role.lab_v2_deploy -target=aws_iam_role_policy.lab_v2_deploy -target=aws_iam_role_policy.lab_v2_runtime -target=aws_iam_role_policy.lab_v2_maintenance)
+              targets+=(-target=aws_iam_role.iac_observer -target=aws_iam_role_policy.iac_observer -target=aws_iam_role.iac_evidence -target=aws_iam_role_policy.iac_evidence -target=aws_iam_role.lab_v2_deploy -target=aws_iam_role_policy.lab_v2_deploy -target=aws_iam_role_policy.lab_v2_runtime -target=aws_iam_role_policy.lab_v2_maintenance)
               gate+=(--bootstrap)
               if [[ "$PHASE" == bootstrap-plan ]]; then refresh=false; fi
               ;;

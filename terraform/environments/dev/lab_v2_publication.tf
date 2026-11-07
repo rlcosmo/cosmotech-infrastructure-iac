@@ -64,6 +64,7 @@ resource "aws_iam_role_policy" "lab_v2_runtime" {
   name = "lab-v2-portal-and-grafana-publication"
   role = "cosmotech-itsm-dev-instance-role"
   policy = jsonencode({ Version = "2012-10-17", Statement = [
+    { Sid = "AssumeReadOnlyObserver", Effect = "Allow", Action = ["sts:AssumeRole"], Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/cosmotech-iac-observer" },
     { Sid = "QueueMetrics", Effect = "Allow", Action = ["cloudwatch:GetMetricStatistics"], Resource = "*", Condition = { StringEquals = { "aws:RequestedRegion" = var.aws_region } } },
     { Sid = "QueueMetadata", Effect = "Allow", Action = ["sqs:GetQueueAttributes"], Resource = [for queue in ["aws-eks-istio-lab-dev-orders-eks", "aws-eks-istio-lab-dev-orders-eks-dlq"] : "arn:aws:sqs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${queue}"] },
     { Sid = "PortalRuntimeCredentials", Effect = "Allow", Action = ["ssm:GetParameter", "ssm:PutParameter"], Resource = local.lab_v2_parameters },
@@ -105,3 +106,49 @@ output "lab_v2_publication_document" {
     hash_type = aws_ssm_document.lab_v2_publication.hash_type
   }
 }
+
+# Direct Git/AWS observation is independent of GitHub Actions and encrypted CI reports.
+locals {
+  iac_observer_metadata = jsondecode(templatefile("${path.module}/../../../ops/iac-portal/evidence-policy.json.tftpl", {
+    account = data.aws_caller_identity.current.account_id, region = "*"
+  }))
+  # Inventory spans enabled regions. Retain the seeded-record condition; remove only
+  # the previous single-region restriction, never resource or DynamoDB restrictions.
+  iac_observer_reads = [for statement in local.iac_observer_metadata.Statement : merge(
+    { for key, value in statement : key => value if key != "Condition" },
+    statement.Sid == "LabSeedOnly" ? { Condition = statement.Condition } : {}
+  ) if statement.Sid != "PublicRecipientOnly"]
+}
+resource "aws_iam_role" "iac_observer" {
+  name                 = "cosmotech-iac-observer"
+  max_session_duration = 3600
+  assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{
+    Effect    = "Allow", Action = "sts:AssumeRole"
+    Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/cosmotech-itsm-dev-instance-role" }
+  }] })
+  tags = merge(local.common_tags, { Purpose = "direct-git-aws-read-only-comparison" })
+  lifecycle { prevent_destroy = true }
+}
+resource "aws_iam_role_policy" "iac_observer" {
+  name = "git-aws-read-only-comparison"
+  role = aws_iam_role.iac_observer.id
+  policy = jsonencode({ Version = "2012-10-17", Statement = concat(local.iac_observer_reads, [
+    { Sid = "AdditionalInventoryMetadata", Effect = "Allow", Resource = "*", Action = [
+      "ec2:DescribeRegions", "ec2:DescribeSnapshots", "ec2:DescribeNatGateways",
+      "elasticfilesystem:DescribeFileSystems", "fsx:DescribeFileSystems",
+      "config:DescribeConfigurationRecorderStatus", "config:SelectResourceConfig",
+      "autoscaling:DescribeAutoScalingGroups", "s3:ListAllMyBuckets",
+      "iam:ListRoles", "iam:ListInstanceProfiles", "iam:ListPolicies"
+    ] },
+    { Sid = "ExistingBucketLocations", Effect = "Allow", Action = ["s3:GetBucketLocation"], Resource = "arn:aws:s3:::*" },
+    { Sid = "ExistingEKSNodegroups", Effect = "Allow", Action = ["eks:ListNodegroups", "eks:DescribeNodegroup"], Resource = [
+      "arn:aws:eks:*:${data.aws_caller_identity.current.account_id}:cluster/*",
+      "arn:aws:eks:*:${data.aws_caller_identity.current.account_id}:nodegroup/*"
+    ] },
+    { Sid = "ExistingResourceExplorerViews", Effect = "Allow", Action = ["resource-explorer-2:Search"], Resource = [
+      "arn:aws:resource-explorer-2:*:${data.aws_caller_identity.current.account_id}:view/*",
+      "arn:aws:resource-explorer-2:*::view/*"
+    ] }
+  ]) })
+}
+output "iac_observer_role_arn" { value = aws_iam_role.iac_observer.arn }

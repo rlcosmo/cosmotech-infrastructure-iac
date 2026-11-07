@@ -52,8 +52,8 @@ locals {
     if contains(["iamMetadata", "ec2Metadata", "eksMetadata", "elasticloadbalancingMetadata", "ssmMetadata", "secretsmanagerMetadata", "BackendRead", "BackendList", "PublicAMIOnly"], statement.Sid)
   ]
   writes = [
-    { Sid = "CreateOnlyReviewedRoles", Effect = "Allow", Action = ["iam:CreateRole", "iam:TagRole"], Resource = [for name in ["cosmotech-iac-evidence", "cosmotech-lab-v2-deploy"] : "arn:aws:iam::${local.account}:role/${name}"] },
-    { Sid = "ReviewedInlinePoliciesOnly", Effect = "Allow", Action = ["iam:PutRolePolicy"], Resource = [for name in ["cosmotech-iac-evidence", "cosmotech-lab-v2-deploy", "cosmotech-itsm-dev-instance-role", "cosmotech-lab-maintenance"] : "arn:aws:iam::${local.account}:role/${name}"] },
+    { Sid = "CreateOnlyReviewedRoles", Effect = "Allow", Action = ["iam:CreateRole", "iam:TagRole"], Resource = [for name in ["cosmotech-iac-evidence", "cosmotech-lab-v2-deploy", "cosmotech-iac-observer"] : "arn:aws:iam::${local.account}:role/${name}"] },
+    { Sid = "ReviewedInlinePoliciesOnly", Effect = "Allow", Action = ["iam:PutRolePolicy"], Resource = [for name in ["cosmotech-iac-evidence", "cosmotech-lab-v2-deploy", "cosmotech-iac-observer", "cosmotech-itsm-dev-instance-role", "cosmotech-lab-maintenance"] : "arn:aws:iam::${local.account}:role/${name}"] },
     { Sid = "SaveCanonicalState", Effect = "Allow", Action = ["s3:PutObject"], Resource = [local.state] },
     { Sid = "TransientLockOnly", Effect = "Allow", Action = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"], Resource = ["${local.state}.tflock"] },
     { Sid = "FixedPublisherDocument", Effect = "Allow", Action = ["ssm:CreateDocument", "ssm:UpdateDocument", "ssm:UpdateDocumentDefaultVersion", "ssm:AddTagsToResource"], Resource = ["arn:aws:ssm:us-east-1:${local.account}:document/CosmoTech-Publish-Lab-V2"] },
