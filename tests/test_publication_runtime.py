@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import tempfile
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -11,6 +12,20 @@ spec.loader.exec_module(runtime)
 
 
 class RuntimeTests(unittest.TestCase):
+    def test_private_cli_payload_is_removed_even_when_command_fails(self):
+        with tempfile.TemporaryDirectory() as directory:
+            private = Path(directory) / 'requests'
+            def failed(args):
+                request = Path(args[-1].removeprefix('file://'))
+                self.assertEqual(request.stat().st_mode & 0o777, 0o600)
+                self.assertEqual(json.loads(request.read_text()), {'Value': 'test-only-secret'})
+                self.assertNotIn('test-only-secret', str(args))
+                raise RuntimeError('test failure')
+            with patch.object(runtime, 'REQUEST_DIRECTORY', private), patch.object(runtime, 'run', side_effect=failed):
+                with self.assertRaises(RuntimeError):
+                    runtime.aws('ssm', 'put-parameter', value={'Value': 'test-only-secret'})
+            self.assertEqual(list(private.iterdir()), [])
+
     def test_credential_schema_never_prints_secret_on_failure(self):
         self.assertEqual(runtime.credentials({'runtime_credential_record': {'username': 'test', 'password': 'test-only'}}), ('test', 'test-only'))
         with self.assertRaises(ValueError) as caught:
