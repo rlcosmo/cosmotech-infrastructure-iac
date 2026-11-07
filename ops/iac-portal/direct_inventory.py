@@ -10,11 +10,11 @@ def inventory(call, account, partition='aws'):
 
     def regional(region):
         found, observed = [], []
-        def add(kind, identifier, name=None, arn=None, parents=(), platform=False):
+        def add(kind, identifier, name=None, arn=None, parents=(), platform=False, discovery='native'):
             if not identifier:
                 return
             found.append({'kind':kind,'id':str(identifier),'name':str(name or identifier),
-                          'arn':arn,'region':region,'parents':list(parents),'platform':platform})
+                          'arn':arn,'region':region,'parents':list(parents),'platform':platform,'discovery':discovery})
         specs = [
             ('AWS::EC2::Instance','ec2','describe-instances','Reservations','InstanceId'),
             ('AWS::EC2::Volume','ec2','describe-volumes','Volumes','VolumeId'),
@@ -90,7 +90,7 @@ def inventory(call, account, partition='aws'):
             for raw in response.get('Results',[]):
                 row=json.loads(raw)
                 add(row['resourceType'],row['resourceId'],row.get('resourceName'),row.get('arn'),
-                    [r['resourceId'] for r in row.get('relationships',[]) if r.get('resourceId')])
+                    [r['resourceId'] for r in row.get('relationships',[]) if r.get('resourceId')],discovery='config')
             observed.append({'region':region,'kind':'AWS Config recorded types','status':'partial','source':'configservice'})
         except (RuntimeError,KeyError,ValueError,TypeError):
             observed.append({'region':region,'kind':'AWS Config recorded types','status':'unavailable','source':'configservice'})
@@ -98,7 +98,7 @@ def inventory(call, account, partition='aws'):
             response=call(region,'resource-explorer-2','search','--query-string','region:'+region)
             for row in response.get('Resources',[]):
                 if row.get('OwningAccountId')==account:
-                    add(row['ResourceType'],row['Arn'],arn=row['Arn'])
+                    add(row['ResourceType'],row['Arn'],arn=row['Arn'],discovery='resource-explorer')
             observed.append({'region':region,'kind':'Resource Explorer indexed types','status':'partial','source':'resource-explorer-2'})
         except (RuntimeError,KeyError,ValueError,TypeError):
             observed.append({'region':region,'kind':'Resource Explorer indexed types','status':'unavailable','source':'resource-explorer-2'})
@@ -113,7 +113,7 @@ def inventory(call, account, partition='aws'):
             try:
                 region=call('us-east-1','s3api','get-bucket-location','--bucket',name).get('LocationConstraint') or 'us-east-1'
                 if region=='EU':region='eu-west-1'
-                assets.append({'kind':'AWS::S3::Bucket','id':name,'name':name,'arn':f'arn:{partition}:s3:::{name}','region':region,'parents':[],'platform':False})
+                assets.append({'kind':'AWS::S3::Bucket','id':name,'name':name,'arn':f'arn:{partition}:s3:::{name}','region':region,'parents':[],'platform':False,'discovery':'native'})
             except (RuntimeError,ValueError,KeyError):
                 coverage.append({'region':'unknown','kind':'AWS::S3::Bucket location','status':'unavailable','source':'s3api'})
         coverage.append({'region':'all','kind':'AWS::S3::Bucket','status':'observed','source':'s3api'})
@@ -125,7 +125,7 @@ def inventory(call, account, partition='aws'):
             for row in call('us-east-1','iam',operation,*options).get(key,[]):
                 assets.append({'kind':kind,'id':row['Arn'],'arn':row['Arn'],
                                'name':row.get('RoleName') or row.get('InstanceProfileName') or row.get('PolicyName'),
-                               'region':'global','parents':[],'platform':False})
+                               'region':'global','parents':[],'platform':False,'discovery':'native'})
             coverage.append({'region':'global','kind':kind,'status':'observed','source':'iam'})
         except (RuntimeError,KeyError,ValueError):
             coverage.append({'region':'global','kind':kind,'status':'unavailable','source':'iam'})
@@ -135,6 +135,9 @@ def inventory(call, account, partition='aws'):
         existing=by_arn.get(asset.get('arn'),key)
         if existing in unique:
             prior=unique[existing]
+            if asset.get('discovery')=='native' and prior.get('discovery')!='native':
+                unique[existing]=asset
+                prior=asset
             if asset.get('platform'):
                 prior.update(platform=True,parents=asset.get('parents',[]))
             if not prior.get('arn') and asset.get('arn'):
