@@ -1,0 +1,13 @@
+{
+  "observed_at": "2026-11-07T22:47:23.762485+00:00",
+  "region": "us-east-1",
+  "ondemand": {
+    "c7i-flex.large": "0.0847900000",
+    "m7i.xlarge": "0.2016000000",
+    "t3.large": "0.0832000000"
+  },
+  "spot": {
+    "c7i-flex.large@us-east-1b": "0.030800",
+    "c7i-flex.large@us-east-1a": "0.030500"
+  }
+}
