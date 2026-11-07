@@ -29,3 +29,19 @@ SQS não replica mensagens automaticamente entre regiões. Continuidade requer o
 CI do commit inicial aprovado: https://github.com/rlcosmo/cosmotech-infrastructure-iac/actions/runs/42366279454 — testes, build dos artefatos Lambda, fmt, init sem backend e validate Terraform concluídos com sucesso.
 
 PR de revisão: https://github.com/rlcosmo/cosmotech-infrastructure-iac/pull/2 (draft). A tentativa de acionar `iac-evidence.yml` na branch retornou HTTP 404: o novo workflow ainda não está registrado na branch padrão. Sua ativação depende da incorporação pelo fluxo de revisão existente; nenhum merge ou alteração de proteção foi realizado. A variável do papel OIDC de plan existe; isso não comprova permissão de refresh/inventário. A execução autenticada e a URL do portal permanecem pendentes. A ordem V2-001 → V2-002 → V2-003 foi preservada.
+
+## Continuação — revisão de 07/11/2026
+
+Esta seção substitui o status inicial acima. PR #2 continua aberto, sem conflitos e com checks aprovados no head anterior, mas **sem reviews**. O pedido condiciona merge à aprovação; nenhum merge foi executado e nenhuma aprovação foi simulada.
+
+Correção preparada para o 404: entrada `workflow_dispatch` do `iac.yml` já registrado passa a aceitar `evidence=true` e chamar o workflow reutilizável. Após aprovação/incorporação, acionar `gh workflow run iac.yml --ref main -f evidence=true`. O coletor permanece restrito à branch main, preservando a trust OIDC existente. A trust e as permissões do papel de plan foram inspecionadas: esse papel aceita somente main e não oferece leitura suficiente para refresh completo, inventário, faturamento ou Free Tier. Não alargar a trust para executar código de branches.
+
+Novo requisito explícito: `IAC_EVIDENCE_ROLE_ARN`, um papel de observação revisado com permissões efetivas para os recursos do state e inventário. Não reutilizar silenciosamente o papel de plan. A configuração desse papel continua bloqueada pelo fluxo de IaC/revisão. A sessão local disponível usa credencial permanente; não foi usada para operações AWS, pois o projeto exige credenciais temporárias baseadas em role.
+
+Inventário ampliado para ECR, Lambda, ELB, RDS, metadata de Secrets Manager, SQS, DynamoDB, EKS e instâncias EC2, incluindo recursos sem tags nesses escopos. Paginação automática da CLI; SQS usa `MaxResults=1000`, máximo de 200 consultas de metadata por execução. Cobertura e falhas são explícitas por serviço. Outros tipos e recursos de outros states continuam fora da conclusão de ownership: candidatos não são automaticamente importados.
+
+Portal com servidor em loopback, autenticação Basic obrigatória atrás do proxy HTTPS existente e histórico de até 56 relatórios. `IAC_CREDENTIAL_SHA256` contém SHA256 de `usuario:senha` com senha aleatória forte, provisionado fora de Git/state; `IAC_REPORT_DIRECTORY` aponta somente para relatórios sanitizados. Testes HTTP verificam 401, leitura autenticada, rejeição de escrita/traversal, histórico e evidência corrompida. Ainda não implantado no proxy real.
+
+Como este repositório é público, os artefatos operacionais passam a ser criptografados com o destinatário público `IAC_EVIDENCE_GPG_PUBLIC_KEY`; a chave privada fica exclusivamente no runtime autorizado do portal. Não publicar relatórios plaintext nos artefatos. O transporte/decriptação até o portal ainda depende do executor aprovado; nunca baixar/decriptar state ou plan para o diretório servido.
+
+Último apply segue desconhecido: os workflows presentes não têm executor de apply nem recibo verificável. `S3 LastModified`, CI verde e drift observado não comprovam sucesso do último apply. Conectar recibos do executor oficial, associados a commit, ambiente, state e aprovação GMUD, antes de preencher esse campo. Nenhum histórico foi inventado.

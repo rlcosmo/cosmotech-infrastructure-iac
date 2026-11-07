@@ -21,11 +21,14 @@ def build_report(state: dict, plan: dict, inventory: dict, *, region: str,
     """Return an allowlisted view without values, outputs, tags or plan payloads."""
     if not region or not isinstance(inventory.get("complete"), bool):
         raise ValueError("Region and explicit inventory coverage are required")
+    if plan.get("errored") is True:
+        raise ValueError("Failed Terraform plan cannot establish drift status")
     managed = resources(state.get("values", {}).get("root_module", {}))
     arns = {r.get("values", {}).get("arn") for r in managed if r.get("mode") == "managed"}
     arns.discard(None)
     changes = {c["address"]: c.get("change", {}).get("actions", [])
-               for c in plan.get("resource_drift", [])}
+               for c in plan.get("resource_drift", [])
+               if c.get("change", {}).get("actions") != ["no-op"]}
     rows = [{"address": r["address"], "type": r["type"], "region": region,
              "status": "drift" if r["address"] in changes else "observed",
              "actions": changes.get(r["address"], [])}
