@@ -75,7 +75,10 @@ jobs:
           evidence_dir="$(mktemp -d)"
           echo "EVIDENCE_DIR=$evidence_dir" >> "$GITHUB_ENV"
           terraform -chdir=terraform/environments/dev show -json > "$evidence_dir/state.json"
-          terraform -chdir=terraform/environments/dev plan -refresh-only -lock=false -input=false -out="$evidence_dir/drift.plan" > "$evidence_dir/plan.log" 2>&1
+          if ! terraform -chdir=terraform/environments/dev plan -refresh-only -lock=false -input=false -out="$evidence_dir/drift.plan" > "$evidence_dir/plan.log" 2>&1; then
+            python3 scripts/summarize_terraform_failure.py "$evidence_dir/plan.log" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
           terraform -chdir=terraform/environments/dev show -json "$evidence_dir/drift.plan" > "$evidence_dir/plan.json"
           python3 scripts/collect_iac_inventory.py --region us-east-1 --output "$evidence_dir/inventory.json"
           python3 scripts/build_iac_portal.py --state "$evidence_dir/state.json" --plan "$evidence_dir/plan.json" --inventory "$evidence_dir/inventory.json" --region us-east-1 --output "$evidence_dir/report.json"
