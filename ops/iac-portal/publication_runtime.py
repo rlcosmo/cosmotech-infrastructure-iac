@@ -232,6 +232,26 @@ def sync_reports() -> None:
         temporary.replace(target)
 
 
+def validate_alerts(token: str) -> dict:
+    auth = 'Bearer ' + token
+    sources = api('/api/datasources', auth)
+    matching = [s for s in sources if s['type'] == 'prometheus' and
+                (s['name'] == 'prometheus-aws-eks-istio-lab-dev' or s.get('isDefault'))]
+    if len(matching) != 1:
+        raise ValueError('Ambiguous Prometheus datasource')
+    expected = {'CosmoTechSQSEvidenceUnavailable','CosmoTechSQSBacklog','CosmoTechSQSOldMessages',
+                'CosmoTechSQSDLQ','CosmoTechWorkerFailures','CosmoTechWorkerRetries',
+                'CosmoTechWorkerSlow','CosmoTechWorkerScrapeUnavailable'}
+    response = api('/api/datasources/proxy/uid/' + matching[0]['uid'] + '/api/v1/rules?type=alert', auth)
+    if response.get('status') != 'success':
+        raise ValueError('Live alert rules unavailable')
+    rules = [r for group in response.get('data', {}).get('groups', []) for r in group.get('rules', [])
+             if r.get('name') in expected and r.get('type') == 'alerting']
+    return {'expected': len(expected), 'loaded': len({r['name'] for r in rules}),
+            'firing': sum(r.get('state') == 'firing' for r in rules),
+            'unhealthy': sum(r.get('health') != 'ok' for r in rules)}
+
+
 def install() -> None:
     global STAGE
     STAGE = 'prerequisites'
@@ -354,7 +374,7 @@ def validate() -> None:
                 raise
             time.sleep(30)
     print(json.dumps({'portal_authenticated': True, 'grafana_authenticated': True,
-                      'live_metric_series': metrics}))
+                      'live_metric_series': metrics, 'live_alert_rules': validate_alerts(token)}))
 
 
 if __name__ == '__main__':

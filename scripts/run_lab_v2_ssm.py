@@ -61,6 +61,10 @@ for _ in range(130):
                     if key in ['cosmotech_sqs_visible','cosmotech_sqs_inflight','cosmotech_sqs_oldest_age_seconds',
                                'cosmotech_sqs_dlq_visible','cosmotech_worker_processing_seconds_count']
                     and type(value) is int and value >= 0}
+            alerts = evidence.get('live_alert_rules', {})
+            if isinstance(alerts, dict):
+                safe['live_alert_rules'] = {key: value for key, value in alerts.items()
+                    if key in ['expected','loaded','firing','unhealthy'] and type(value) is int and value >= 0}
             for field, names in {'runtime_tools': ['aws','gpg','nginx','systemctl','docker'],
                                  'prerequisite_paths': ['host_proxy','monitoring_directory','docker_proxy']}.items():
                 value = evidence.get(field, {})

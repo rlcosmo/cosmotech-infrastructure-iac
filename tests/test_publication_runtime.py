@@ -12,6 +12,14 @@ spec.loader.exec_module(runtime)
 
 
 class RuntimeTests(unittest.TestCase):
+    def test_absent_live_alert_rules_remain_absent(self):
+        def query(path, auth):
+            if path == '/api/datasources':
+                return [{'type': 'prometheus', 'name': 'prometheus-aws-eks-istio-lab-dev', 'uid': 'test'}]
+            return {'status': 'success', 'data': {'groups': []}}
+        with patch.object(runtime, 'api', side_effect=query):
+            self.assertEqual(runtime.validate_alerts('test-token'), {'expected': 8, 'loaded': 0, 'firing': 0, 'unhealthy': 0})
+
     def test_private_cli_payload_is_removed_even_when_command_fails(self):
         with tempfile.TemporaryDirectory() as directory:
             private = Path(directory) / 'requests'

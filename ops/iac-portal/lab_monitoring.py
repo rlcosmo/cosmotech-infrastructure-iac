@@ -400,18 +400,21 @@ def collect() -> None:
         cache = {}
     for data in cache.values():
         data["samples"] = [re.sub(r"(?<=[{,])service=", "aws_service=", sample) for sample in data.get("samples", [])]
-    now = time.time()
     # Persist successful snapshots; a failure is visible and never becomes a false zero.
     groups = {"costs": (21600, collect_costs), "credits": (3600, collect_credits),
               "servers": (300, collect_servers), "inventory": (900, collect_inventory),
-              "web": (45, collect_web), "sqs": (60, collect_sqs), "application_hosts": (60, collect_application_hosts),
-              "codex": (60, collect_codex_quota), "zabbix": (45, collect_zabbix_problems)}
+              "web": (45, collect_web), "application_hosts": (60, collect_application_hosts),
+              "codex": (60, collect_codex_quota), "zabbix": (45, collect_zabbix_problems),
+              "sqs": (60, collect_sqs)}
     for name, (ttl, collector) in groups.items():
         previous = cache.get(name, {})
-        if now - previous.get("attempt", 0) < (ttl if previous.get("ok") else 300):
+        now = time.time()
+        retry_after = ttl if previous.get("ok") or name == "sqs" else 300
+        if now - previous.get("attempt", 0) < retry_after:
             continue
         try:
-            cache[name] = {"ok": 1, "attempt": now, "success": time.time(), "samples": collector()}
+            collected = collector()
+            cache[name] = {"ok": 1, "attempt": now, "success": time.time(), "samples": collected}
         except (RuntimeError, ValueError, KeyError, subprocess.TimeoutExpired, OSError):
             cache[name] = {**previous, "ok": 0, "attempt": now}
         print(json.dumps({"component": "lab-monitoring", "group": name, "ok": cache[name]["ok"]}), flush=True)
