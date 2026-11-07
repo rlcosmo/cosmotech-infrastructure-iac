@@ -1,0 +1,60 @@
+name: V2-004 Power Manager
+on:
+  pull_request:
+    paths: ['power_manager/**', 'scripts/*power*', '.github/workflows/power-manager.yml']
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy only the isolated Always-On planning stack; never shuts down the lab
+        type: boolean
+        default: false
+permissions: {contents: read}
+concurrency:
+  group: power-manager-publication
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install boto3==1.43.122 pytest==8.4.2
+      - run: python -m pytest power_manager/tests -q
+      - run: python scripts/build_power_manager.py
+      - uses: hashicorp/setup-terraform@v3
+        with: {terraform_version: 1.17.1, terraform_wrapper: false}
+      - run: terraform -chdir=power_manager/terraform fmt -check
+      - run: terraform -chdir=power_manager/terraform init -backend=false -input=false
+      - run: terraform -chdir=power_manager/terraform validate
+  publish:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.deploy
+    needs: test
+    runs-on: ubuntu-latest
+    permissions: {contents: read, id-token: write}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with: {terraform_version: 1.17.1, terraform_wrapper: false}
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.POWER_MANAGER_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: PowerManager-${{ github.run_id }}
+          retry-max-attempts: 2
+      - name: Prove non-root OIDC identity
+        run: |
+          arn=$(aws sts get-caller-identity --query Arn --output text)
+          [[ "$arn" == arn:aws:sts::414053644145:assumed-role/cosmotech-power-deploy/* ]]
+          echo "OIDC role verified: $arn" >> "$GITHUB_STEP_SUMMARY"
+      - run: python3 scripts/build_power_manager.py
+      - run: terraform -chdir=power_manager/terraform init -input=false
+      - name: Plan and enforce scope
+        run: |
+          umask 077
+          terraform -chdir=power_manager/terraform plan -input=false -out=power.plan > /tmp/power-plan.log
+          terraform -chdir=power_manager/terraform show -json power.plan > /tmp/power-plan.json
+          python3 scripts/check_power_plan.py /tmp/power-plan.json >> "$GITHUB_STEP_SUMMARY"
+      - run: terraform -chdir=power_manager/terraform apply -input=false power.plan
+      - name: Endpoint evidence
+        run: terraform -chdir=power_manager/terraform output -raw api_endpoint >> "$GITHUB_STEP_SUMMARY"
