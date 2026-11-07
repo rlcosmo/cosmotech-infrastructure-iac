@@ -86,7 +86,7 @@ def compare(plan, discovered, source, region='us-east-1'):
                     typed.add(('AWS::EC2::Volume',resource_region,entry['volume_id']))
         row={'address':address,'kind':kind,'region':resource_region,'id':str(identity),
              'name':str(values.get('name') or values.get('bucket') or values.get('node_group_name') or
-                        values.get('tags',{}).get('Name') or identity),
+                        (values.get('tags') or {}).get('Name') or identity),
              'status':status,'origin':'git_terraform','changed_fields':changed_paths(before,after,detail.get('before_sensitive'),detail.get('after_sensitive')) if status=='different' else []}
         if status=='missing' and not before:
             natural=next((after[k] for k in ['bucket','name','function_name','node_group_name'] if isinstance(after.get(k),str)),None)

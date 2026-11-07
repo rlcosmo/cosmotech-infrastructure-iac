@@ -120,7 +120,7 @@ def observe(role_arn):
                 trust=aws(env,'us-east-1','iam','get-role','--role-name','cosmotech-lab-v2-bootstrap')['Role']['AssumeRolePolicyDocument']
                 expiry=trust['Statement'][0]['Condition']['DateLessThan']['aws:CurrentTime']
                 live=flatten(payload.get('prior_state',{}).get('values',{}).get('root_module',{}))
-                targets=[r['values']['id'] for r in live if r.get('type')=='aws_instance' and r.get('values',{}).get('tags',{}).get('Name')=='cosmotech-itsm-dev']
+                targets=[r['values']['id'] for r in live if r.get('type')=='aws_instance' and (r.get('values',{}).get('tags') or {}).get('Name')=='cosmotech-itsm-dev']
                 if len(targets)!=1:raise ObservationError('bootstrap_target_unknown')
                 command(['terraform','init','-input=false','-lockfile=readonly',
                          '-backend-config=bucket=aws-serverless-lab-'+identity['Account']+'-tfstate-use1'],env,cwd=checkout/admin,timeout=300)
@@ -157,7 +157,7 @@ def observe(role_arn):
             write_snapshot(report)
             print(json.dumps({'state':'ready','commit':source['commit'],'resources':len(report['resources']),
                               'drift_count':report['drift_count'],'coverage_entries':len(report['coverage'])}),flush=True)
-    except (ObservationError,OSError,ValueError,KeyError,TypeError,subprocess.TimeoutExpired) as error:
+    except Exception as error:
         diagnostics=error.diagnostics if isinstance(error,ObservationError) else {'error_type':type(error).__name__}
         write_snapshot({'schema_version':2,'state':'unavailable','source':source,'resources':[],
                         'coverage':[],'failed_stage':stage,'diagnostics':diagnostics,

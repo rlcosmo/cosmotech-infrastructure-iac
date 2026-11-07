@@ -97,3 +97,8 @@ class MultipleRootTests(unittest.TestCase):
         self.assertEqual(result['summary'],{'declared_untracked':2})
         self.assertEqual(result['drift_count'],0)
         self.assertFalse(result['inventory_complete'])
+
+    def test_nullable_terraform_tags_do_not_crash_comparison(self):
+        r=resource('aws_vpc_security_group_ingress_rule.allow','aws_vpc_security_group_ingress_rule',{'id':'sgr-test','tags':None,'tags_all':{'Project':'CosmoTech'}})
+        result=comparison.compare(plan([r]),{'resources':[]},SOURCE)
+        self.assertEqual(result['resources'][0]['status'],'in_sync')
