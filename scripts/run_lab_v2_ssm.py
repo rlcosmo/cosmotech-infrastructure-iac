@@ -55,6 +55,8 @@ for _ in range(130):
             for name in ['portal_authenticated', 'grafana_authenticated']:
                 if type(evidence.get(name)) is bool:
                     safe[name] = evidence[name]
+            if type(evidence.get('portal_reports_available')) is int and evidence['portal_reports_available'] >= 0:
+                safe['portal_reports_available'] = evidence['portal_reports_available']
             metrics = evidence.get('live_metric_series', {})
             if isinstance(metrics, dict):
                 safe['live_metric_series'] = {key: value for key, value in metrics.items()

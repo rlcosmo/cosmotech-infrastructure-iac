@@ -345,6 +345,7 @@ def install() -> None:
 def validate() -> None:
     global STAGE
     STAGE = 'validate-portal'
+    sync_reports()
     auth = parameter('portal-auth')
     if auth is None:
         raise ValueError('Portal not installed')
@@ -360,10 +361,16 @@ def validate() -> None:
     with urllib.request.urlopen(request, timeout=20) as response:
         if response.status != 200:
             raise ValueError('Authenticated portal failed')
+    request = urllib.request.Request(PORTAL + 'api/history', headers=request.headers)
+    with urllib.request.urlopen(request, timeout=20) as response:
+        history = json.load(response)
+    if not isinstance(history, list) or any(r.get('schema_version') != 1 for r in history):
+        raise ValueError('Portal history is not validated CI evidence')
     token = publisher_token()
     STAGE = 'validate-grafana'
     api('/api/dashboards/uid/cosmotech-v2-sqs-workers', 'Bearer ' + token)
-    print(json.dumps({'portal_authenticated': True, 'grafana_authenticated': True}), flush=True)
+    print(json.dumps({'portal_authenticated': True, 'grafana_authenticated': True,
+                      'portal_reports_available': len(history)}), flush=True)
     STAGE = 'validate-metrics'
     for attempt in range(4):
         try:
@@ -374,6 +381,7 @@ def validate() -> None:
                 raise
             time.sleep(30)
     print(json.dumps({'portal_authenticated': True, 'grafana_authenticated': True,
+                      'portal_reports_available': len(history),
                       'live_metric_series': metrics, 'live_alert_rules': validate_alerts(token)}))
 
 
