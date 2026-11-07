@@ -1,0 +1,98 @@
+{
+  "observed_at": "2026-11-07T12:50:13.097118+00:00",
+  "principal": "existing maintenance role",
+  "session_seconds": 900,
+  "aws_mutations": false,
+  "iam_get_role": {
+    "allowed": false,
+    "error_code": "AccessDenied"
+  },
+  "eks": {
+    "describe_allowed": true,
+    "status": "ACTIVE",
+    "authentication_mode": "API_AND_CONFIG_MAP"
+  },
+  "authorization_reviews": [
+    {
+      "verb": "create",
+      "resource": "roles.rbac.authorization.k8s.io",
+      "namespace": "observability",
+      "allowed": false,
+      "review_completed": true
+    },
+    {
+      "verb": "create",
+      "resource": "rolebindings.rbac.authorization.k8s.io",
+      "namespace": "observability",
+      "allowed": false,
+      "review_completed": true
+    },
+    {
+      "verb": "get",
+      "resource": "secrets",
+      "namespace": "observability",
+      "allowed": false,
+      "review_completed": true
+    }
+  ],
+  "live_inventory": {
+    "cosmotech-iac-evidence": "absent",
+    "cosmotech-lab-v2-deploy": "absent",
+    "source": "connected read-only IAM inventory"
+  },
+  "github_variables": {
+    "LAB_V2_BOOTSTRAP_ROLE_ARN": "absent; GitHub API 404",
+    "LAB_V2_RBAC_BOOTSTRAP_ROLE_ARN": "absent; GitHub API 404"
+  },
+  "github_oidc": {
+    "iac_repository": "rlcosmo/cosmotech-infrastructure-iac",
+    "rbac_repository": "rlcosmo/cosmotech-kubernetes-rbac",
+    "immutable_subjects_enabled": true,
+    "required_branch": "refs/heads/main",
+    "required_audience": "sts.amazonaws.com"
+  },
+  "trust_verification": {
+    "github_configuration": "verified live",
+    "iam_assume_role_documents": "not verified live; iam:GetRole denied",
+    "source_comparison": "canonical Terraform; not presented as current AWS policy"
+  },
+  "reuse_assessment": [
+    {
+      "role": "cosmotech-lab-maintenance",
+      "present": true,
+      "session_observed": "assumed successfully",
+      "blocker": "IAM GetRole denied and EKS create Role/RoleBinding denied"
+    },
+    {
+      "role": "cosmotech-terraform-github-plan",
+      "present": true,
+      "source_scope": "IaC main OIDC; state read and transient lock; no IAM mutation or state PutObject"
+    },
+    {
+      "role": "cosmotech-gitops-github-sync",
+      "present": true,
+      "source_scope": "GitOps main OIDC; fixed SSM reconciliation only; wrong repo/scope for IAM bootstrap"
+    },
+    {
+      "role": "cosmotech-orders-worker-github-ecr",
+      "present": true,
+      "source_scope": "Worker main OIDC; image/promotion delivery; not IaC/RBAC authority"
+    },
+    {
+      "role": "cosmotech-itsm-dev-instance-role",
+      "present": true,
+      "source_scope": "EC2 service trust; metadata reads; not GitHub OIDC bootstrap"
+    }
+  ],
+  "actions_not_retried": [
+    "evidence AssumeRoleWithWebIdentity denial",
+    "bootstrap-apply missing role preflight",
+    "RBAC delivery missing role preflight"
+  ],
+  "publication": {
+    "portal": false,
+    "grafana_authenticated_validation": false,
+    "resource_changes_by_this_execution": 0
+  },
+  "other_workstreams_modified": false
+}
