@@ -1,0 +1,163 @@
+{
+  "verified_date": "2026-11-07",
+  "references": {
+    "ec2": "https://servicereference.us-east-1.amazonaws.com/v1/ec2/ec2.json",
+    "elasticloadbalancing": "https://servicereference.us-east-1.amazonaws.com/v1/elasticloadbalancing/elasticloadbalancing.json",
+    "eks": "https://servicereference.us-east-1.amazonaws.com/v1/eks/eks.json",
+    "iam": "https://servicereference.us-east-1.amazonaws.com/v1/iam/iam.json",
+    "ssm": "https://servicereference.us-east-1.amazonaws.com/v1/ssm/ssm.json",
+    "sqs": "https://servicereference.us-east-1.amazonaws.com/v1/sqs/sqs.json",
+    "lambda": "https://servicereference.us-east-1.amazonaws.com/v1/lambda/lambda.json",
+    "dynamodb": "https://servicereference.us-east-1.amazonaws.com/v1/dynamodb/dynamodb.json",
+    "cloudwatch": "https://servicereference.us-east-1.amazonaws.com/v1/cloudwatch/cloudwatch.json",
+    "logs": "https://servicereference.us-east-1.amazonaws.com/v1/logs/logs.json",
+    "sns": "https://servicereference.us-east-1.amazonaws.com/v1/sns/sns.json",
+    "secretsmanager": "https://servicereference.us-east-1.amazonaws.com/v1/secretsmanager/secretsmanager.json",
+    "kms": "https://servicereference.us-east-1.amazonaws.com/v1/kms/kms.json",
+    "backup": "https://servicereference.us-east-1.amazonaws.com/v1/backup/backup.json",
+    "scheduler": "https://servicereference.us-east-1.amazonaws.com/v1/scheduler/scheduler.json",
+    "wafv2": "https://servicereference.us-east-1.amazonaws.com/v1/wafv2/wafv2.json",
+    "ecr": "https://servicereference.us-east-1.amazonaws.com/v1/ecr/ecr.json",
+    "rds": "https://servicereference.us-east-1.amazonaws.com/v1/rds/rds.json",
+    "tag": "https://servicereference.us-east-1.amazonaws.com/v1/tag/tag.json"
+  },
+  "operations": {
+    "ec2": "DescribeInstances DescribeVolumes DescribeVpcs DescribeSubnets DescribeSecurityGroups DescribeSecurityGroupRules DescribeTags DescribeVpcAttribute",
+    "elasticloadbalancing": "DescribeLoadBalancers DescribeListeners DescribeLoadBalancerAttributes DescribeTags DescribeTargetGroups DescribeTargetGroupAttributes DescribeTargetHealth DescribeRules",
+    "eks": "DescribeCluster DescribeAccessEntry DescribePodIdentityAssociation DescribeAddon ListAssociatedAccessPolicies ListTagsForResource ListClusters",
+    "iam": "GetRole GetRolePolicy ListRolePolicies ListAttachedRolePolicies GetInstanceProfile GetPolicy GetPolicyVersion ListPolicyVersions GetOpenIDConnectProvider",
+    "ssm": "GetDocument DescribeDocument ListTagsForResource DescribeAssociation",
+    "sqs": "GetQueueAttributes ListQueueTags ListQueues",
+    "lambda": "GetFunction GetFunctionConcurrency GetFunctionCodeSigningConfig GetEventSourceMapping GetPolicy ListTags ListFunctions",
+    "dynamodb": "DescribeTable DescribeContinuousBackups DescribeTimeToLive ListTagsOfResource ListTables",
+    "cloudwatch": "DescribeAlarms ListTagsForResource",
+    "logs": "DescribeLogGroups ListTagsForResource",
+    "sns": "GetTopicAttributes GetSubscriptionAttributes ListTagsForResource",
+    "secretsmanager": "DescribeSecret GetResourcePolicy ListSecrets",
+    "kms": "DescribeKey GetKeyPolicy ListResourceTags",
+    "backup": "GetBackupPlan GetBackupSelection DescribeBackupVault ListTags",
+    "scheduler": "GetSchedule GetScheduleGroup ListTagsForResource",
+    "wafv2": "GetIPSet GetWebACL ListTagsForResource",
+    "ecr": "DescribeRepositories ListTagsForResource",
+    "rds": "DescribeDBInstances",
+    "tag": "GetResources"
+  },
+  "actions": {
+    "ec2": [
+      "ec2:DescribeInstances",
+      "ec2:DescribeSecurityGroupRules",
+      "ec2:DescribeSecurityGroups",
+      "ec2:DescribeSubnets",
+      "ec2:DescribeTags",
+      "ec2:DescribeVolumes",
+      "ec2:DescribeVpcAttribute",
+      "ec2:DescribeVpcs"
+    ],
+    "elasticloadbalancing": [
+      "elasticloadbalancing:DescribeListeners",
+      "elasticloadbalancing:DescribeLoadBalancerAttributes",
+      "elasticloadbalancing:DescribeLoadBalancers",
+      "elasticloadbalancing:DescribeRules",
+      "elasticloadbalancing:DescribeTags",
+      "elasticloadbalancing:DescribeTargetGroupAttributes",
+      "elasticloadbalancing:DescribeTargetGroups",
+      "elasticloadbalancing:DescribeTargetHealth"
+    ],
+    "eks": [
+      "eks:DescribeAccessEntry",
+      "eks:DescribeAddon",
+      "eks:DescribeCluster",
+      "eks:DescribePodIdentityAssociation",
+      "eks:ListAssociatedAccessPolicies",
+      "eks:ListClusters",
+      "eks:ListTagsForResource"
+    ],
+    "iam": [
+      "iam:GetInstanceProfile",
+      "iam:GetOpenIDConnectProvider",
+      "iam:GetPolicy",
+      "iam:GetPolicyVersion",
+      "iam:GetRole",
+      "iam:GetRolePolicy",
+      "iam:ListAttachedRolePolicies",
+      "iam:ListPolicyVersions",
+      "iam:ListRolePolicies"
+    ],
+    "ssm": [
+      "ssm:DescribeAssociation",
+      "ssm:DescribeDocument",
+      "ssm:GetDocument",
+      "ssm:ListTagsForResource"
+    ],
+    "sqs": [
+      "sqs:GetQueueAttributes",
+      "sqs:ListQueueTags",
+      "sqs:ListQueues"
+    ],
+    "lambda": [
+      "lambda:GetEventSourceMapping",
+      "lambda:GetFunction",
+      "lambda:GetFunctionCodeSigningConfig",
+      "lambda:GetFunctionConcurrency",
+      "lambda:GetPolicy",
+      "lambda:ListFunctions",
+      "lambda:ListTags"
+    ],
+    "dynamodb": [
+      "dynamodb:DescribeContinuousBackups",
+      "dynamodb:DescribeTable",
+      "dynamodb:DescribeTimeToLive",
+      "dynamodb:ListTables",
+      "dynamodb:ListTagsOfResource"
+    ],
+    "cloudwatch": [
+      "cloudwatch:DescribeAlarms",
+      "cloudwatch:ListTagsForResource"
+    ],
+    "logs": [
+      "logs:DescribeLogGroups",
+      "logs:ListTagsForResource"
+    ],
+    "sns": [
+      "sns:GetSubscriptionAttributes",
+      "sns:GetTopicAttributes",
+      "sns:ListTagsForResource"
+    ],
+    "secretsmanager": [
+      "secretsmanager:DescribeSecret",
+      "secretsmanager:GetResourcePolicy",
+      "secretsmanager:ListSecrets"
+    ],
+    "kms": [
+      "kms:DescribeKey",
+      "kms:GetKeyPolicy",
+      "kms:ListResourceTags"
+    ],
+    "backup": [
+      "backup:DescribeBackupVault",
+      "backup:GetBackupPlan",
+      "backup:GetBackupSelection",
+      "backup:ListTags"
+    ],
+    "scheduler": [
+      "scheduler:GetSchedule",
+      "scheduler:GetScheduleGroup",
+      "scheduler:ListTagsForResource"
+    ],
+    "wafv2": [
+      "wafv2:GetIPSet",
+      "wafv2:GetWebACL",
+      "wafv2:ListTagsForResource"
+    ],
+    "ecr": [
+      "ecr:DescribeRepositories",
+      "ecr:ListTagsForResource"
+    ],
+    "rds": [
+      "rds:DescribeDBInstances"
+    ],
+    "tag": [
+      "tag:GetResources"
+    ]
+  }
+}

@@ -21,10 +21,8 @@ jobs:
       - name: Require authorized read-only evidence role
         env:
           EVIDENCE_ROLE: ${{ vars.IAC_EVIDENCE_ROLE_ARN }}
-          EVIDENCE_PUBLIC_KEY: ${{ vars.IAC_EVIDENCE_GPG_PUBLIC_KEY }}
         run: |
           test -n "$EVIDENCE_ROLE" || { echo 'IAC_EVIDENCE_ROLE_ARN is required; the no-refresh plan role is insufficient'; exit 1; }
-          test -n "$EVIDENCE_PUBLIC_KEY" || { echo 'An authorized evidence encryption recipient is required'; exit 1; }
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -34,8 +32,29 @@ jobs:
         with:
           role-to-assume: ${{ vars.IAC_EVIDENCE_ROLE_ARN }}
           aws-region: us-east-1
+          retry-max-attempts: 2
+          role-session-name: LabV2-${{ github.run_id }}
+      - name: Resolve public recipient from configured variable or approved runtime
+        env:
+          CONFIGURED_PUBLIC_KEY: ${{ vars.IAC_EVIDENCE_GPG_PUBLIC_KEY }}
+        shell: bash
+        run: |
+          python3 - <<'PYKEY'
+          import json, os, subprocess
+          key = os.environ.get('CONFIGURED_PUBLIC_KEY', '')
+          if not key:
+              result = subprocess.run(['aws', 'ssm', 'get-parameter', '--region', 'us-east-1', '--name', '/cosmotech/lab-v2/evidence-public-key', '--output', 'json'], capture_output=True, check=False)
+              if result.returncode:
+                  raise SystemExit('Runtime evidence recipient not available; publication bootstrap is required')
+              key = json.loads(json.loads(result.stdout)['Parameter']['Value'])['public_key']
+          if not key.startswith('-----BEGIN PGP PUBLIC KEY BLOCK-----') or 'PRIVATE KEY' in key:
+              raise SystemExit('A public-only GPG recipient is required')
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              output.write('EVIDENCE_PUBLIC_KEY<<PUBLIC_KEY_END\n' + key + '\nPUBLIC_KEY_END\n')
+          PYKEY
       - run: python3 -m unittest discover -s tests -v
       - run: python3 scripts/build_lambda_artifacts.py
+      - run: python3 scripts/build_lab_v2_bundle.py
       - run: terraform -chdir=terraform/environments/dev init -input=false
       - name: Observe drift without persisting refreshed state
         shell: bash
@@ -50,8 +69,6 @@ jobs:
           python3 scripts/collect_iac_inventory.py --region us-east-1 --output "$evidence_dir/inventory.json"
           python3 scripts/build_iac_portal.py --state "$evidence_dir/state.json" --plan "$evidence_dir/plan.json" --inventory "$evidence_dir/inventory.json" --region us-east-1 --output "$evidence_dir/report.json"
       - name: Encrypt private operational evidence before upload
-        env:
-          EVIDENCE_PUBLIC_KEY: ${{ vars.IAC_EVIDENCE_GPG_PUBLIC_KEY }}
         shell: bash
         run: |
           set -euo pipefail
@@ -59,6 +76,13 @@ jobs:
           mkdir "$EVIDENCE_DIR/gpg"
           printf '%s' "$EVIDENCE_PUBLIC_KEY" > "$EVIDENCE_DIR/recipient.asc"
           gpg --homedir "$EVIDENCE_DIR/gpg" --batch --yes --trust-model always --recipient-file "$EVIDENCE_DIR/recipient.asc" --encrypt --output "$EVIDENCE_DIR/report.json.gpg" "$EVIDENCE_DIR/report.json"
+      - name: Deliver encrypted report to the private existing bucket
+        shell: bash
+        run: |
+          set -euo pipefail
+          account="$(aws sts get-caller-identity --query Account --output text)"
+          stamp="$(date -u +%Y-%m/%Y%m%dT%H%M%SZ)"
+          aws s3api put-object --bucket "aws-serverless-lab-$account-tfstate-use1" --key "lab-v2/iac-evidence/$stamp-$GITHUB_RUN_ID.json.gpg" --server-side-encryption AES256 --body "$EVIDENCE_DIR/report.json.gpg" > /dev/null
       - uses: actions/upload-artifact@v4
         with:
           name: iac-evidence-${{ github.run_id }}
