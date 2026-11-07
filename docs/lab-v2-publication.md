@@ -39,7 +39,8 @@ O Terraform avalia todos os recursos gerenciados do root canônico. A descoberta
 fora do código inclui EC2, EBS, snapshots próprios, VPC/subnet/security group/NAT,
 EKS/node groups, ASG, S3, EFS, FSx, RDS, ELB, ECR, Lambda, DynamoDB, SQS e metadata
 IAM. Config amplia para seus tipos gravados; Resource Explorer amplia para seus
-tipos indexados. APIs paginadas são consultadas pelo AWS CLI.
+tipos indexados. APIs paginadas são consultadas pelo SDK com clientes reutilizados e timeouts limitados.
+O SDK fica em ambiente virtual isolado do sistema, com versões fixadas.
 
 Não existe uma única API AWS que garanta descoberta instantânea de todos os tipos.
 Config depende do recorder; Resource Explorer pode ter cobertura parcial e atraso
