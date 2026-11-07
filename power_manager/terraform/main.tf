@@ -26,6 +26,10 @@ resource "aws_dynamodb_table" "control" {
     name = "pk"
     type = "S"
   }
+  ttl {
+    attribute_name = "expires"
+    enabled        = true
+  }
   point_in_time_recovery { enabled = true }
   server_side_encryption { enabled = true }
   deletion_protection_enabled = true
@@ -47,8 +51,13 @@ resource "aws_lambda_function" "api" {
   reserved_concurrent_executions = 2
   environment {
     variables = {
-      TABLE             = aws_dynamodb_table.control.name
-      SIGNING_PARAMETER = "/cosmotech/power-manager/proxy-signing-key"
+      TABLE              = aws_dynamodb_table.control.name
+      SNAPSHOT_BUCKET    = aws_s3_bucket.snapshots.id
+      AGENT_HASH         = local.agent_hash
+      HOST_READ_DOCUMENT = aws_ssm_document.host["read"].name
+      READ_DOCUMENT      = aws_ssm_document.agent["read"].name
+      STATE_MACHINE_ARN  = aws_sfn_state_machine.operations.arn
+      SIGNING_PARAMETER  = "/cosmotech/power-manager/proxy-signing-key"
     }
   }
   depends_on = [aws_cloudwatch_log_group.api]

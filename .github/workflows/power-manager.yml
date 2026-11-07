@@ -1,7 +1,7 @@
 name: V2-004 Power Manager
 on:
   pull_request:
-    paths: ['power_manager/**', 'scripts/*power*', '.github/workflows/power-manager.yml']
+    paths: ['power_manager/**', 'ops/power-manager/**', 'scripts/*power*', '.github/workflows/power-manager.yml']
   workflow_dispatch:
     inputs:
       deploy:
@@ -21,6 +21,7 @@ jobs:
         with: {python-version: '3.12'}
       - run: pip install boto3==1.43.122 pytest==8.4.2
       - run: python -m pytest power_manager/tests -q
+      - run: node power_manager/tests/test_web.mjs
       - run: python scripts/build_power_manager.py
       - uses: hashicorp/setup-terraform@v3
         with: {terraform_version: 1.17.1, terraform_wrapper: false}
@@ -58,5 +59,21 @@ jobs:
           terraform -chdir=power_manager/terraform show -json power.plan > /tmp/power-plan.json
           python3 scripts/check_power_plan.py /tmp/power-plan.json >> "$GITHUB_STEP_SUMMARY"
       - run: terraform -chdir=power_manager/terraform apply -input=false power.plan
+      - name: Certify non-root permissions through Step Functions without power changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          state_machine=$(terraform -chdir=power_manager/terraform output -raw state_machine_arn)
+          execution=$(aws stepfunctions start-execution --state-machine-arn "$state_machine" --name "certify-${{ github.run_id }}-${{ github.run_attempt }}" --input '{"mode":"safe_test"}' --query executionArn --output text)
+          for attempt in {1..24}; do
+            status=$(aws stepfunctions describe-execution --execution-arn "$execution" --query status --output text)
+            if [[ "$status" == SUCCEEDED ]]; then break; fi
+            [[ "$status" == RUNNING ]] || { echo "Certification failed: $execution"; exit 1; }
+            sleep 5
+          done
+          [[ "$status" == SUCCEEDED ]]
+          complete=$(aws dynamodb get-item --table-name cosmotech-power-control --key '{"pk":{"S":"CERTIFICATION"}}' --consistent-read --query Item.complete.BOOL --output text)
+          [[ "$complete" == True ]]
+          echo "Safe certification: $execution; no EC2 stop/start/scale applied" >> "$GITHUB_STEP_SUMMARY"
       - name: Endpoint evidence
         run: terraform -chdir=power_manager/terraform output -raw api_endpoint >> "$GITHUB_STEP_SUMMARY"

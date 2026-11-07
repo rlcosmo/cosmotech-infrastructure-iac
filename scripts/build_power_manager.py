@@ -7,7 +7,7 @@ def main():
     output = ROOT / 'build/power-manager.zip'
     output.parent.mkdir(exist_ok=True)
     with ZipFile(output, 'w', ZIP_DEFLATED) as archive:
-        for name in ('__init__.py', 'api.py', 'core.py', 'inventory.py', 'costs.py'):
+        for name in ('__init__.py', 'api.py', 'core.py', 'inventory.py', 'costs.py', 'executor.py','compute-rates.json'):
             info = ZipInfo('power_manager/' + name, (2026, 1, 1, 0, 0, 0))
             info.compress_type = ZIP_DEFLATED
             info.external_attr = 0o644 << 16
