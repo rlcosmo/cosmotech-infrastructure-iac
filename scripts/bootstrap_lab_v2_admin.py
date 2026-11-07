@@ -43,6 +43,27 @@ def command(arguments: list[str], *, env: dict | None = None, value: object = No
     return response.stdout
 
 
+def kubernetes_session(profile: str, config: str, shared: str, expected: str) -> dict:
+    environment = {k: v for k, v in os.environ.items() if k not in {
+        'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN', 'AWS_PROFILE', 'AWS_DEFAULT_PROFILE'}}
+    environment.update(AWS_CONFIG_FILE=config, AWS_SHARED_CREDENTIALS_FILE=shared)
+    source = json.loads(command(['aws', '--profile', profile, 'sts', 'get-caller-identity'], env=environment))
+    if source['Account'] != expected or not source['Arn'].endswith(':user/serverless-lab-admin'):
+        raise ValueError('Unexpected Kubernetes bootstrap source identity')
+    credentials = json.loads(command(['aws', '--profile', profile, 'sts', 'get-session-token',
+                                     '--duration-seconds', '3600'], env=environment))['Credentials']
+    validate_temporary(credentials, dt.datetime.now(dt.timezone.utc))
+    environment.update(AWS_ACCESS_KEY_ID=credentials['AccessKeyId'],
+                       AWS_SECRET_ACCESS_KEY=credentials['SecretAccessKey'],
+                       AWS_SESSION_TOKEN=credentials['SessionToken'])
+    identity = aws(environment, 'sts', 'get-caller-identity')
+    if identity != source:
+        raise ValueError('Temporary Kubernetes identity differs from the authorized source')
+    print(json.dumps({'phase': 'temporary-kubernetes-session', 'identity': 'user/serverless-lab-admin',
+                      'expires_at': credentials['Expiration']}), flush=True)
+    return environment
+
+
 def aws(env: dict, service: str, operation: str, *options: str) -> dict:
     return json.loads(command(['aws', '--region', 'us-east-1', '--output', 'json', service, operation, *options], env=env) or b'{}')
 
@@ -116,11 +137,13 @@ def main() -> None:
     parser.add_argument('--profile', default='serverless-lab')
     parser.add_argument('--rbac-checkout', type=Path)
     parser.add_argument('--apply', action='store_true')
+    parser.add_argument('--kubernetes-session-profile', help='Explicit authorized IAM user profile; used only to obtain temporary STS credentials for RBAC')
+    parser.add_argument('--preserve-cluster-access', action='store_true', help='Do not create EKS access entries or run the unmapped RBAC OIDC identity')
     parser.add_argument('--credential-process', action='store_true', help=argparse.SUPPRESS)
     parser.add_argument('--source-config', default=str(Path.home() / '.aws/config'), help=argparse.SUPPRESS)
     parser.add_argument('--source-credentials', default=str(Path.home() / '.aws/credentials'), help=argparse.SUPPRESS)
     args = parser.parse_args()
-    if not re.fullmatch(r'[A-Za-z0-9_.-]+', args.profile):
+    if any(not re.fullmatch(r'[A-Za-z0-9_.-]+', p) for p in [args.profile, args.kubernetes_session_profile] if p):
         raise ValueError('Invalid profile name')
     credentials = export_session(args.profile, args.source_config, args.source_credentials)
     if args.credential_process:
@@ -157,14 +180,17 @@ def main() -> None:
             'contexts':[{'name':'lab','context':{'cluster':'lab','user':'administrator'}}],'current-context':'lab'}))
         kubeconfig.chmod(0o600)
         env['KUBECONFIG'] = str(kubeconfig)
+        kube_env = kubernetes_session(args.kubernetes_session_profile, args.source_config, args.source_credentials, expected) if args.kubernetes_session_profile else dict(env)
+        kube_env['KUBECONFIG'] = str(kubeconfig)
         for resource in ['roles.rbac.authorization.k8s.io', 'rolebindings.rbac.authorization.k8s.io']:
             for verb in ['get', 'create', 'patch', 'update']:
-                check_kubernetes_authority(env, verb, resource)
+                check_kubernetes_authority(kube_env, verb, resource)
         manifests = []
         for filename in ['lab-v2-observability-reader.yaml', 'lab-v2-bootstrap-authority.json']:
-            data = command(['kubectl','--request-timeout=20s','apply','--dry-run=client','-f',str(rbac/'ops/kubernetes'/filename),'-o','json'],env=env)
+            data = command(['kubectl','--request-timeout=20s','apply','--dry-run=client','-f',str(rbac/'ops/kubernetes'/filename),'-o','json'],env=kube_env)
             manifests.extend(json_documents(data))
         validate_rbac(manifests)
+        command(['kubectl','--request-timeout=20s','apply','--dry-run=server','-f','-'],env=kube_env,value={'apiVersion':'v1','kind':'List','items':manifests})
         instance = gh_json('api', f'repos/{IAC}/actions/variables/LAB_V2_ITSM_INSTANCE_ID')['value']
         if not re.fullmatch(r'i-[a-f0-9]{17}', instance):
             raise ValueError('Invalid existing ITSM target')
@@ -178,16 +204,18 @@ def main() -> None:
         expiry = authorization_deadline(outputs.get('authorization_expires_at',{}).get('value'),dt.datetime.now(dt.timezone.utc))
         plan, plan_json = work/'admin.plan', work/'admin.json'
         command(['terraform','-chdir='+str(stack),'plan','-input=false','-refresh=true','-out='+str(plan),
-                 '-var=expected_account_id='+expected,'-var=itsm_instance_id='+instance,'-var=authorization_expires_at='+expiry],env=env)
+                 '-var=expected_account_id='+expected,'-var=itsm_instance_id='+instance,'-var=authorization_expires_at='+expiry,
+                 *(['-target=aws_iam_role.bootstrap','-target=aws_iam_role_policy.infrastructure','-target=aws_iam_role_policy.rbac'] if args.preserve_cluster_access else [])],env=env)
         raw = command(['terraform','-chdir='+str(stack),'show','-json',str(plan)],env=env)
         changes = check_admin_plan(json.loads(raw))
+        if args.preserve_cluster_access and any(c['address'].startswith('aws_eks_') for c in changes):
+            raise ValueError('Cluster access mapping changes are not authorized')
         print(json.dumps({'phase':'administrative-plan','changes':changes,'authorization_expires_at':expiry,'revisions':revisions,'apply_requested':args.apply}),flush=True)
         if not args.apply:
             return
         validate_temporary(export_session(args.profile, args.source_config, args.source_credentials), dt.datetime.now(dt.timezone.utc))
         command(['terraform','-chdir='+str(stack),'apply','-input=false',str(plan)],env=env,timeout=600)
-        command(['kubectl','--request-timeout=20s','apply','--dry-run=server','-f','-'],env=env,value={'apiVersion':'v1','kind':'List','items':manifests})
-        command(['kubectl','--request-timeout=20s','apply','-f','-'],env=env,value={'apiVersion':'v1','kind':'List','items':manifests})
+        command(['kubectl','--request-timeout=20s','apply','-f','-'],env=kube_env,value={'apiVersion':'v1','kind':'List','items':manifests})
         output = json.loads(command(['terraform','-chdir='+str(stack),'output','-json'],env=env))
         values = {
           (IAC,'LAB_V2_BOOTSTRAP_ROLE_ARN'):output['bootstrap_role_arn']['value'],
@@ -198,7 +226,10 @@ def main() -> None:
         for (repository,name),value in values.items():
             command(['gh','variable','set',name,'--repo',repository,'--body',value])
         request = 'lab-v2-admin-' + uuid.uuid4().hex[:16]
-        official_run(RBAC,'lab-v2-rbac.yml',{},request+'-rbac')
+        if args.preserve_cluster_access:
+            print(json.dumps({'pipeline':'lab-v2-rbac.yml','status':'pending','reason':'EKS access mapping preserved; temporary user delivered reviewed namespace objects'}),flush=True)
+        else:
+            official_run(RBAC,'lab-v2-rbac.yml',{},request+'-rbac')
         official_run(IAC,'lab-v2-publication.yml',{'phase':'bootstrap-apply'},request+'-publish')
         public = json.loads(aws(env,'ssm','get-parameter','--name','/cosmotech/lab-v2/evidence-public-key')['Parameter']['Value'])['public_key']
         if not public.startswith('-----BEGIN PGP PUBLIC KEY BLOCK-----') or 'PRIVATE KEY' in public:

@@ -31,3 +31,23 @@ class KubernetesAuthorityTests(unittest.TestCase):
     def test_unexpected_output_is_not_authority_or_disclosed(self):
         with self.assertRaisesRegex(RuntimeError, 'raw output withheld'):
             self.check(subprocess.CompletedProcess([], 0, b'unexpected-private-output', b''))
+
+class KubernetesSessionTests(unittest.TestCase):
+    def test_static_profile_only_obtains_temporary_session(self):
+        import datetime as dt
+        import json
+        identity = {'Account': '123456789012', 'Arn': 'arn:aws:iam::123456789012:user/serverless-lab-admin', 'UserId': 'test'}
+        credentials = {'AccessKeyId': 'ASIA-test', 'SecretAccessKey': 'test-only', 'SessionToken': 'test-only',
+                       'Expiration': (dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=1)).isoformat()}
+        with patch.object(bootstrap, 'command', side_effect=[json.dumps(identity).encode(), json.dumps({'Credentials': credentials}).encode()]) as call, patch.object(bootstrap, 'aws', return_value=identity), patch('builtins.print'):
+            env = bootstrap.kubernetes_session('serverless-lab-static', '/source/config', '/source/credentials', identity['Account'])
+        self.assertEqual(env['AWS_ACCESS_KEY_ID'], 'ASIA-test')
+        self.assertNotIn('AWS_PROFILE', env)
+        self.assertEqual(call.call_args_list[1].args[0][4], 'get-session-token')
+
+    def test_wrong_source_stops_before_session_request(self):
+        import json
+        with patch.object(bootstrap, 'command', return_value=json.dumps({'Account':'123456789012', 'Arn':'arn:aws:iam::123456789012:root'}).encode()) as call:
+            with self.assertRaisesRegex(ValueError, 'Unexpected Kubernetes'):
+                bootstrap.kubernetes_session('source', '/config', '/credentials', '123456789012')
+            self.assertEqual(call.call_count, 1)
