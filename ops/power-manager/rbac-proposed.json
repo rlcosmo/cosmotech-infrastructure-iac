@@ -1,0 +1,1010 @@
+{
+  "apiVersion": "v1",
+  "kind": "List",
+  "items": [
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "ClusterRole",
+      "metadata": {
+        "name": "cosmotech-power-reader",
+        "labels": {
+          "app.kubernetes.io/part-of": "cosmotech-power-manager"
+        }
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "nodes",
+            "persistentvolumes",
+            "namespaces"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            "storage.k8s.io"
+          ],
+          "resources": [
+            "storageclasses",
+            "volumeattachments"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        }
+      ]
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "ClusterRoleBinding",
+      "metadata": {
+        "name": "cosmotech-power-reader",
+        "labels": {
+          "app.kubernetes.io/part-of": "cosmotech-power-manager"
+        }
+      },
+      "subjects": [
+        {
+          "kind": "Group",
+          "name": "cosmotech-argocd-orders",
+          "apiGroup": "rbac.authorization.k8s.io"
+        }
+      ],
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "ClusterRole",
+        "name": "cosmotech-power-reader"
+      }
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "Role",
+      "metadata": {
+        "name": "cosmotech-power-workloads",
+        "labels": {
+          "app.kubernetes.io/part-of": "cosmotech-power-manager"
+        },
+        "namespace": "istio-system"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "deployments",
+            "statefulsets",
+            "daemonsets"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "pods",
+            "persistentvolumeclaims",
+            "services",
+            "endpoints"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            "autoscaling"
+          ],
+          "resources": [
+            "horizontalpodautoscalers"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            "policy"
+          ],
+          "resources": [
+            "poddisruptionbudgets"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            "discovery.k8s.io"
+          ],
+          "resources": [
+            "endpointslices"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "pods/eviction"
+          ],
+          "verbs": [
+            "create"
+          ]
+        },
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "deployments/scale"
+          ],
+          "resourceNames": [
+            "istio-ingressgateway",
+            "istiod"
+          ],
+          "verbs": [
+            "get",
+            "patch",
+            "update"
+          ]
+        }
+      ]
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "RoleBinding",
+      "metadata": {
+        "name": "cosmotech-power-workloads",
+        "labels": {
+          "app.kubernetes.io/part-of": "cosmotech-power-manager"
+        },
+        "namespace": "istio-system"
+      },
+      "subjects": [
+        {
+          "kind": "Group",
+          "name": "cosmotech-argocd-orders",
+          "apiGroup": "rbac.authorization.k8s.io"
+        }
+      ],
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "Role",
+        "name": "cosmotech-power-workloads"
+      }
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "Role",
+      "metadata": {
+        "name": "cosmotech-power-workloads",
+        "labels": {
+          "app.kubernetes.io/part-of": "cosmotech-power-manager"
+        },
+        "namespace": "kube-system"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "deployments",
+            "statefulsets",
+            "daemonsets"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "pods",
+            "persistentvolumeclaims",
+            "services",
+            "endpoints"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            "autoscaling"
+          ],
+          "resources": [
+            "horizontalpodautoscalers"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            "policy"
+          ],
+          "resources": [
+            "poddisruptionbudgets"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            "discovery.k8s.io"
+          ],
+          "resources": [
+            "endpointslices"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "pods/eviction"
+          ],
+          "verbs": [
+            "create"
+          ]
+        },
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "deployments/scale"
+          ],
+          "resourceNames": [
+            "aws-load-balancer-controller",
+            "cluster-autoscaler",
+            "coredns",
+            "ebs-csi-controller",
+            "metrics-server",
+            "snapshot-controller"
+          ],
+          "verbs": [
+            "get",
+            "patch",
+            "update"
+          ]
+        }
+      ]
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "RoleBinding",
+      "metadata": {
+        "name": "cosmotech-power-workloads",
+        "labels": {
+          "app.kubernetes.io/part-of": "cosmotech-power-manager"
+        },
+        "namespace": "kube-system"
+      },
+      "subjects": [
+        {
+          "kind": "Group",
+          "name": "cosmotech-argocd-orders",
+          "apiGroup": "rbac.authorization.k8s.io"
+        }
+      ],
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "Role",
+        "name": "cosmotech-power-workloads"
+      }
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "Role",
+      "metadata": {
+        "name": "cosmotech-power-workloads",
+        "labels": {
+          "app.kubernetes.io/part-of": "cosmotech-power-manager"
+        },
+        "namespace": "kyverno"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "deployments",
+            "statefulsets",
+            "daemonsets"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "pods",
+            "persistentvolumeclaims",
+            "services",
+            "endpoints"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            "autoscaling"
+          ],
+          "resources": [
+            "horizontalpodautoscalers"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            "policy"
+          ],
+          "resources": [
+            "poddisruptionbudgets"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            "discovery.k8s.io"
+          ],
+          "resources": [
+            "endpointslices"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "pods/eviction"
+          ],
+          "verbs": [
+            "create"
+          ]
+        },
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "deployments/scale"
+          ],
+          "resourceNames": [
+            "kyverno-admission-controller",
+            "kyverno-background-controller",
+            "kyverno-cleanup-controller",
+            "kyverno-reports-controller"
+          ],
+          "verbs": [
+            "get",
+            "patch",
+            "update"
+          ]
+        }
+      ]
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "RoleBinding",
+      "metadata": {
+        "name": "cosmotech-power-workloads",
+        "labels": {
+          "app.kubernetes.io/part-of": "cosmotech-power-manager"
+        },
+        "namespace": "kyverno"
+      },
+      "subjects": [
+        {
+          "kind": "Group",
+          "name": "cosmotech-argocd-orders",
+          "apiGroup": "rbac.authorization.k8s.io"
+        }
+      ],
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "Role",
+        "name": "cosmotech-power-workloads"
+      }
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "Role",
+      "metadata": {
+        "name": "cosmotech-power-workloads",
+        "labels": {
+          "app.kubernetes.io/part-of": "cosmotech-power-manager"
+        },
+        "namespace": "loki"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "deployments",
+            "statefulsets",
+            "daemonsets"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "pods",
+            "persistentvolumeclaims",
+            "services",
+            "endpoints"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            "autoscaling"
+          ],
+          "resources": [
+            "horizontalpodautoscalers"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            "policy"
+          ],
+          "resources": [
+            "poddisruptionbudgets"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            "discovery.k8s.io"
+          ],
+          "resources": [
+            "endpointslices"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "pods/eviction"
+          ],
+          "verbs": [
+            "create"
+          ]
+        },
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "deployments/scale"
+          ],
+          "resourceNames": [
+            "loki-gateway"
+          ],
+          "verbs": [
+            "get",
+            "patch",
+            "update"
+          ]
+        },
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "statefulsets/scale"
+          ],
+          "resourceNames": [
+            "loki"
+          ],
+          "verbs": [
+            "get",
+            "patch",
+            "update"
+          ]
+        }
+      ]
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "RoleBinding",
+      "metadata": {
+        "name": "cosmotech-power-workloads",
+        "labels": {
+          "app.kubernetes.io/part-of": "cosmotech-power-manager"
+        },
+        "namespace": "loki"
+      },
+      "subjects": [
+        {
+          "kind": "Group",
+          "name": "cosmotech-argocd-orders",
+          "apiGroup": "rbac.authorization.k8s.io"
+        }
+      ],
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "Role",
+        "name": "cosmotech-power-workloads"
+      }
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "Role",
+      "metadata": {
+        "name": "cosmotech-power-workloads",
+        "labels": {
+          "app.kubernetes.io/part-of": "cosmotech-power-manager"
+        },
+        "namespace": "observability"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "deployments",
+            "statefulsets",
+            "daemonsets"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "pods",
+            "persistentvolumeclaims",
+            "services",
+            "endpoints"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            "autoscaling"
+          ],
+          "resources": [
+            "horizontalpodautoscalers"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            "policy"
+          ],
+          "resources": [
+            "poddisruptionbudgets"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            "discovery.k8s.io"
+          ],
+          "resources": [
+            "endpointslices"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "pods/eviction"
+          ],
+          "verbs": [
+            "create"
+          ]
+        },
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "deployments/scale"
+          ],
+          "resourceNames": [
+            "otel-collector-opentelemetry-collector",
+            "prometheus-grafana",
+            "prometheus-kube-prometheus-operator",
+            "prometheus-kube-state-metrics"
+          ],
+          "verbs": [
+            "get",
+            "patch",
+            "update"
+          ]
+        },
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "statefulsets/scale"
+          ],
+          "resourceNames": [
+            "alertmanager-prometheus-kube-prometheus-alertmanager",
+            "prometheus-prometheus-kube-prometheus-prometheus",
+            "tempo"
+          ],
+          "verbs": [
+            "get",
+            "patch",
+            "update"
+          ]
+        }
+      ]
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "RoleBinding",
+      "metadata": {
+        "name": "cosmotech-power-workloads",
+        "labels": {
+          "app.kubernetes.io/part-of": "cosmotech-power-manager"
+        },
+        "namespace": "observability"
+      },
+      "subjects": [
+        {
+          "kind": "Group",
+          "name": "cosmotech-argocd-orders",
+          "apiGroup": "rbac.authorization.k8s.io"
+        }
+      ],
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "Role",
+        "name": "cosmotech-power-workloads"
+      }
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "Role",
+      "metadata": {
+        "name": "cosmotech-power-workloads",
+        "labels": {
+          "app.kubernetes.io/part-of": "cosmotech-power-manager"
+        },
+        "namespace": "orders-api"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "deployments",
+            "statefulsets",
+            "daemonsets"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "pods",
+            "persistentvolumeclaims",
+            "services",
+            "endpoints"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            "autoscaling"
+          ],
+          "resources": [
+            "horizontalpodautoscalers"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            "policy"
+          ],
+          "resources": [
+            "poddisruptionbudgets"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            "discovery.k8s.io"
+          ],
+          "resources": [
+            "endpointslices"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "pods/eviction"
+          ],
+          "verbs": [
+            "create"
+          ]
+        },
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "deployments/scale"
+          ],
+          "resourceNames": [
+            "orders-api"
+          ],
+          "verbs": [
+            "get",
+            "patch",
+            "update"
+          ]
+        }
+      ]
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "RoleBinding",
+      "metadata": {
+        "name": "cosmotech-power-workloads",
+        "labels": {
+          "app.kubernetes.io/part-of": "cosmotech-power-manager"
+        },
+        "namespace": "orders-api"
+      },
+      "subjects": [
+        {
+          "kind": "Group",
+          "name": "cosmotech-argocd-orders",
+          "apiGroup": "rbac.authorization.k8s.io"
+        }
+      ],
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "Role",
+        "name": "cosmotech-power-workloads"
+      }
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "Role",
+      "metadata": {
+        "name": "cosmotech-power-workloads",
+        "labels": {
+          "app.kubernetes.io/part-of": "cosmotech-power-manager"
+        },
+        "namespace": "orders-worker"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "deployments",
+            "statefulsets",
+            "daemonsets"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "pods",
+            "persistentvolumeclaims",
+            "services",
+            "endpoints"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            "autoscaling"
+          ],
+          "resources": [
+            "horizontalpodautoscalers"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            "policy"
+          ],
+          "resources": [
+            "poddisruptionbudgets"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            "discovery.k8s.io"
+          ],
+          "resources": [
+            "endpointslices"
+          ],
+          "verbs": [
+            "get",
+            "list"
+          ]
+        },
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "pods/eviction"
+          ],
+          "verbs": [
+            "create"
+          ]
+        },
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "deployments/scale"
+          ],
+          "resourceNames": [
+            "orders-worker",
+            "orders-worker-canary"
+          ],
+          "verbs": [
+            "get",
+            "patch",
+            "update"
+          ]
+        }
+      ]
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "RoleBinding",
+      "metadata": {
+        "name": "cosmotech-power-workloads",
+        "labels": {
+          "app.kubernetes.io/part-of": "cosmotech-power-manager"
+        },
+        "namespace": "orders-worker"
+      },
+      "subjects": [
+        {
+          "kind": "Group",
+          "name": "cosmotech-argocd-orders",
+          "apiGroup": "rbac.authorization.k8s.io"
+        }
+      ],
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "Role",
+        "name": "cosmotech-power-workloads"
+      }
+    }
+  ]
+}
