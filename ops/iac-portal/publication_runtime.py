@@ -271,6 +271,7 @@ def install_direct_observer() -> None:
         directory.chmod(mode)
     app = Path('/opt/cosmotech/iac-observer')
     app.mkdir(mode=0o755,exist_ok=True)
+    app.chmod(0o755)
     for name in ['direct_observer.py','direct_inventory.py','direct_comparison.py']:
         shutil.copyfile(SOURCE / name,app / name)
         (app / name).chmod(0o644)
