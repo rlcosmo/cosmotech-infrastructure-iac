@@ -49,6 +49,8 @@ jobs:
           echo "OIDC role verified: $arn" >> "$GITHUB_STEP_SUMMARY"
       - run: python3 scripts/build_power_manager.py
       - run: terraform -chdir=power_manager/terraform init -input=false
+      - name: Recover verified post-create log group state
+        run: python3 scripts/recover_power_log_group.py
       - name: Plan and enforce scope
         run: |
           umask 077
