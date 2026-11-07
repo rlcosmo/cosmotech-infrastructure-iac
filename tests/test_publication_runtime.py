@@ -85,3 +85,21 @@ class RuntimeTests(unittest.TestCase):
                 self.assertEqual(statement['Condition']['Null'], {'dynamodb:LeadingKeys': 'false'})
         # Inline policy aggregate limit is 10,240 chars; leave room for encrypted PutObject grant.
         self.assertLess(len(json.dumps(policy, separators=(',', ':'))), 9500)
+
+    def test_observer_code_is_readable_under_private_publisher_umask(self):
+        import os
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as directory:
+            base=Path(directory)
+            (base/'opt/cosmotech').mkdir(parents=True)
+            (base/'etc/systemd/system').mkdir(parents=True)
+            def path(value):return base/str(value).lstrip('/')
+            previous=os.umask(0o077)
+            try:
+                with patch.object(runtime,'Path',side_effect=path), patch.object(runtime.pwd,'getpwnam',return_value=SimpleNamespace(pw_uid=os.getuid())), patch.object(runtime.grp,'getgrnam',return_value=SimpleNamespace(gr_gid=os.getgid())), patch.object(runtime.os,'chown'), patch.object(runtime,'aws',return_value={'Account':'123456789012'}), patch.object(runtime,'run',return_value=b''):
+                    runtime.install_direct_observer()
+            finally:
+                os.umask(previous)
+            self.assertEqual((base/'opt/cosmotech/iac-observer').stat().st_mode & 0o777,0o755)
+            self.assertEqual((base/'opt/cosmotech/iac-observer/direct_observer.py').stat().st_mode & 0o777,0o644)
+            self.assertEqual((base/'var/lib/cosmotech-iac-observer').stat().st_mode & 0o777,0o700)
