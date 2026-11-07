@@ -58,3 +58,17 @@ Como este repositório é público, os artefatos operacionais passam a ser cript
 - Créditos: diagnóstico de sessão temporária ausente/expirada; Bedrock/RDS não executados por falta de elegibilidade verificável e teto/ciclo de vida para RDS. Detalhes em lab-v2-credits.md.
 
 O V2-001 ainda não atende aceite operacional: falta aprovação do PR, role de observação, configuração do destinatário GPG, publicação autenticada/ingestão de relatórios, recibo do apply oficial e coleta AWS real. V2-002 também exige implantação pelo proprietário GitOps/Helm e validação de queries/alertas reais. Nenhum recurso cloud novo, apply, merge ou custo recorrente de infraestrutura foi criado nesta execução.
+
+## Estado atual após autorização de merges (substitui os bloqueios antigos de revisão)
+
+O proprietário autorizou merges automáticos do Lab V2. IaC #2 foi mesclado em `6177376`; Observabilidade #1 em `c877930`. Ambos tinham CI aprovado, ausência de conflitos e verificações de diff/segredos sem achados nos padrões examinados. Não havia proteção/review obrigatório configurado nas branches, e nenhum mecanismo foi desabilitado/burlado. Autorização persistida em lab-v2-merge-policy.md.
+
+CI main pós-merge aprovado em ambos os repositórios. Workflow IaC de evidências acionado em main sem 404, porém falhou corretamente no preflight por ausência de IAC_EVIDENCE_ROLE_ARN e IAC_EVIDENCE_GPG_PUBLIC_KEY. O executor CI existente tem permissão de plan/leitura restrita, não de criação/atualização de IAM ou implantação. Não foi substituído por credencial administrativa permanente.
+
+Foi identificado e utilizado o caminho já existente de STS AssumeRole para a role de manutenção: sessão de 900s, credenciais apenas em memória. Portanto, a falta do login local temporário não impede toda observação: CloudWatch e pods foram consultados legitimamente. Essa role recebeu AccessDenied ao ler atributos SQS e Forbidden para ConfigMap/PodMonitor/PrometheusRule. O endpoint privado Prometheus não foi alcançável deste executor. Grafana /api/health respondeu 200; a API do dashboard V2 respondeu 401. Isso não confirma existência/ausência do dashboard, apenas a necessidade de validação autenticada ainda não disponível.
+
+A observação real encontrou gauges recentes da fila principal (backlog/in-flight/idade zero), mas DLQ sem datapoints. O coletor foi corrigido no PR Observabilidade #2 (`bbfd24c`) para buscar a contagem real da DLQ por GetQueueAttributes com o grant ITSM já declarado, mantendo estado desconhecido quando negar/falhar. Fontes SSM sincronizadas nesta alteração; sem execução SSM manual. Testes canônicos de observabilidade: 27 aprovados.
+
+Plan source-only pós-merge aprovado: 0 adições, 8 atualizações, 0 remoções, com refresh=false. Inclui alterações pendentes de Lambda, WAF e documentos de gerenciamento fora da publicação V2. Não aplicar esse plano como se fosse uma mudança isolada/aprovada; não houve apply. Portal/publicação, role de evidências, chave destinatária e deploy autenticado dos dashboards continuam dependentes do executor Terraform/GitOps autorizado, com escopo de plano revisado.
+
+Evidências sanitizadas e URLs: docs/evidence/lab-v2-post-merge-2026-11-07.json. Nenhum recurso cloud novo, mensagem consumida, mudança de RBAC/IAM, publicação manual no Grafana ou custo recorrente novo de infraestrutura. O portal ainda não tem URL publicada; V2-001/V2-002 não foram declarados operacionalmente concluídos.

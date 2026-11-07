@@ -372,10 +372,20 @@ def collect_sqs() -> list[str]:
                    "--period", str(query["Period"]),
                    "--statistics", str(query["Statistics"][0]))
 
+    def queue_attributes(queue_name: str) -> dict:
+        # Reuse the current account/region and the existing ITSM GetQueueAttributes
+        # grant. No GetQueueUrl permission, message receive or payload read.
+        account = aws("sts", "get-caller-identity")["Account"]
+        if not re.fullmatch(r"[0-9]{12}", account) or not re.fullmatch(r"[A-Za-z0-9_-]{1,75}(?:\.fifo)?", queue_name):
+            raise ValueError("Invalid queue identity")
+        url = f"https://sqs.{REGION}.amazonaws.com/{account}/{queue_name}"
+        return aws("sqs", "get-queue-attributes", "--queue-url", url,
+                   "--attribute-names", "ApproximateNumberOfMessages")
+
     result = collect_queue_metrics(call,
         os.environ.get("LAB_SQS_QUEUE_NAME", "aws-eks-istio-lab-dev-orders-eks"),
         os.environ.get("LAB_SQS_DLQ_NAME", "aws-eks-istio-lab-dev-orders-eks-dlq"),
-        dt.datetime.now(dt.timezone.utc))
+        dt.datetime.now(dt.timezone.utc), queue_attributes=queue_attributes)
     if not result.startswith("cosmotech_sqs_collection_success 1\n"):
         raise RuntimeError("SQS gauges unavailable")
     return result.strip().splitlines()

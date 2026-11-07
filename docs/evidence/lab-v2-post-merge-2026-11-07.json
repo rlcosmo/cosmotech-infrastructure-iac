@@ -1,0 +1,71 @@
+{
+  "observed_date": "2026-11-07",
+  "scope": "Lab V2 post-merge; sanitized live observations, not deployment completion",
+  "merges": {
+    "iac_pr_2": {
+      "sha": "61773765a528b468d7e526aa8b124e6141f71163",
+      "url": "https://github.com/rlcosmo/cosmotech-infrastructure-iac/pull/2"
+    },
+    "observability_pr_1": {
+      "sha": "c87793019941af498cb3f853a6ad1e7ae28f96a9",
+      "url": "https://github.com/rlcosmo/cosmotech-observability/pull/1"
+    },
+    "observability_idle_dlq_fix_pr_2": {
+      "sha": "bbfd24cc64d6ee4fc3b07e3cf80cd7920101b592",
+      "url": "https://github.com/rlcosmo/cosmotech-observability/pull/2"
+    }
+  },
+  "authentication": {
+    "existing_maintenance_role_assumed": true,
+    "session_duration_seconds": 900,
+    "credentials_persisted": false
+  },
+  "source_queue_cloudwatch": {
+    "region": "us-east-1",
+    "latest_timestamp_utc": "2026-11-07T11:25:00Z",
+    "visible": 0,
+    "inflight": 0,
+    "oldest_age_seconds": 0
+  },
+  "dlq_cloudwatch": {
+    "datapoints": 0,
+    "count": null,
+    "conclusion": "unknown; absence does not establish empty DLQ"
+  },
+  "queue_attribute_read_with_maintenance_role": "AccessDenied",
+  "kubernetes": {
+    "observability_pods_list": "allowed",
+    "podmonitor_list": "Forbidden",
+    "prometheusrule_list": "Forbidden",
+    "configmap_list": "Forbidden"
+  },
+  "private_prometheus_query": "unreachable from current executor",
+  "grafana": {
+    "public_health_http_status": 200,
+    "v2_dashboard_api_http_status": 401,
+    "dashboard_authenticated_validation": false
+  },
+  "ci": {
+    "iac_main_validate": "https://github.com/rlcosmo/cosmotech-infrastructure-iac/actions/runs/42367863779",
+    "observability_main_validate": "https://github.com/rlcosmo/cosmotech-observability/actions/runs/42367875838",
+    "iac_live_evidence_failed": "https://github.com/rlcosmo/cosmotech-infrastructure-iac/actions/runs/42367876026",
+    "iac_source_only_plan_passed": "https://github.com/rlcosmo/cosmotech-infrastructure-iac/actions/runs/42368202398"
+  },
+  "source_only_plan": {
+    "refresh": false,
+    "add": 0,
+    "change": 8,
+    "destroy": 0,
+    "applied": false,
+    "warning": "includes unrelated Lambda, WAF and management document updates; not approved as a deployment plan"
+  },
+  "missing_configuration": [
+    "IAC_EVIDENCE_ROLE_ARN",
+    "IAC_EVIDENCE_GPG_PUBLIC_KEY"
+  ],
+  "deployed": {
+    "portal": false,
+    "v2_dashboards_verified": false,
+    "new_cloud_resources": 0
+  }
+}
