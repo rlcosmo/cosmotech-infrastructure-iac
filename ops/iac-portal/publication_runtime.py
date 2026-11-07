@@ -292,7 +292,7 @@ def install_direct_observer() -> None:
     configuration = Path('/etc/cosmotech-iac-observer.conf')
     configuration.write_text('IAC_OBSERVER_ROLE=' + role + '\n')
     configuration.chmod(0o600)
-    unit = '[Unit]\nDescription=Compare canonical Git IaC to AWS metadata without applying changes\nAfter=network-online.target\n[Service]\nUser=cosmotech-iac-observer\nGroup=www-data\nEnvironmentFile=/etc/cosmotech-iac-observer.conf\nEnvironment=HOME=/var/lib/cosmotech-iac-observer\nExecStart=/opt/cosmotech/iac-observer/venv/bin/python3 /opt/cosmotech/iac-observer/direct_observer.py --role-arn ${IAC_OBSERVER_ROLE}\nRestart=on-failure\nRestartSec=15\nUMask=0027\nRuntimeDirectory=cosmotech-iac-observer\nRuntimeDirectoryMode=2770\nProtectSystem=strict\nProtectHome=true\nPrivateTmp=true\nReadWritePaths=/var/lib/cosmotech-iac-observer /var/lib/cosmotech-iac/comparison /run/cosmotech-iac-observer\n[Install]\nWantedBy=multi-user.target\n'
+    unit = '[Unit]\nDescription=Compare canonical Git IaC to AWS metadata without applying changes\nAfter=network-online.target\n[Service]\nUser=cosmotech-iac-observer\nGroup=www-data\nEnvironmentFile=/etc/cosmotech-iac-observer.conf\nEnvironment=HOME=/var/lib/cosmotech-iac-observer\nExecStart=/opt/cosmotech/iac-observer/venv/bin/python3 /opt/cosmotech/iac-observer/direct_observer.py --role-arn ${IAC_OBSERVER_ROLE}\nRestart=on-failure\nRestartSec=15\nUMask=0027\nRuntimeDirectory=cosmotech-iac-observer\nRuntimeDirectoryMode=2770\nRuntimeDirectoryPreserve=restart\nProtectSystem=strict\nProtectHome=true\nPrivateTmp=true\nReadWritePaths=/var/lib/cosmotech-iac-observer /var/lib/cosmotech-iac/comparison /run/cosmotech-iac-observer\n[Install]\nWantedBy=multi-user.target\n'
     Path('/etc/systemd/system/cosmotech-iac-observer.service').write_text(unit)
     run(['systemctl','daemon-reload'])
     run(['systemctl','enable','--now','cosmotech-iac-observer.service'])
@@ -346,7 +346,7 @@ def install() -> None:
     config = Path('/etc/cosmotech-iac-portal.conf')
     config.write_text('IAC_CREDENTIAL_SHA256=' + digest + '\n')
     config.chmod(0o600)
-    unit = '''[Unit]\nDescription=CosmoTech read-only IaC portal\nAfter=network.target\n[Service]\nUser=www-data\nGroup=www-data\nEnvironmentFile=/etc/cosmotech-iac-portal.conf\nExecStart=/usr/bin/python3 /opt/cosmotech/iac-portal/launch.py\nRestart=on-failure\nNoNewPrivileges=true\nProtectSystem=strict\nReadWritePaths=-/run/cosmotech-iac-observer\nProtectHome=true\nPrivateTmp=true\nCapabilityBoundingSet=\n[Install]\nWantedBy=multi-user.target\n'''
+    unit = '''[Unit]\nDescription=CosmoTech read-only IaC portal\nAfter=network.target cosmotech-iac-observer.service\nWants=cosmotech-iac-observer.service\n[Service]\nUser=www-data\nGroup=www-data\nEnvironmentFile=/etc/cosmotech-iac-portal.conf\nExecStart=/usr/bin/python3 /opt/cosmotech/iac-portal/launch.py\nRestart=on-failure\nNoNewPrivileges=true\nProtectSystem=strict\nReadWritePaths=-/run/cosmotech-iac-observer\nProtectHome=true\nPrivateTmp=true\nCapabilityBoundingSet=\n[Install]\nWantedBy=multi-user.target\n'''
     Path('/etc/systemd/system/cosmotech-iac-portal.service').write_text(unit)
     Path('/etc/systemd/system/cosmotech-iac-reports.service').write_text('[Service]\nType=oneshot\nUMask=0077\nExecStart=/usr/bin/python3 /opt/cosmotech/lab-v2-source/publication_runtime.py sync-reports\n')
     Path('/etc/systemd/system/cosmotech-iac-reports.timer').write_text('[Timer]\nOnCalendar=hourly\nPersistent=true\n[Install]\nWantedBy=timers.target\n')
