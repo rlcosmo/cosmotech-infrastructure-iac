@@ -91,7 +91,10 @@ jobs:
               ;;
             plan) refresh=false ;;
           esac
-          terraform -chdir=terraform/environments/dev plan -input=false -refresh="$refresh" -out="$work/publication.plan" "${targets[@]}" > "$work/plan.log" 2>&1
+          if ! terraform -chdir=terraform/environments/dev plan -input=false -refresh="$refresh" -out="$work/publication.plan" "${targets[@]}" > "$work/plan.log" 2>&1; then
+            python3 scripts/summarize_terraform_failure.py "$work/plan.log" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
           terraform -chdir=terraform/environments/dev show -json "$work/publication.plan" > "$work/plan.json"
           python3 scripts/check_lab_v2_plan.py "$work/plan.json" "${gate[@]}" | tee "$work/scope.json" >> "$GITHUB_STEP_SUMMARY"
           echo "Plan refresh=$refresh; apply uses only this saved, gated plan" >> "$GITHUB_STEP_SUMMARY"
@@ -100,7 +103,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          terraform -chdir=terraform/environments/dev apply -input=false "$PUBLICATION_WORK/publication.plan" > "$PUBLICATION_WORK/apply.log" 2>&1
+          if ! terraform -chdir=terraform/environments/dev apply -input=false "$PUBLICATION_WORK/publication.plan" > "$PUBLICATION_WORK/apply.log" 2>&1; then
+            python3 scripts/summarize_terraform_failure.py "$PUBLICATION_WORK/apply.log" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
           echo "Scoped Terraform apply completed for $GITHUB_SHA / $GITHUB_RUN_ID" >> "$GITHUB_STEP_SUMMARY"
       - name: Pin the applied document version and content hash
         if: inputs.phase == 'deploy' || inputs.phase == 'bootstrap-apply'
