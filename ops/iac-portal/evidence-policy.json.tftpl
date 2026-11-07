@@ -367,7 +367,6 @@
         "wafv2:GetIPSet",
         "wafv2:GetWebACL",
         "wafv2:GetLoggingConfiguration",
-        "wafv2:GetWebACLForResource",
         "wafv2:ListTagsForResource"
       ],
       "Resource": [
@@ -506,8 +505,7 @@
       "Sid": "ExistingALBWAFMetadata",
       "Effect": "Allow",
       "Action": [
-        "elasticloadbalancing:GetLoadBalancerWebACL",
-        "wafv2:GetWebACLForResource"
+        "elasticloadbalancing:GetLoadBalancerWebACL"
       ],
       "Resource": [
         "arn:aws:elasticloadbalancing:${region}:${account}:loadbalancer/app/k8s-observability-633f55bc55/*"
@@ -526,6 +524,21 @@
       ],
       "Resource": [
         "*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "${region}"
+        }
+      }
+    },
+    {
+      "Sid": "WAFRegionalAssociationMetadata",
+      "Effect": "Allow",
+      "Action": [
+        "wafv2:GetWebACLForResource"
+      ],
+      "Resource": [
+        "arn:aws:wafv2:${region}:${account}:regional/webacl/*/*"
       ],
       "Condition": {
         "StringEquals": {
