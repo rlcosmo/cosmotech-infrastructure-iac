@@ -160,7 +160,8 @@
         "lambda:GetFunctionConcurrency",
         "lambda:GetPolicy",
         "lambda:ListTags",
-        "lambda:ListVersionsByFunction"
+        "lambda:ListVersionsByFunction",
+        "lambda:GetFunctionEventInvokeConfig"
       ],
       "Resource": [
         "arn:aws:lambda:${region}:${account}:function:cosmotech-*",
@@ -505,10 +506,26 @@
       "Sid": "ExistingALBWAFMetadata",
       "Effect": "Allow",
       "Action": [
-        "elasticloadbalancing:GetLoadBalancerWebACL"
+        "elasticloadbalancing:GetLoadBalancerWebACL",
+        "wafv2:GetWebACLForResource"
       ],
       "Resource": [
         "arn:aws:elasticloadbalancing:${region}:${account}:loadbalancer/app/k8s-observability-633f55bc55/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "${region}"
+        }
+      }
+    },
+    {
+      "Sid": "kmsAliasInventory",
+      "Effect": "Allow",
+      "Action": [
+        "kms:ListAliases"
+      ],
+      "Resource": [
+        "*"
       ],
       "Condition": {
         "StringEquals": {
