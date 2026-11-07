@@ -86,3 +86,14 @@ class DirectInventoryTests(unittest.TestCase):
         self.assertFalse(result['complete'])
         self.assertTrue(any(c['status']=='unavailable' and c['source']=='fsx' for c in result['coverage']))
         self.assertTrue(all(op not in ['receive-message','get-secret-value','get-object','create-index'] for _,_,op in calls))
+
+class MultipleRootTests(unittest.TestCase):
+    def test_backend_bucket_defined_in_another_git_root_is_not_extra_or_falsely_compliant(self):
+        bucket=resource('terraform/bootstrap/state_backend::aws_s3_bucket.state','aws_s3_bucket',{'bucket':'state-bucket'})
+        config=resource('terraform/bootstrap/state_backend::aws_s3_bucket_versioning.state','aws_s3_bucket_versioning',{})
+        changes=[{'address':r['address'],'type':r['type'],'change':{'actions':['create'],'before':None,'after':r['values']}} for r in [bucket,config]]
+        live={'resources':[{'kind':'AWS::S3::Bucket','id':'state-bucket','name':'state-bucket','region':'us-east-1','arn':'arn:aws:s3:::state-bucket'}]}
+        result=comparison.compare(plan([bucket,config],changes,before=[]),live,SOURCE)
+        self.assertEqual(result['summary'],{'declared_untracked':2})
+        self.assertEqual(result['drift_count'],0)
+        self.assertFalse(result['inventory_complete'])

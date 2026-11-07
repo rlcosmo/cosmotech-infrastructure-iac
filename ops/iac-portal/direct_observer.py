@@ -10,7 +10,7 @@ import shutil
 import subprocess
 import tempfile
 import time
-from direct_comparison import compare
+from direct_comparison import compare, flatten
 from direct_inventory import inventory
 
 REPOSITORY = 'https://github.com/rlcosmo/cosmotech-infrastructure-iac.git'
@@ -60,6 +60,9 @@ def observe(role_arn):
     try:
         env={k:v for k,v in os.environ.items() if k not in {'AWS_ACCESS_KEY_ID','AWS_SECRET_ACCESS_KEY','AWS_SESSION_TOKEN','AWS_PROFILE','AWS_DEFAULT_PROFILE','TF_LOG','TF_LOG_PATH','GIT_CONFIG','GIT_CONFIG_GLOBAL'}}
         env['PATH'] = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin'
+        cache=HOME/'plugins'
+        cache.mkdir(parents=True,exist_ok=True,mode=0o700)
+        env['TF_PLUGIN_CACHE_DIR']=str(cache)
         env.update(AWS_CONFIG_FILE='/dev/null',AWS_SHARED_CREDENTIALS_FILE='/dev/null',AWS_MAX_ATTEMPTS='2',
                    AWS_RETRY_MODE='standard',TF_IN_AUTOMATION='1',GIT_TERMINAL_PROMPT='0',GIT_CONFIG_NOSYSTEM='1',GIT_CONFIG_GLOBAL='/dev/null')
         # The source is the host's temporary instance profile, never a user/root credential.
@@ -92,10 +95,46 @@ def observe(role_arn):
             plan=Path(temporary)/'comparison.plan'
             command(['terraform','plan','-input=false','-refresh=true','-lock=false','-detailed-exitcode','-out='+str(plan)],env,cwd=stack,timeout=600,codes=(0,2))
             payload=json.loads(command(['terraform','show','-json',str(plan)],env,cwd=stack,timeout=120))
+            plans=[(DIRECTORY,payload)]
+            # Evaluate the other active roots in the same canonical repository so
+            # bootstrap resources are not falsely reported as absent from Git.
+            admin='terraform/bootstrap/lab_v2_admin'
+            if (checkout/admin).is_dir():
+                stage='bootstrap_git_evaluation'
+                trust=aws(env,'us-east-1','iam','get-role','--role-name','cosmotech-lab-v2-bootstrap')['Role']['AssumeRolePolicyDocument']
+                expiry=trust['Statement'][0]['Condition']['DateLessThan']['aws:CurrentTime']
+                live=flatten(payload.get('prior_state',{}).get('values',{}).get('root_module',{}))
+                targets=[r['values']['id'] for r in live if r.get('type')=='aws_instance' and r.get('values',{}).get('tags',{}).get('Name')=='cosmotech-itsm-dev']
+                if len(targets)!=1:raise ObservationError('bootstrap_target_unknown')
+                command(['terraform','init','-input=false','-lockfile=readonly',
+                         '-backend-config=bucket=aws-serverless-lab-'+identity['Account']+'-tfstate-use1'],env,cwd=checkout/admin,timeout=300)
+                admin_plan=Path(temporary)/'bootstrap.plan'
+                command(['terraform','plan','-input=false','-refresh=true','-lock=false','-detailed-exitcode',
+                         '-var=expected_account_id='+identity['Account'],'-var=itsm_instance_id='+targets[0],
+                         '-var=authorization_expires_at='+expiry,'-out='+str(admin_plan)],env,cwd=checkout/admin,timeout=300,codes=(0,2))
+                plans.append((admin,json.loads(command(['terraform','show','-json',str(admin_plan)],env,cwd=checkout/admin))))
+            backend='terraform/bootstrap/state_backend'
+            if (checkout/backend).is_dir():
+                stage='backend_git_evaluation'
+                command(['terraform','init','-input=false','-lockfile=readonly'],env,cwd=checkout/backend,timeout=300)
+                backend_plan=Path(temporary)/'backend.plan'
+                command(['terraform','plan','-input=false','-refresh=true','-lock=false','-detailed-exitcode','-out='+str(backend_plan)],env,cwd=checkout/backend,timeout=300,codes=(0,2))
+                plans.append((backend,json.loads(command(['terraform','show','-json',str(backend_plan)],env,cwd=checkout/backend))))
+            combined={'planned_values':{'root_module':{'resources':[]}},'prior_state':{'values':{'root_module':{'resources':[]}}},'resource_changes':[]}
+            for root,part in plans:
+                if part.get('errored') or part.get('deferred_changes') or part.get('complete') is False:
+                    raise ObservationError('incomplete_root_evaluation')
+                for field,target in [('planned_values',combined['planned_values']['root_module']['resources'])]:
+                    for row in flatten(part.get(field,{}).get('root_module',{})):
+                        target.append({**row,'address':root+'::'+row['address']})
+                for row in flatten(part.get('prior_state',{}).get('values',{}).get('root_module',{})):
+                    combined['prior_state']['values']['root_module']['resources'].append({**row,'address':root+'::'+row['address']})
+                combined['resource_changes'] += [{**row,'address':root+'::'+row['address']} for row in part.get('resource_changes',[])]
+            source['directories']=[root for root,_ in plans]
             stage='aws_inventory'
             discovered=inventory(lambda region,service,operation,*args:aws(env,region,service,operation,*args),identity['Account'],identity['Arn'].split(':')[1])
             stage='comparison'
-            report=compare(payload,discovered,source)
+            report=compare(combined,discovered,source)
             write_snapshot(report)
             print(json.dumps({'state':'ready','commit':source['commit'],'resources':len(report['resources']),
                               'drift_count':report['drift_count'],'coverage_entries':len(report['coverage'])}),flush=True)

@@ -43,7 +43,7 @@ def changed_paths(before, after, sensitive_before=None, sensitive_after=None, pr
 def compare(plan, discovered, source, region='us-east-1'):
     if plan.get('errored') or plan.get('deferred_changes') or plan.get('complete') is False:
         raise ValueError('Incomplete Git evaluation cannot establish comparison')
-    rows=[]; owned=set();typed=set(); inherited_ids=set(); seen=set()
+    rows=[]; owned=set();typed=set(); inherited_ids=set(); seen=set(); declared_untracked=[]
     changes=[r for r in plan.get('resource_changes',[]) if r.get('mode','managed')=='managed']
     desired={r['address']:r for r in flatten(plan.get('planned_values',{}).get('root_module',{})) if r.get('mode')=='managed'}
     current={r['address']:r for r in flatten(plan.get('prior_state',{}).get('values',{}).get('root_module',{})) if r.get('mode')=='managed'}
@@ -86,8 +86,27 @@ def compare(plan, discovered, source, region='us-east-1'):
              'name':str(values.get('name') or values.get('bucket') or values.get('node_group_name') or
                         values.get('tags',{}).get('Name') or identity),
              'status':status,'origin':'git_terraform','changed_fields':changed_paths(before,after,detail.get('before_sensitive'),detail.get('after_sensitive')) if status=='different' else []}
+        if status=='missing' and not before:
+            natural=next((after[k] for k in ['bucket','name','function_name','node_group_name'] if isinstance(after.get(k),str)),None)
+            if natural:
+                declared_untracked.append((row,natural,kind,resource_region))
         rows.append(row)
         seen.add((row['kind'],row['region'],row['id']))
+    # A root without an accessible state can still declare a known natural ID.
+    # Presence is confirmed by inventory; configuration is explicitly unverified, never falsely missing.
+    for row,natural,kind,rregion in declared_untracked:
+        matches=[a for a in discovered.get('resources',[]) if a['kind']==kind and (a['region']==rregion or kind=='AWS::S3::Bucket') and (a['id']==natural or a.get('name')==natural)]
+        if len(matches)==1:
+            row['status']='declared_untracked'
+            row['id']=matches[0]['id']
+            row['region']=matches[0]['region']
+            if matches[0].get('arn'):owned.add(matches[0]['arn'])
+            typed.add((kind,matches[0]['region'],matches[0]['id']))
+    roots_with_presence={r['address'].split('::')[0] for r in rows if r['status']=='declared_untracked' and '::' in r['address']}
+    known_natural_addresses={r['address'] for r,_,_,_ in declared_untracked}
+    for row in rows:
+        if row['status']=='missing' and '::' in row['address'] and row['address'].split('::')[0] in roots_with_presence and row['address'] not in known_natural_addresses:
+            row['status']='declared_untracked'
     pending=[]
     for asset in discovered.get('resources',[]):
         key=(asset['kind'],asset['region'],asset['id'])

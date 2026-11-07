@@ -133,6 +133,7 @@ resource "aws_iam_role_policy" "iac_observer" {
   name = "git-aws-read-only-comparison"
   role = aws_iam_role.iac_observer.id
   policy = jsonencode({ Version = "2012-10-17", Statement = concat(local.iac_observer_reads, [
+    { Sid = "BootstrapStateCorrelation", Effect = "Allow", Action = ["s3:GetObject"], Resource = "arn:aws:s3:::${local.lab_v2_bucket}/lab-v2/admin-bootstrap/terraform.tfstate" },
     { Sid = "AdditionalInventoryMetadata", Effect = "Allow", Resource = "*", Action = [
       "ec2:DescribeRegions", "ec2:DescribeSnapshots", "ec2:DescribeNatGateways",
       "elasticfilesystem:DescribeFileSystems", "fsx:DescribeFileSystems",

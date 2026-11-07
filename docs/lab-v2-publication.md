@@ -1,7 +1,8 @@
 # Portal IaC — Git desejado × AWS real
 
-A fonte de verdade é `rlcosmo/cosmotech-infrastructure-iac`, branch `main`, diretório
-`terraform/environments/dev`. O portal não exige upload de arquivos, relatório CI
+A fonte de verdade é `rlcosmo/cosmotech-infrastructure-iac`, branch `main`, roots ativos
+`terraform/environments/dev`, `terraform/bootstrap/lab_v2_admin` e
+`terraform/bootstrap/state_backend`. O portal não exige upload de arquivos, relatório CI
 ou execução manual de GitHub Actions para atualizar seu conteúdo.
 
 O observador no host ITSM existente roda automaticamente a cada cinco minutos após
@@ -48,8 +49,10 @@ base em uma consulta negada.** Serviços que não têm adaptador nem aparecem na
 gerais não são declarados cobertos. Relações ambíguas não justificam importação automática.
 
 A identidade é a conta do profile do host, não outras contas da organização.
-Outros roots Terraform não são presumidos como fontes de verdade; a tela mostra o
-root e a revisão exatos usados. Nenhuma infraestrutura DR é provisionada.
+A tela mostra os roots e a revisão usados. O scaffold DR desabilitado não é tratado
+como infraestrutura a provisionar. No bootstrap do bucket, sem state remoto, uma
+presença por nome determinístico é exibida como declarada no Git, mas com configuração
+não verificada; não é confundida com conformidade nem com recurso extra. Nenhuma infraestrutura DR é provisionada.
 
 ## Identidade e operação
 
@@ -57,7 +60,7 @@ root e a revisão exatos usados. Nenhuma infraestrutura DR é provisionada.
 ITSM existente, por sessões de uma hora. O daemon usa um usuário local sem login,
 sem privilégios root. Não recebe escrita AWS, IAM write, GetSecretValue, acesso a
 mensagens SQS, decrypt ou acesso geral a objetos S3. A leitura do state é limitada
-à chave canônica existente. GetItem continua limitado ao registro INVENTORY#LAB.
+às chaves canônicas dev e admin-bootstrap existentes. GetItem continua limitado ao registro INVENTORY#LAB.
 
 Código/configuração do observador são públicos no Git. Credenciais STS ficam em
 memória. Checkout e plano/state brutos ficam em diretório privado e são removidos
