@@ -188,12 +188,14 @@ def validate_real_data(token: str) -> dict:
                      '/api/v1/query?' + urllib.parse.urlencode({'query': expression}), auth)
         samples = result.get('data', {}).get('result', [])
         if result.get('status') != 'success' or not samples or any(not math.isfinite(float(s['value'][1])) for s in samples):
+            FAILURE.update(metric=expression, reason='missing_or_invalid_metric')
             raise ValueError('Missing or invalid live metrics; unknown is not zero')
         counts[expression] = len(samples)
     freshness = api('/api/datasources/proxy/uid/' + matching[0]['uid'] + '/api/v1/query?' +
                     urllib.parse.urlencode({'query': 'time() - cosmotech_sqs_data_timestamp_seconds'}), auth)
     samples = freshness.get('data', {}).get('result', [])
     if not samples or any(not 0 <= float(s['value'][1]) <= 180 for s in samples):
+        FAILURE.update(reason='queue_evidence_stale_or_missing')
         raise ValueError('Queue evidence is stale')
     return counts
 
@@ -318,6 +320,8 @@ def install() -> None:
 
 
 def validate() -> None:
+    global STAGE
+    STAGE = 'validate-portal'
     auth = parameter('portal-auth')
     if auth is None:
         raise ValueError('Portal not installed')
@@ -334,7 +338,9 @@ def validate() -> None:
         if response.status != 200:
             raise ValueError('Authenticated portal failed')
     token = publisher_token()
+    STAGE = 'validate-grafana'
     api('/api/dashboards/uid/cosmotech-v2-sqs-workers', 'Bearer ' + token)
+    STAGE = 'validate-metrics'
     print(json.dumps({'portal_authenticated': True, 'grafana_authenticated': True,
                       'live_metric_series': validate_real_data(token)}))
 
@@ -346,6 +352,16 @@ if __name__ == '__main__':
         mode = sys.argv[1] if len(sys.argv) == 2 else ''
         {'install': install, 'validate': validate, 'sync-reports': sync_reports}[mode]()
     except Exception as error:
+        if isinstance(error, urllib.error.HTTPError):
+            FAILURE['http_status'] = error.code
+        codes = {'Ambiguous Prometheus datasource': 'ambiguous_prometheus',
+                 'Portal not installed': 'portal_not_installed',
+                 'Unauthenticated portal access must be denied': 'portal_auth_not_enforced',
+                 'Authenticated portal failed': 'portal_authenticated_request_failed',
+                 'Unsupported credential schema': 'credential_schema_unsupported',
+                 'Queue evidence is stale': 'queue_evidence_stale_or_missing'}
+        if str(error) in codes:
+            FAILURE['reason'] = codes[str(error)]
         print(json.dumps({'publication_failed': True, 'error_type': type(error).__name__,
                           'stage': STAGE, 'failure_identifiers': FAILURE,
                           'runtime_tools': {name: shutil.which(name) is not None for name in ['aws','gpg','nginx','systemctl','docker']},

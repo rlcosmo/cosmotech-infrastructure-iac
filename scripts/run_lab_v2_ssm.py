@@ -32,11 +32,7 @@ for _ in range(130):
     except RuntimeError:
         time.sleep(5)
         continue
-    if response['Status'] == 'Success':
-        # Runtime emits only explicitly allowlisted evidence, never raw command logs.
-        print(json.dumps({'command_id': command, 'mode': args.mode, 'status': 'Success'}))
-        break
-    if response['Status'] in ('Failed', 'Cancelled', 'TimedOut', 'Cancelling'):
+    if response['Status'] in ('Success', 'Failed', 'Cancelled', 'TimedOut', 'Cancelling'):
         for line in response.get('StandardOutputContent', '').splitlines():
             try:
                 evidence = json.loads(line)
@@ -45,13 +41,24 @@ for _ in range(130):
             if not isinstance(evidence, dict):
                 continue
             safe = {}
-            if evidence.get('stage') in ['identity','prerequisites','evidence-key','portal-auth','nginx','monitoring','grafana']:
+            if evidence.get('stage') in ['identity','prerequisites','evidence-key','portal-auth','nginx','monitoring','grafana','validate-portal','validate-grafana','validate-metrics']:
                 safe['stage'] = evidence['stage']
             identifiers = evidence.get('failure_identifiers', {})
             if isinstance(identifiers, dict):
                 safe['failure_identifiers'] = {key: value for key, value in identifiers.items()
-                    if key in ['binary','aws_error_code','aws_operation','aws_service','cli_error'] and isinstance(value, str)
+                    if key in ['binary','aws_error_code','aws_operation','aws_service','cli_error','reason','metric'] and isinstance(value, str)
                     and re.fullmatch(r'[A-Za-z0-9_-]{1,80}', value)}
+                if type(identifiers.get('http_status')) is int and 100 <= identifiers['http_status'] <= 599:
+                    safe['failure_identifiers']['http_status'] = identifiers['http_status']
+            for name in ['portal_authenticated', 'grafana_authenticated']:
+                if type(evidence.get(name)) is bool:
+                    safe[name] = evidence[name]
+            metrics = evidence.get('live_metric_series', {})
+            if isinstance(metrics, dict):
+                safe['live_metric_series'] = {key: value for key, value in metrics.items()
+                    if key in ['cosmotech_sqs_visible','cosmotech_sqs_inflight','cosmotech_sqs_oldest_age_seconds',
+                               'cosmotech_sqs_dlq_visible','cosmotech_worker_processing_seconds_count']
+                    and type(value) is int and value >= 0}
             for field, names in {'runtime_tools': ['aws','gpg','nginx','systemctl','docker'],
                                  'prerequisite_paths': ['host_proxy','monitoring_directory','docker_proxy']}.items():
                 value = evidence.get(field, {})
@@ -59,6 +66,9 @@ for _ in range(130):
                     safe[field] = {name: value[name] for name in names if type(value.get(name)) is bool}
             if safe:
                 print(json.dumps(safe), flush=True)
+        if response['Status'] == 'Success':
+            print(json.dumps({'command_id': command, 'mode': args.mode, 'status': 'Success'}))
+            break
         raise SystemExit('Fixed publisher failed; inspect only its sanitized runtime evidence')
     time.sleep(5)
 else:
