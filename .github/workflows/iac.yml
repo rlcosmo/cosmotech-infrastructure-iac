@@ -25,6 +25,9 @@ jobs:
       - run: terraform -chdir=terraform/environments/dr init -backend=false -input=false
       - run: terraform -chdir=terraform/environments/dr validate
       - run: terraform -chdir=terraform/environments/dr test
+      - run: terraform -chdir=terraform/bootstrap/lab_v2_admin init -backend=false -input=false
+      - run: terraform -chdir=terraform/bootstrap/lab_v2_admin validate
+      - run: terraform -chdir=terraform/bootstrap/lab_v2_admin test
   plan:
     if: github.event_name == 'workflow_dispatch' && !inputs.evidence && vars.TERRAFORM_PLAN_ROLE_ARN != ''
     needs: validate
