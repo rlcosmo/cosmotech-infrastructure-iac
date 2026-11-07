@@ -50,6 +50,8 @@ for _ in range(130):
                     and re.fullmatch(r'[A-Za-z0-9_-]{1,80}', value)}
                 if type(identifiers.get('http_status')) is int and 100 <= identifiers['http_status'] <= 599:
                     safe['failure_identifiers']['http_status'] = identifiers['http_status']
+                if type(identifiers.get('queue_data_max_age_seconds')) is int:
+                    safe['failure_identifiers']['queue_data_max_age_seconds'] = identifiers['queue_data_max_age_seconds']
             for name in ['portal_authenticated', 'grafana_authenticated']:
                 if type(evidence.get(name)) is bool:
                     safe[name] = evidence[name]
