@@ -102,3 +102,21 @@ class MultipleRootTests(unittest.TestCase):
         r=resource('aws_vpc_security_group_ingress_rule.allow','aws_vpc_security_group_ingress_rule',{'id':'sgr-test','tags':None,'tags_all':{'Project':'CosmoTech'}})
         result=comparison.compare(plan([r]),{'resources':[]},SOURCE)
         self.assertEqual(result['resources'][0]['status'],'in_sync')
+
+class InventoryIdentityTests(unittest.TestCase):
+    def test_native_s3_identity_wins_over_resource_explorer_alias(self):
+        collector=module('direct_inventory')
+        def call(region,service,operation,*args):
+            if operation=='describe-regions':return {'Regions':[{'RegionName':'us-east-1'}]}
+            if operation=='search':return {'Resources':[{'OwningAccountId':'123456789012','ResourceType':'s3:bucket','Arn':'arn:aws:s3:::state-bucket'}]}
+            if operation=='list-buckets':return {'Buckets':[{'Name':'state-bucket'}]}
+            if operation=='get-bucket-location':return {'LocationConstraint':None}
+            raise RuntimeError('unavailable')
+        result=collector.inventory(call,'123456789012')
+        buckets=[r for r in result['resources'] if r.get('arn')=='arn:aws:s3:::state-bucket']
+        self.assertEqual(len(buckets),1)
+        self.assertEqual((buckets[0]['kind'],buckets[0]['id']),('AWS::S3::Bucket','state-bucket'))
+        r=resource('aws_s3_bucket.state','aws_s3_bucket',{'bucket':'state-bucket'})
+        change={'address':r['address'],'type':r['type'],'change':{'actions':['create'],'before':None,'after':r['values']}}
+        report=comparison.compare(plan([r],[change],before=[]),result,SOURCE)
+        self.assertEqual(report['summary'],{'declared_untracked':1})
