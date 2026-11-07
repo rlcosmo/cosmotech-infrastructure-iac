@@ -358,6 +358,29 @@ def collect_web() -> list[str]:
         return [sample for result in executor.map(probe, TOOLS.items()) for sample in result]
 
 
+def collect_sqs() -> list[str]:
+    """Read only CloudWatch through the existing role; no queue message APIs."""
+    from sqs_canary_metrics import collect as collect_queue_metrics
+
+    def call(**query: object) -> dict:
+        return aws("cloudwatch", "get-metric-statistics",
+                   "--namespace", str(query["Namespace"]),
+                   "--metric-name", str(query["MetricName"]),
+                   "--dimensions", json.dumps(query["Dimensions"]),
+                   "--start-time", query["StartTime"].isoformat(),
+                   "--end-time", query["EndTime"].isoformat(),
+                   "--period", str(query["Period"]),
+                   "--statistics", str(query["Statistics"][0]))
+
+    result = collect_queue_metrics(call,
+        os.environ.get("LAB_SQS_QUEUE_NAME", "aws-eks-istio-lab-dev-orders-eks"),
+        os.environ.get("LAB_SQS_DLQ_NAME", "aws-eks-istio-lab-dev-orders-eks-dlq"),
+        dt.datetime.now(dt.timezone.utc))
+    if not result.startswith("cosmotech_sqs_collection_success 1\n"):
+        raise RuntimeError("SQS gauges unavailable")
+    return result.strip().splitlines()
+
+
 def collect() -> None:
     STATE_DIR.mkdir(mode=0o755, parents=True, exist_ok=True)
     path = STATE_DIR / "cache.json"
@@ -371,7 +394,7 @@ def collect() -> None:
     # Persist successful snapshots; a failure is visible and never becomes a false zero.
     groups = {"costs": (21600, collect_costs), "credits": (3600, collect_credits),
               "servers": (300, collect_servers), "inventory": (900, collect_inventory),
-              "web": (45, collect_web), "application_hosts": (60, collect_application_hosts),
+              "web": (45, collect_web), "sqs": (60, collect_sqs), "application_hosts": (60, collect_application_hosts),
               "codex": (60, collect_codex_quota), "zabbix": (45, collect_zabbix_problems)}
     for name, (ttl, collector) in groups.items():
         previous = cache.get(name, {})

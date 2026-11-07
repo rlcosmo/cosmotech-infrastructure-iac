@@ -26,6 +26,8 @@ resource "aws_ssm_document" "command_center_install" {
     "#!/bin/bash", "set -Eeuo pipefail", "umask 077",
     "test -f /etc/systemd/system/cosmotech-monitoring.service", "install -d -m 0755 /opt/cosmotech/monitoring",
     "printf '%s' '${base64encode(file("${path.module}/../../../ops/monitoring/lab_monitoring.py"))}' | base64 --decode > /opt/cosmotech/monitoring/lab_monitoring.py",
+    "printf '%s' '${base64encode(file("${path.module}/../../../ops/monitoring/sqs_canary_metrics.py"))}' | base64 --decode > /opt/cosmotech/monitoring/sqs_canary_metrics.py",
+    "chmod 0644 /opt/cosmotech/monitoring/sqs_canary_metrics.py", "python3 -m py_compile /opt/cosmotech/monitoring/sqs_canary_metrics.py",
     "chmod 0644 /opt/cosmotech/monitoring/lab_monitoring.py", "python3 -m py_compile /opt/cosmotech/monitoring/lab_monitoring.py",
     "systemctl start --no-block cosmotech-monitoring.service"
   ] } }] })
