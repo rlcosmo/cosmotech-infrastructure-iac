@@ -12,6 +12,7 @@ import tempfile
 import time
 from direct_comparison import compare, flatten
 from direct_inventory import inventory
+from direct_sdk import InventorySdk
 
 REPOSITORY = 'https://github.com/rlcosmo/cosmotech-infrastructure-iac.git'
 BRANCH = 'main'
@@ -150,7 +151,11 @@ def observe(role_arn):
             source['directories']=[root for root,_ in plans]
             stage='aws_inventory'
             progress(stage)
-            discovered=inventory(lambda region,service,operation,*args:aws(env,region,service,operation,*args),identity['Account'],identity['Arn'].split(':')[1])
+            transport=InventorySdk(credentials)
+            try:
+                discovered=inventory(transport,identity['Account'],identity['Arn'].split(':')[1])
+            finally:
+                transport.close()
             stage='comparison'
             progress(stage)
             report=compare(combined,discovered,source)

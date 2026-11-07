@@ -9,6 +9,7 @@ import json
 import math
 import os
 import pwd
+import importlib.util
 import re
 from pathlib import Path
 import secrets
@@ -272,15 +273,26 @@ def install_direct_observer() -> None:
     app = Path('/opt/cosmotech/iac-observer')
     app.mkdir(mode=0o755,exist_ok=True)
     app.chmod(0o755)
-    for name in ['direct_observer.py','direct_inventory.py','direct_comparison.py']:
+    for name in ['direct_observer.py','direct_inventory.py','direct_comparison.py','direct_sdk.py']:
         shutil.copyfile(SOURCE / name,app / name)
         (app / name).chmod(0o644)
+    sdk_umask = os.umask(0o022)
+    try:
+        venv = app / 'venv'
+        if not (venv / 'bin/python3').exists():
+            if importlib.util.find_spec('ensurepip') is None:
+                run(['apt-get','update'])
+                run(['apt-get','install','-y','--no-install-recommends','python3-venv'])
+            run(['/usr/bin/python3','-m','venv',str(venv)])
+        run([str(venv / 'bin/python3'),'-m','pip','install','--disable-pip-version-check','--no-input','boto3==1.43.122','botocore==1.43.122'])
+    finally:
+        os.umask(sdk_umask)
     identity = aws('sts','get-caller-identity')
     role = 'arn:aws:iam::' + identity['Account'] + ':role/cosmotech-iac-observer'
     configuration = Path('/etc/cosmotech-iac-observer.conf')
     configuration.write_text('IAC_OBSERVER_ROLE=' + role + '\n')
     configuration.chmod(0o600)
-    unit = '[Unit]\nDescription=Compare canonical Git IaC to AWS metadata without applying changes\nAfter=network-online.target\n[Service]\nUser=cosmotech-iac-observer\nGroup=www-data\nEnvironmentFile=/etc/cosmotech-iac-observer.conf\nEnvironment=HOME=/var/lib/cosmotech-iac-observer\nExecStart=/usr/bin/python3 /opt/cosmotech/iac-observer/direct_observer.py --role-arn ${IAC_OBSERVER_ROLE}\nRestart=on-failure\nRestartSec=15\nUMask=0027\nRuntimeDirectory=cosmotech-iac-observer\nRuntimeDirectoryMode=2770\nProtectSystem=strict\nProtectHome=true\nPrivateTmp=true\nReadWritePaths=/var/lib/cosmotech-iac-observer /var/lib/cosmotech-iac/comparison /run/cosmotech-iac-observer\n[Install]\nWantedBy=multi-user.target\n'
+    unit = '[Unit]\nDescription=Compare canonical Git IaC to AWS metadata without applying changes\nAfter=network-online.target\n[Service]\nUser=cosmotech-iac-observer\nGroup=www-data\nEnvironmentFile=/etc/cosmotech-iac-observer.conf\nEnvironment=HOME=/var/lib/cosmotech-iac-observer\nExecStart=/opt/cosmotech/iac-observer/venv/bin/python3 /opt/cosmotech/iac-observer/direct_observer.py --role-arn ${IAC_OBSERVER_ROLE}\nRestart=on-failure\nRestartSec=15\nUMask=0027\nRuntimeDirectory=cosmotech-iac-observer\nRuntimeDirectoryMode=2770\nProtectSystem=strict\nProtectHome=true\nPrivateTmp=true\nReadWritePaths=/var/lib/cosmotech-iac-observer /var/lib/cosmotech-iac/comparison /run/cosmotech-iac-observer\n[Install]\nWantedBy=multi-user.target\n'
     Path('/etc/systemd/system/cosmotech-iac-observer.service').write_text(unit)
     run(['systemctl','daemon-reload'])
     run(['systemctl','enable','--now','cosmotech-iac-observer.service'])
