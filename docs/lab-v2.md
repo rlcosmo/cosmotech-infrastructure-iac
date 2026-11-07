@@ -45,3 +45,16 @@ Portal com servidor em loopback, autenticação Basic obrigatória atrás do pro
 Como este repositório é público, os artefatos operacionais passam a ser criptografados com o destinatário público `IAC_EVIDENCE_GPG_PUBLIC_KEY`; a chave privada fica exclusivamente no runtime autorizado do portal. Não publicar relatórios plaintext nos artefatos. O transporte/decriptação até o portal ainda depende do executor aprovado; nunca baixar/decriptar state ou plan para o diretório servido.
 
 Último apply segue desconhecido: os workflows presentes não têm executor de apply nem recibo verificável. `S3 LastModified`, CI verde e drift observado não comprovam sucesso do último apply. Conectar recibos do executor oficial, associados a commit, ambiente, state e aprovação GMUD, antes de preencher esse campo. Nenhum histórico foi inventado.
+
+## Evidências consolidadas da continuação
+
+- Testes Python IaC ampliados (19 casos), incluindo inventário metadata/sem tags, limitação de consultas, isolamento, ausência de plan e autenticação/histórico via HTTP real local.
+- CI Terraform dev/DR e três testes mock de orçamento aprovados em https://github.com/rlcosmo/cosmotech-infrastructure-iac/actions/runs/42367358896. Nenhuma chamada AWS dos testes mock.
+- Dispatch real de `iac.yml` com `evidence=true` aceito na branch do PR, sem HTTP 404: https://github.com/rlcosmo/cosmotech-infrastructure-iac/actions/runs/42367424412. Coleta cloud é intencionalmente restrita a main; dispatch aceito não comprova inventário.
+- Criptografia GPG do artefato validada por roundtrip com chave temporária local; nenhum segredo real foi usado/exposto.
+- V2-002 preparado em https://github.com/rlcosmo/cosmotech-observability/pull/1: 26 testes locais e oito regras/fixtures promtool aprovados no CI. Testes existentes do Worker (12 casos, incluindo falha/retry/duplicata) aprovados localmente, sem alteração do Worker.
+- Fonte de entrega do coletor SQS sincronizada no documento SSM existente via Terraform. Sem execução SSM fora do pipeline.
+- DR: scaffold desabilitado, state isolado e runbook em lab-v2-dr.md; sem EKS secundário, replicação, failover ou Chaos real.
+- Créditos: diagnóstico de sessão temporária ausente/expirada; Bedrock/RDS não executados por falta de elegibilidade verificável e teto/ciclo de vida para RDS. Detalhes em lab-v2-credits.md.
+
+O V2-001 ainda não atende aceite operacional: falta aprovação do PR, role de observação, configuração do destinatário GPG, publicação autenticada/ingestão de relatórios, recibo do apply oficial e coleta AWS real. V2-002 também exige implantação pelo proprietário GitOps/Helm e validação de queries/alertas reais. Nenhum recurso cloud novo, apply, merge ou custo recorrente de infraestrutura foi criado nesta execução.

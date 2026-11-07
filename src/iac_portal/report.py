@@ -16,6 +16,14 @@ def resources(module: dict[str, Any]) -> list[dict[str, Any]]:
     return result
 
 
+def resource_region(resource: dict, fallback: str) -> str:
+    """Global ARNs must not be shown as regional infrastructure."""
+    arn = resource.get("values", {}).get("arn", "")
+    if isinstance(arn, str) and arn.startswith("arn:") and len(arn.split(":")) >= 6:
+        return arn.split(":")[3] or "global"
+    return fallback
+
+
 def build_report(state: dict, plan: dict, inventory: dict, *, region: str,
                  last_apply: str | None = None) -> dict:
     """Return an allowlisted view without values, outputs, tags or plan payloads."""
@@ -23,14 +31,19 @@ def build_report(state: dict, plan: dict, inventory: dict, *, region: str,
         raise ValueError("Region and explicit inventory coverage are required")
     if plan.get("errored") is True:
         raise ValueError("Failed Terraform plan cannot establish drift status")
+    evaluated = bool(plan.get("timestamp"))
+    if evaluated:
+        timestamp = datetime.fromisoformat(plan["timestamp"])
+        if timestamp.tzinfo is None:
+            raise ValueError("Plan timestamp must identify its timezone")
     managed = resources(state.get("values", {}).get("root_module", {}))
     arns = {r.get("values", {}).get("arn") for r in managed if r.get("mode") == "managed"}
     arns.discard(None)
     changes = {c["address"]: c.get("change", {}).get("actions", [])
                for c in plan.get("resource_drift", [])
                if c.get("change", {}).get("actions") != ["no-op"]}
-    rows = [{"address": r["address"], "type": r["type"], "region": region,
-             "status": "drift" if r["address"] in changes else "observed",
+    rows = [{"address": r["address"], "type": r["type"], "region": resource_region(r, region),
+             "status": "unknown" if not evaluated else ("drift" if r["address"] in changes else "observed"),
              "actions": changes.get(r["address"], [])}
             for r in managed if r.get("mode") == "managed"]
     # Inventory is scoped to the requested region by the collector. Candidates
@@ -43,4 +56,4 @@ def build_report(state: dict, plan: dict, inventory: dict, *, region: str,
             "last_plan": plan.get("timestamp"), "inventory_complete": inventory["complete"],
             "inventory_coverage": inventory.get("coverage", []),
             "resources": rows, "unmanaged_candidates": candidates,
-            "drift_count": len(changes)}
+            "drift_evaluated": evaluated, "drift_count": len(changes) if evaluated else None}
