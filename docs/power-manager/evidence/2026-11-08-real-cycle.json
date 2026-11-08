@@ -1,0 +1,112 @@
+{
+  "date_utc": "2026-11-08",
+  "overall_status": "real_cycle_passed_current_lambda_access_blocked",
+  "portal_url": "https://cosmotech-lab-power-manager.botanicalrook.chatgpt.site",
+  "authentication": "Owner-only external ChatGPT/Sites identity; no parallel password",
+  "successful_cycle": {
+    "workflow": "https://github.com/rlcosmo/cosmotech-infrastructure-iac/actions/runs/42468160575",
+    "commit": "60a4a515cc0d361c20653c357b9918c4d25f802d",
+    "result": "success",
+    "down_operation": "60ad0713-6df7-4e3a-a304-a18aa623ad64",
+    "first_up_operation": "8fb06d24-ca27-4730-ac4f-5ba74768f3af",
+    "successful_up_operation": "934c2921-3f7e-4a39-a8a8-390cbe7cac66",
+    "off_observed_at": "2026-11-08T10:11:22.305449+00:00",
+    "on_observed_at": "2026-11-08T10:29:19.022684+00:00",
+    "automatic_retry": "Kestra HTTP 502 during startup; subsequent recovery succeeded",
+    "portal_http_while_off": 200,
+    "recorded_state_observations": 66,
+    "observer_errors": 0
+  },
+  "data_preservation": {
+    "original_volumes": 17,
+    "original_volumes_preserved": 17,
+    "missing_original_volumes": 0,
+    "current_volumes": 20,
+    "current_gib": 414,
+    "extra_volumes": 3,
+    "extra_gib": 60,
+    "extra_storage_usd_month": 4.8,
+    "control_state": "ON",
+    "final_operation": "934c2921-3f7e-4a39-a8a8-390cbe7cac66"
+  },
+  "protected_network": {
+    "protected_network_matches_baseline": true,
+    "baseline_hash": "dfd24a0f5ba1ef7735c2d2917d82baeed6af86f37d885cfef6d70f7ee51b963d",
+    "current_hash": "dfd24a0f5ba1ef7735c2d2917d82baeed6af86f37d885cfef6d70f7ee51b963d"
+  },
+  "current_kubernetes_health": {
+    "read_at": 1794173916,
+    "ready_nodes": 3,
+    "nodes": 3,
+    "workloads": 24,
+    "unhealthy_workloads": [],
+    "pv": 11,
+    "pvc": 5,
+    "hpa": 4,
+    "blockers": [],
+    "endpoints": {
+      "argocd": 200,
+      "glpi": 200,
+      "grafana": 200,
+      "kestra": 200,
+      "orders_api": 200,
+      "orders_worker": 200,
+      "prometheus": 403,
+      "tempo": 200,
+      "zabbix": 200
+    },
+    "gitops": [
+      {
+        "name": "orders-api-dev",
+        "sync": "Synced",
+        "revision": "3ea5fad056bf23c92ffbdd1357e17f2270688b8c"
+      },
+      {
+        "name": "orders-worker-dev",
+        "sync": "Synced",
+        "revision": "3ea5fad056bf23c92ffbdd1357e17f2270688b8c"
+      }
+    ]
+  },
+  "security": {
+    "temporary_cycle_policy_revoked": true,
+    "cluster_admin_granted": false,
+    "eks_access_mapping_changed": false,
+    "persistent_aws_profiles_changed": false,
+    "runtime_root_credentials_used": false
+  },
+  "current_blocker": {
+    "observed_utc": "2026-11-08T21:42:16.283275+00:00",
+    "service": "AWS Lambda us-east-1",
+    "error": "AccessDeniedException / UnknownError",
+    "http": 403,
+    "api_gateway_http": 500,
+    "principals_tested": [
+      "authorized administrative session",
+      "GitHub OIDC publisher role"
+    ],
+    "organization_membership": false,
+    "console_same_error_confirmed_by_owner": true,
+    "request_id": "00846770-5125-4b86-ae9f-a196dd84ef9b",
+    "last_update_commit": "e61ae14b92a90044c776633de1cdcd0ebbb21bc5",
+    "last_update_deployment": "https://github.com/rlcosmo/cosmotech-infrastructure-iac/actions/runs/42524931216",
+    "last_update_applied": false
+  },
+  "tests": {
+    "python": 58,
+    "dom_down_up": "passed",
+    "ci": "passed before merges",
+    "real_confirmation_idempotency_concurrency": "passed",
+    "real_failure_recovery": "passed"
+  },
+  "estimated_costs_usd_month": {
+    "quoted_known_on_before_cycle": 513.62,
+    "quoted_partial_off_floor_before_cycle": 177.97,
+    "retained_old_boot_volumes_extra": 4.8,
+    "known_on_with_retained_boot_volumes_approx": 518.42,
+    "partial_off_floor_with_retained_boot_volumes": 182.77,
+    "compute_savings_approx": 335.65,
+    "usage_costs_and_unquoted_services": "additional; not a complete AWS bill",
+    "rate_quote_date": "2026-11-07"
+  }
+}
