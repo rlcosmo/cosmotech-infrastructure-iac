@@ -195,3 +195,24 @@ def test_legacy_scheduler_snapshot_requires_matching_historical_revision(monkeyp
     assert upgraded['automation']['disabled'] is False
     monkeypatch.setattr(mod,'kestra_request',lambda path:current)
     with pytest.raises(ValueError,match='not proven'):mod.normalize_legacy_snapshot(baseline,mod.ITSM)
+
+
+def test_itsm_restore_recovers_containers_before_polling_warming_api(monkeypatch):
+    import urllib.error
+    mod=module('host_agent');events=[]
+    original={'units':{},'containers':[{'id':'a'*64,'name':'/kestra','image':'same','running':True,'mounts':[]}]}
+    stopped={'units':{},'containers':[{**original['containers'][0],'running':False}]}
+    count=0
+    def collect(host,**kwargs):
+        nonlocal count
+        if kwargs.get('include_automation') is False:
+            events.append('process-state');return stopped
+        count+=1;events.append('api-state')
+        if count==1:raise urllib.error.HTTPError('https://kestra.example',502,'warming',{},None)
+        return original
+    monkeypatch.setattr(mod,'collect',collect)
+    monkeypatch.setattr(mod,'command',lambda args,**kw:events.append(args))
+    monkeypatch.setattr(mod.time,'sleep',lambda _:None)
+    assert mod.restore(original,mod.ITSM)['complete']
+    assert events[:3]==['process-state',['docker','start','a'*64],'api-state']
+    assert count==2
