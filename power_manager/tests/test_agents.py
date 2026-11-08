@@ -107,3 +107,21 @@ def test_passive_recovery_claim_is_preserved_without_authorizing_workloads():
     assert not agent.passive_retained_claim(claim,{})
     assert not agent.passive_retained_claim(claim,{'recovery':{'spec':{'persistentVolumeReclaimPolicy':'Delete'}}})
     assert not agent.passive_retained_claim(claim,{'recovery':{'spec':{'persistentVolumeReclaimPolicy':'Retain','hostPath':{}}}})
+
+
+def test_collect_pvs_are_not_overwritten_by_pod_template_volumes(monkeypatch):
+    mod=module('agent');agent=mod.Agent.__new__(mod.Agent)
+    monkeypatch.setattr(mod,'NAMESPACES',('kube-system',));monkeypatch.setattr(mod,'ENDPOINTS',{})
+    pv={'metadata':{'name':'durable'},'spec':{'persistentVolumeReclaimPolicy':'Retain','csi':{'volumeHandle':'vol-original'}}}
+    deployment={'metadata':{'name':'coredns'},'spec':{'replicas':1,'template':{'spec':{'volumes':[{'name':'scratch','emptyDir':{}}]}}},'status':{'readyReplicas':1}}
+    def kube(args,**kw):
+        resource=args[args.index('get')+1]
+        if '--all-namespaces' in args:return {'items':[]}
+        if resource=='pv':return {'items':[pv]}
+        if resource=='nodes':return {'items':[{'metadata':{'name':'node'},'status':{'conditions':[{'type':'Ready','status':'True'}]}}]}
+        if resource=='deployments' and not kw.get('local'):return {'items':[deployment]}
+        return {'items':[]}
+    agent.kube=kube
+    snapshot=agent.collect()
+    assert snapshot['pvs']==[{'name':'durable','spec':pv['spec'],'phase':None}]
+    assert snapshot['blockers']==[]
