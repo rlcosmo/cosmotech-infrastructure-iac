@@ -92,3 +92,49 @@ def test_iam_admin_route_preserves_audit_actor_without_impersonating_visitor():
         assert route.call_args.args[1:] == ('github-actions:123-1',{'direction':'DOWN'})
     event['path']='/api/arbitrary'
     assert api.handler(event,None)['statusCode']==401
+
+
+def test_backend_correlation_survives_errors_without_logging_sensitive_exception(capsys):
+    import json
+    from power_manager import api
+    identifier='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    event={'headers':{'X-Power-Correlation-Id':identifier}}
+    with patch.object(api,'handle_request',side_effect=RuntimeError('secret-token-value')):
+        result=api.handler(event,None)
+    body=json.loads(result['body']);logs=capsys.readouterr().out
+    assert result['statusCode']==500 and body['error_code']=='INTERNAL_ERROR'
+    assert result['headers']['x-correlation-id']==identifier==body['correlation_id']
+    assert identifier in logs
+    assert 'secret-token-value' not in logs+result['body']
+    assert api.CORRELATION.get() is None
+
+
+def test_aws_access_denial_is_correlated_and_does_not_expose_raw_message(capsys):
+    import json
+    from botocore.exceptions import ClientError
+    from power_manager import api
+    identifier='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+    error=ClientError({'Error':{'Code':'AccessDeniedException','Message':'Authorization: Bearer never-log-this'},'ResponseMetadata':{'RequestId':'aws-request'}},'GetParameter')
+    with patch.object(api,'authenticate',side_effect=error):
+        result=api.handler({'headers':{'x-power-correlation-id':identifier}},None)
+    body=json.loads(result['body']);logs=capsys.readouterr().out
+    assert result['statusCode']==503 and body['error_code']=='AccessDeniedException'
+    assert body['correlation_id']==identifier
+    assert 'never-log-this' not in logs+result['body']
+    assert 'GetParameter' in logs
+
+
+def test_publisher_trust_rejects_fork_branch_and_wrong_audience_without_calendar_expiry():
+    import importlib.util
+    from pathlib import Path
+    path=Path(__file__).resolve().parents[2]/'scripts/bootstrap_power_manager.py'
+    spec=importlib.util.spec_from_file_location('bootstrap_power',path);module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+    trust=module.publisher_trust()['Statement']
+    assert len(trust)==1 and trust[0]['Action']=='sts:AssumeRoleWithWebIdentity'
+    condition=trust[0]['Condition']
+    assert set(condition)=={'StringEquals'}
+    required=condition['StringEquals']
+    assert required['token.actions.githubusercontent.com:aud']=='sts.amazonaws.com'
+    subject=required['token.actions.githubusercontent.com:sub']
+    assert subject=='repo:rlcosmo@124368446/cosmotech-infrastructure-iac@1445869018:ref:refs/heads/main'
+    assert '*' not in subject and ':pull_request' not in subject

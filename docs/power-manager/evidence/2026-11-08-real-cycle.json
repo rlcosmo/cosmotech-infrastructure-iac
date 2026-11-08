@@ -90,10 +90,15 @@
     "request_id": "00846770-5125-4b86-ae9f-a196dd84ef9b",
     "last_update_commit": "e61ae14b92a90044c776633de1cdcd0ebbb21bc5",
     "last_update_deployment": "https://github.com/rlcosmo/cosmotech-infrastructure-iac/actions/runs/42524931216",
-    "last_update_applied": false
+    "last_update_applied": false,
+    "root_cause": "Provider account verification hold",
+    "proof_source": "AWS User Notifications managed account event",
+    "provider_notification_time_utc": "2026-11-08T18:30:55.248Z",
+    "provider_event_type": "Account Verification Required",
+    "owner_action": "Verification through the official secure AWS flow; no document or verification link in repository"
   },
   "tests": {
-    "python": 58,
+    "python": 62,
     "dom_down_up": "passed",
     "ci": "passed before merges",
     "real_confirmation_idempotency_concurrency": "passed",

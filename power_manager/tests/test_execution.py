@@ -222,6 +222,8 @@ def test_operation_requires_confirmation_and_lock_excludes_concurrency(model,mon
     body={'confirmation':'DESLIGAR LABORATÓRIO','idempotencyKey':'a19c54a7-2dd4-46df-8e55-e3e075a65449'}
     assert api.submit_operation(result,'owner',body)['statusCode']==400
     model.table.put_item(Item={'pk':'LOCK','operation':'another'})
+    monkeypatch.setenv('AGENT_HASH','version');result['agent_hash']='version'
+    model.table.put_item(Item={'pk':'CERTIFICATION','complete':True,'agent_hash':'version'})
     body['firstShutdownConsent']=True
     assert api.submit_operation(result,'owner',body)['statusCode']==409
     assert not model.events
@@ -262,3 +264,16 @@ def test_failed_scheduler_drain_prevents_any_instance_or_capacity_change(model,m
     monkeypatch.setattr(model,'send_command',send)
     create_operation(model,'down','DOWN');assert drive(model,'down')['state']=='failed'
     assert not any(event[0] in ('stop','capacity','retain') for event in model.events)
+
+
+def test_confirmation_rechecks_current_executor_and_certificate(model,monkeypatch):
+    monkeypatch.setattr(api,'table',lambda:model.table);monkeypatch.setenv('AGENT_HASH','new')
+    plan={'actor':'owner','expires':int(time.time())+600,'direction':'DOWN','id':'plan','ready':True,'pending':False,'blockers':[],'agent_hash':'old'}
+    body={'confirmation':'DESLIGAR LABORATÓRIO','firstShutdownConsent':True,'idempotencyKey':'a19c54a7-2dd4-46df-8e55-e3e075a65449'}
+    result=api.submit_operation(plan,'owner',body)
+    assert json.loads(result['body'])['error_code']=='PLAN_VERSION_CHANGED'
+    plan['agent_hash']='new'
+    model.table.put_item(Item={'pk':'CERTIFICATION','complete':False,'agent_hash':'new'})
+    result=api.submit_operation(plan,'owner',body)
+    assert json.loads(result['body'])['error_code']=='CERTIFICATION_PENDING'
+    assert 'LOCK' not in model.table.data and not model.events

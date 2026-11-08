@@ -3,7 +3,6 @@ import argparse
 import json
 import secrets
 import subprocess
-from datetime import datetime, timedelta, timezone
 import boto3
 from botocore.config import Config
 
@@ -99,6 +98,16 @@ def extend_execution_policies(policies, groups):
     return policies
 
 
+def publisher_trust():
+    # Trust is durable; credentials minted by STS remain short-lived. A calendar
+    # cutoff here would make routine CI require another administrative bootstrap.
+    return {'Version':'2012-10-17','Statement':[{
+        'Effect':'Allow','Principal':{'Federated':f'arn:aws:iam::{ACCOUNT}:oidc-provider/token.actions.githubusercontent.com'},
+        'Action':'sts:AssumeRoleWithWebIdentity','Condition':{'StringEquals':{
+            'token.actions.githubusercontent.com:aud':'sts.amazonaws.com',
+            'token.actions.githubusercontent.com:sub':'repo:rlcosmo@124368446/cosmotech-infrastructure-iac@1445869018:ref:refs/heads/main'}}}]}
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--apply', action='store_true')
@@ -123,19 +132,15 @@ def main():
     power_ids = [v['ApiId'] for page in api.get_paginator('get_apis').paginate() for v in page['Items'] if v['Name'] == 'cosmotech-power-api']
     if power_ids:
         policies['deploy']['Statement'].append(statement(['apigateway:TagResource'], [f'arn:aws:apigateway:us-east-1::/apis/{i}*' for i in power_ids]))
-    expiry = (datetime.now(timezone.utc) + timedelta(hours=6)).isoformat()
     trusts = {
         'runtime': {'Version': '2012-10-17', 'Statement': [{'Effect': 'Allow', 'Principal': {'Service': 'lambda.amazonaws.com'}, 'Action': 'sts:AssumeRole'}]},
-        'deploy': {'Version': '2012-10-17', 'Statement': [{'Effect': 'Allow', 'Principal': {'Federated': f'arn:aws:iam::{ACCOUNT}:oidc-provider/token.actions.githubusercontent.com'},
-                   'Action': 'sts:AssumeRoleWithWebIdentity', 'Condition': {'StringEquals': {'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com',
-                   'token.actions.githubusercontent.com:sub': 'repo:rlcosmo@124368446/cosmotech-infrastructure-iac@1445869018:ref:refs/heads/main'},
-                   'DateLessThan': {'aws:CurrentTime': expiry}}}]}}
+        'deploy': publisher_trust()}
     trusts['worker']=trusts['runtime']
     trusts['orchestrator']={'Version':'2012-10-17','Statement':[{'Effect':'Allow','Principal':{'Service':'states.amazonaws.com'},'Action':'sts:AssumeRole','Condition':{'StringEquals':{'aws:SourceAccount':ACCOUNT},'ArnLike':{'aws:SourceArn':f'arn:aws:states:{REGION}:{ACCOUNT}:stateMachine:cosmotech-power-operations'}}}]}
     for policy in policies.values():
         assert len(json.dumps(policy,separators=(',',':'))) < 10240, 'Inline IAM policy exceeds role quota'
     print(json.dumps({'identity': identity['Arn'], 'apply': args.apply, 'roles': ['cosmotech-power-'+v for v in policies],
-                      'deploy_trust_expires': expiry, 'policies': policies, 'ssm_parameter': PARAMETER, 'existing_apis_denied': existing_ids}))
+                      'deploy_trust': 'immutable repository/main + STS audience; short-lived STS credentials', 'policies': policies, 'ssm_parameter': PARAMETER, 'existing_apis_denied': existing_ids}))
     if not args.apply:
         return
     for kind in ['runtime', 'deploy', 'worker', 'orchestrator']:
