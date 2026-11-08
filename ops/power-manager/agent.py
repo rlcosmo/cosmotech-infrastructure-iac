@@ -124,8 +124,8 @@ class Agent:
     def collect(self):
         data = {'observed_at':int(time.time()), 'workloads':[], 'pvs':[], 'pvcs':[], 'hpa':[], 'pdb':[], 'nodes':[], 'daemonsets':[], 'argo':[], 'controllers':[], 'endpoints':{}, 'blockers':[]}
         data['namespaces']=[r['metadata']['name'] for r in self.kube(['get','namespaces','-o','json'])['items']]
-        volumes=self.kube(['get','pv','-o','json'])['items']
-        volume_by_name={r['metadata']['name']:r for r in volumes}
+        persistent_volumes=self.kube(['get','pv','-o','json'])['items']
+        volume_by_name={r['metadata']['name']:r for r in persistent_volumes}
         data['storageclasses']=self.kube(['get','storageclasses','-o','json'])['items']
         data['outside_scope']=[]
         for kind in ('deployments','statefulsets','daemonsets','pods','jobs','cronjobs','pvc'):
@@ -168,7 +168,7 @@ class Agent:
                         data[key].append({'namespace':ns,'name':r['metadata']['name'],'volume':r['spec'].get('volumeName'),'phase':r.get('status',{}).get('phase')})
                         if r.get('status',{}).get('phase') != 'Bound':data['blockers'].append('PVC não Bound: '+ns+'/'+r['metadata']['name'])
                     else:data[key].append({'namespace':ns,'name':r['metadata']['name'],'spec':r['spec']})
-        for r in volumes:
+        for r in persistent_volumes:
             data['pvs'].append({'name':r['metadata']['name'],'spec':r['spec'],'phase':r.get('status',{}).get('phase')})
             if r['spec'].get('persistentVolumeReclaimPolicy') != 'Retain' or 'local' in r['spec'] or 'hostPath' in r['spec']:
                 data['blockers'].append('Volume sem retenção segura: '+r['metadata']['name'])
