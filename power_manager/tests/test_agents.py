@@ -137,3 +137,36 @@ def test_host_mount_comparison_ignores_order_but_detects_storage_changes():
     assert mod.compare(baseline,current)==[]
     current['containers'][0]['mounts'][0]['Source']='/different-volume'
     assert mod.compare(baseline,current)==['Mounts divergentes: database']
+
+
+def test_scheduler_pause_preserves_snapshot_and_drains_without_killing_jobs(monkeypatch):
+    mod=module('host_agent');old={**mod.FLOW,'disabled':False,'spec_hash':'same'}
+    samples=iter([old,{**old,'disabled':True}])
+    monkeypatch.setattr(mod,'automation_state',lambda:next(samples))
+    request=Mock();monkeypatch.setattr(mod,'kestra_request',request)
+    monkeypatch.setattr(mod,'command',lambda args: '{"Commands":[]}')
+    monkeypatch.setattr(mod.time,'sleep',lambda _:None)
+    assert mod.automation({'automation':old},mod.ITSM)['drained']
+    assert old['disabled'] is False
+    request.assert_called_once_with('/api/v1/main/flows/disable/by-ids',method='POST',payload=[mod.FLOW])
+
+
+def test_scheduler_resume_retains_original_disabled_state(monkeypatch):
+    mod=module('host_agent');old={**mod.FLOW,'disabled':True,'spec_hash':'same'}
+    monkeypatch.setattr(mod,'automation_state',lambda:dict(old));request=Mock();monkeypatch.setattr(mod,'kestra_request',request)
+    assert mod.automation({'automation':old},mod.ITSM,resume=True)['scheduler_disabled'] is True
+    request.assert_not_called()
+
+
+def test_scheduler_drift_blocks_without_overwriting_configuration(monkeypatch):
+    import pytest
+    mod=module('host_agent');old={**mod.FLOW,'disabled':False,'spec_hash':'old'}
+    monkeypatch.setattr(mod,'automation_state',lambda:{**old,'spec_hash':'new'})
+    request=Mock();monkeypatch.setattr(mod,'kestra_request',request)
+    with pytest.raises(ValueError,match='configuration drift'):mod.automation({'automation':old},mod.ITSM,resume=True)
+    request.assert_not_called()
+
+
+def test_ephemeral_kestra_runner_is_not_restarted_as_a_service():
+    mod=module('host_agent');old={'units':{},'containers':[{'id':'job','name':'finished-task','running':True,'ephemeral':True}]}
+    assert mod.compare(old,{'units':{},'containers':[]})==[]

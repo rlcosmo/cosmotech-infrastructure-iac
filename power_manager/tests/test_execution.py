@@ -76,7 +76,7 @@ class AWS:
             identifier=str(len(self.commands)+1);iid=kw['InstanceIds'][0]
             ref={'key':'plans/'+Parameters['PlanId'][0]+'/hosts/'+iid+'.json','version':'host-'+identifier}
             self.objects[(ref['key'],ref['version'])]=json.dumps({'host':iid,'containers':[],'units':{}}).encode()
-            self.commands[identifier]={'Status':'Success','StandardOutputContent':json.dumps({'reference':ref,'safe_restore_validated':True})}
+            self.commands[identifier]={'Status':'Success','StandardOutputContent':json.dumps({'reference':ref,'safe_restore_validated':True,'complete':True,'drained':True})}
             self.events.append(('host',Parameters['Mode'][0]));return {'Command':{'CommandId':identifier}}
         phase=Parameters['Phase'][0];identifier=str(len(self.commands)+1)
         output={}
@@ -240,3 +240,25 @@ def test_service_access_cannot_confirm_real_power_operation(model,monkeypatch):
     result={'actor':'private-site-service','expires':int(time.time())+600,'direction':'DOWN','id':'plan','ready':True,'blockers':[]}
     assert api.submit_operation(result,'private-site-service',{'confirmation':'DESLIGAR LABORATÓRIO','firstShutdownConsent':True})['statusCode']==403
     assert not model.events and 'LOCK' not in model.table.data
+
+
+def test_scheduler_is_drained_before_compute_changes_and_resumed_last(model):
+    create_operation(model,'down','DOWN');assert drive(model,'down')['state']=='done'
+    pause=model.events.index(('host','PAUSE_AUTOMATION'))
+    assert pause<next(i for i,e in enumerate(model.events) if e[0]=='retain')
+    assert pause<next(i for i,e in enumerate(model.events) if e[0]=='stop')
+    create_operation(model,'up','UP','down');assert drive(model,'up')['state']=='done'
+    resume=model.events.index(('host','RESUME_AUTOMATION'))
+    assert resume>model.events.index(('agent','VERIFY'))
+
+
+def test_failed_scheduler_drain_prevents_any_instance_or_capacity_change(model,monkeypatch):
+    original=model.send_command
+    def send(Parameters,**kwargs):
+        result=original(Parameters=Parameters,**kwargs)
+        if Parameters.get('Mode')==['PAUSE_AUTOMATION']:
+            model.commands[result['Command']['CommandId']]['Status']='Failed'
+        return result
+    monkeypatch.setattr(model,'send_command',send)
+    create_operation(model,'down','DOWN');assert drive(model,'down')['state']=='failed'
+    assert not any(event[0] in ('stop','capacity','retain') for event in model.events)

@@ -83,8 +83,8 @@ def save(op):
 
 def build_steps(snapshot,direction,source=None):
     if direction=='DOWN':
-        return ['hosts','capture','snapshot','retain','freeze','agent:PREPARE','stop:itsm','queues','agent:QUIESCE','zero','wait_zero','stop:zabbix','stop:control','verify_off']
-    return ['start:control','wait:control','host:control','restore_capacity','wait_nodes','start:itsm','wait:itsm','host:itsm','agent:RESUME','start:zabbix','wait:zabbix','host:zabbix','agent:VERIFY','unfreeze','verify_on']
+        return ['hosts','capture','snapshot','automation:PAUSE','retain','freeze','agent:PREPARE','stop:itsm','queues','agent:QUIESCE','zero','wait_zero','stop:zabbix','stop:control','verify_off']
+    return ['start:control','wait:control','host:control','restore_capacity','wait_nodes','start:itsm','wait:itsm','host:itsm','agent:RESUME','start:zabbix','wait:zabbix','host:zabbix','agent:VERIFY','unfreeze','automation:RESUME','verify_on']
 
 
 def ec2_id(name):
@@ -132,6 +132,22 @@ def execute_step(op,step,snapshot):
             if r['Status']!='Success':raise ValueError('Host process snapshot failed; do not power off')
             report=json.loads(r['StandardOutputContent'].strip().splitlines()[-1])
             op['baseline'].setdefault('host_snapshots',{})[iid]=report['reference'];save(op)
+        return True
+    if step.startswith('automation:'):
+        iid=ec2_id('itsm');ref=snapshot.get('host_snapshots',{}).get(iid)
+        target=next((r for r in snapshot['targets'] if r['type']=='EC2' and r['id']==iid),None)
+        if not target or target['state']!='running':return True
+        if not ref:raise ValueError('Original automation snapshot missing')
+        mode=step.split(':')[1]+'_AUTOMATION';key='scheduler_'+mode
+        if key not in op:
+            sent=client('ssm').send_command(InstanceIds=[iid],DocumentName=os.environ['HOST_EXECUTE_DOCUMENT'],Parameters={'Mode':[mode],'PlanId':[snapshot['plan_id']],'OperationId':[op['id']],'SnapshotVersion':[ref['version']]},TimeoutSeconds=600,Comment='Power Manager preserve scheduler state and drain automation')
+            op[key]=sent['Command']['CommandId'];save(op);return False
+        try:r=client('ssm').get_command_invocation(CommandId=op[key],InstanceId=iid)
+        except client('ssm').exceptions.InvocationDoesNotExist:return False
+        if r['Status'] in {'Pending','InProgress','Delayed'}:return False
+        if r['Status']!='Success':raise ValueError('Scheduler quiescence/recovery failed; original state preserved')
+        report=json.loads(r['StandardOutputContent'].strip().splitlines()[-1])
+        if not report.get('complete') or (mode=='PAUSE_AUTOMATION' and not report.get('drained')):raise ValueError('Automation drain not proven')
         return True
     if step.startswith('host:'):
         iid=ec2_id(step.split(':')[1])

@@ -154,6 +154,7 @@ def main():
         roles=iam.get_instance_profile(InstanceProfileName=profile)['InstanceProfile']['Roles']
         assert len(roles)==1
         policy={'Version':'2012-10-17','Statement':[statement(['s3:GetObject','s3:GetObjectVersion','s3:PutObject'],bucket+'/plans/*/hosts/'+iid+'.json')]}
+        if iid=='i-0def4e806c49cf60e':policy['Statement'].append(statement(['ssm:ListCommands'],'*',Condition={'StringEquals':{'aws:RequestedRegion':REGION}}))
         iam.put_role_policy(RoleName=roles[0]['RoleName'],PolicyName='cosmotech-power-host-snapshots',PolicyDocument=json.dumps(policy))
     ssm = session.client('ssm', config=config)
     try:

@@ -129,7 +129,7 @@ output "agent_hash" { value = local.agent_hash }
 resource "aws_ssm_document" "host" {
   for_each = {
     read    = { name = "CosmoTech-Power-Host-Read", modes = ["SNAPSHOT", "SAFE_TEST"] }
-    execute = { name = "CosmoTech-Power-Host-Execute", modes = ["RESTORE", "VERIFY"] }
+    execute = { name = "CosmoTech-Power-Host-Execute", modes = ["RESTORE", "VERIFY", "PAUSE_AUTOMATION", "RESUME_AUTOMATION"] }
   }
   name            = each.value.name
   document_type   = "Command"

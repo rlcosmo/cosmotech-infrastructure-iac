@@ -53,6 +53,10 @@ class Controller:
         for key,value in (('ExecutionStage','Executing'),('Status','Pending')):
             for page in self.ssm.get_paginator('list_commands').paginate(Filters=[{'key':key,'value':value}]):
                 for command in page.get('Commands',[]):
+                    technical=(command['DocumentName']=='CosmoTech-Promotion-Argo-State' or (command['DocumentName']=='CosmoTech-Execute-Promotion-Stage' and command.get('Parameters',{}).get('Stage')==['tick'] and command.get('InstanceIds')==['i-0def4e806c49cf60e']))
+                    # The backend snapshots, disables and drains this known scheduler
+                    # before any capacity/instance change. Other jobs block here.
+                    if technical:continue
                     if command['CommandId'] not in seen:
                         active.append({'document':command['DocumentName'],'command_id':command['CommandId']})
                         seen.add(command['CommandId'])

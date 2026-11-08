@@ -43,3 +43,12 @@ def test_active_external_command_blocks_before_any_power_request():
     paginator=Mock();paginator.paginate.return_value=[{'Commands':[{'DocumentName':'deployment','CommandId':'active'}]}]
     controller.ssm=Mock();controller.ssm.get_paginator.return_value=paginator
     with pytest.raises(RuntimeError,match='Active SSM automation'):controller.no_external_commands()
+
+
+def test_known_scheduler_is_deferred_to_backend_pause_and_drain():
+    controller=cycle.Controller.__new__(cycle.Controller)
+    commands=[{'DocumentName':'CosmoTech-Execute-Promotion-Stage','CommandId':'tick','Parameters':{'Stage':['tick']},'InstanceIds':['i-0def4e806c49cf60e']},
+        {'DocumentName':'CosmoTech-Promotion-Argo-State','CommandId':'read'}]
+    paginator=Mock();paginator.paginate.return_value=[{'Commands':commands}]
+    controller.ssm=Mock();controller.ssm.get_paginator.return_value=paginator
+    controller.no_external_commands()
