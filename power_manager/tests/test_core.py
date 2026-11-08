@@ -122,3 +122,19 @@ def test_aws_access_denial_is_correlated_and_does_not_expose_raw_message(capsys)
     assert body['correlation_id']==identifier
     assert 'never-log-this' not in logs+result['body']
     assert 'GetParameter' in logs
+
+
+def test_publisher_trust_rejects_fork_branch_and_wrong_audience_without_calendar_expiry():
+    import importlib.util
+    from pathlib import Path
+    path=Path(__file__).resolve().parents[2]/'scripts/bootstrap_power_manager.py'
+    spec=importlib.util.spec_from_file_location('bootstrap_power',path);module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+    trust=module.publisher_trust()['Statement']
+    assert len(trust)==1 and trust[0]['Action']=='sts:AssumeRoleWithWebIdentity'
+    condition=trust[0]['Condition']
+    assert set(condition)=={'StringEquals'}
+    required=condition['StringEquals']
+    assert required['token.actions.githubusercontent.com:aud']=='sts.amazonaws.com'
+    subject=required['token.actions.githubusercontent.com:sub']
+    assert subject=='repo:rlcosmo@124368446/cosmotech-infrastructure-iac@1445869018:ref:refs/heads/main'
+    assert '*' not in subject and ':pull_request' not in subject

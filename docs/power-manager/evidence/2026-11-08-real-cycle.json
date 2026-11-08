@@ -98,7 +98,7 @@
     "owner_action": "Verification through the official secure AWS flow; no document or verification link in repository"
   },
   "tests": {
-    "python": 61,
+    "python": 62,
     "dom_down_up": "passed",
     "ci": "passed before merges",
     "real_confirmation_idempotency_concurrency": "passed",

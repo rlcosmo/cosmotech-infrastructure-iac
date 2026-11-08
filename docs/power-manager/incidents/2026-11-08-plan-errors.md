@@ -36,7 +36,7 @@ workloads saudáveis, GitOps Synced, 17/17 volumes originais e rede protegida id
 
 ## Validação e liberação
 
-61 testes Python e testes DOM/proxy cobrem os botões, 401/403/404/500/502, timeout,
+62 testes Python e testes DOM/proxy cobrem os botões, 401/403/404/500/502, timeout,
 JSON inválido, contrato de plano, expiração, consentimento, correlação e redação
 de informações sensíveis. Nenhum novo desligamento é executado durante o bloqueio.
 
@@ -44,3 +44,13 @@ Após a AWS liberar a conta: repetir a publicação oficial, certificar a versã
 preparar e consultar um plano DOWN com sessão pessoal, validar bloqueios/TTL e
 confirmar estado operacional. A disponibilidade dos botões deve ser informada pelo
 resultado ao vivo, não apenas por CI ou pela ausência de erro visual.
+
+## Independência de sessões administrativas no CI
+
+Também havia um DateLessThan absoluto de seis horas na trust policy do publisher.
+Isso expirava a confiança do GitHub em uma data fixa e impedia publicações posteriores
+mesmo com um novo token OIDC válido. A confiança mantém somente o repositório imutável,
+main e audience STS; as credenciais continuam temporárias e as permissões do publisher
+continuam limitadas à stack Power Manager. Não há chaves permanentes ou permissão IAM
+administrativa nova. A policy temporária de invocação usada no teste permanece revogada.
+A restrição de verificação da conta é independente desse ajuste de confiança.
