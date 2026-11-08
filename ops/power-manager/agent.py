@@ -276,7 +276,7 @@ class Agent:
         by={(r['namespace'],r['kind'],r['name']):r for r in current['workloads']}
         for r in baseline['workloads']:
             found=by.get((r['namespace'],r['kind'],r['name']))
-            if not found or found['template_hash']!=r['template_hash'] or found['ready']<found['replicas']:
+            if not found or found['template_hash']!=r['template_hash'] or found['replicas']!=r['replicas'] or found['ready']<r['replicas']:
                 differences.append('Workload não recuperado: '+r['namespace']+'/'+r['name'])
         if current['daemonsets']!=baseline['daemonsets']:differences.append('Configuração de DaemonSets divergente')
         for app in baseline['argo']:

@@ -86,3 +86,14 @@ def test_git_revision_rejects_untrusted_repository_before_running_commands():
     agent=module('agent').Agent.__new__(module('agent').Agent)
     with pytest.raises(ValueError,match='Unreviewed GitOps repository'):
         agent.git_revision({'repoURL':'ext::arbitrary-command','targetRevision':'main'})
+
+
+def test_verify_rejects_unrestored_replica_count_even_when_zero_is_healthy():
+    agent=module('agent').Agent.__new__(module('agent').Agent)
+    baseline={'nodes':[{'ready':True}],'workloads':[{'namespace':'orders-api','kind':'deployments','name':'orders-api','template_hash':'same','replicas':3,'ready':3}],
+        'daemonsets':[],'argo':[],'pvs':[],'endpoints':{}}
+    current={**baseline,'observed_at':1,'blockers':[],'workloads':[{**baseline['workloads'][0],'replicas':0,'ready':0}]}
+    agent.collect=lambda:current
+    result=agent.verify_once(baseline)
+    assert result['complete'] is False
+    assert result['differences']==['Workload não recuperado: orders-api/orders-api']
