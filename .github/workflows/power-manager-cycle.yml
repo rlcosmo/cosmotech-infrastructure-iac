@@ -4,9 +4,9 @@ on:
     inputs:
       action:
         type: choice
-        options: [status, cycle]
+        options: [status, cycle, recover]
         default: status
-        description: 'cycle executes a real DOWN then UP under owner authorization'
+        description: 'cycle: DOWN then UP; recover: UP only from preserved snapshot'
       authorization:
         type: string
         required: true

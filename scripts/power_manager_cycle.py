@@ -131,9 +131,15 @@ def cycle(controller):
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--action',choices=['status','cycle'],default='status');args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('--action',choices=['status','cycle','recover'],default='status');args=parser.parse_args()
     controller=Controller(os.environ['GITHUB_RUN_ID']+'-'+os.environ.get('GITHUB_RUN_ATTEMPT','1'))
     if args.action=='cycle':cycle(controller)
+    elif args.action=='recover':
+        state=controller.state()['state']['state']
+        if state in ('OFF','RECOVERY_REQUIRED'):controller.execute('UP')
+        elif state!='ON':raise RuntimeError('Active operation must finish before recovery')
+        if controller.state()['state']['state']!='ON':raise RuntimeError('Recovery did not restore ON')
+        portal_alive()
     else:print(json.dumps(controller.state(),ensure_ascii=False),flush=True)
 
 if __name__=='__main__':main()
