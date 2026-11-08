@@ -24,3 +24,22 @@ def test_normal_cycle_restores_before_success(monkeypatch):
     monkeypatch.setattr(cycle,'portal_alive',lambda:None)
     cycle.cycle(controller)
     assert [c.args for c in controller.execute.call_args_list]==[('DOWN',),('UP',)]
+
+
+def test_ssm_guard_filters_active_status_on_service_instead_of_scanning_history():
+    controller=cycle.Controller.__new__(cycle.Controller);seen=[]
+    class Pages:
+        def paginate(self,**kwargs):
+            seen.append(kwargs)
+            return [{'Commands':[]}]
+    class SSM:
+        def get_paginator(self,name):assert name=='list_commands';return Pages()
+    controller.ssm=SSM();controller.no_external_commands()
+    assert seen==[{'Filters':[{'key':'Status','value':value}]} for value in ('Pending','InProgress','Cancelling')]
+
+
+def test_active_external_command_blocks_before_any_power_request():
+    controller=cycle.Controller.__new__(cycle.Controller)
+    paginator=Mock();paginator.paginate.return_value=[{'Commands':[{'DocumentName':'deployment','CommandId':'active'}]}]
+    controller.ssm=Mock();controller.ssm.get_paginator.return_value=paginator
+    with pytest.raises(RuntimeError,match='Active SSM automation'):controller.no_external_commands()
