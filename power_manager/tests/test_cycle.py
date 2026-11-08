@@ -35,7 +35,7 @@ def test_ssm_guard_filters_active_status_on_service_instead_of_scanning_history(
     class SSM:
         def get_paginator(self,name):assert name=='list_commands';return Pages()
     controller.ssm=SSM();controller.no_external_commands()
-    assert seen==[{'Filters':[{'key':'Status','value':value}]} for value in ('Pending','InProgress','Cancelling')]
+    assert seen==[{'Filters':[{'key':key,'value':value}]} for key,value in (('ExecutionStage','Executing'),('Status','Pending'))]
 
 
 def test_active_external_command_blocks_before_any_power_request():

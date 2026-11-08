@@ -46,10 +46,16 @@ class Controller:
         # Unknown active automation can race with a snapshot or restart workloads.
         active=[]
         # Filter on the service, avoiding a scan of the 30-day command history.
-        for status in ('Pending','InProgress','Cancelling'):
-            for page in self.ssm.get_paginator('list_commands').paginate(Filters=[{'key':'Status','value':status}]):
+        # Executing includes commands still running/cancelling; explicitly query
+        # Pending as well. Cancelling is a response status, not a valid Status
+        # filter value (AWS API CommandFilter documentation).
+        seen=set()
+        for key,value in (('ExecutionStage','Executing'),('Status','Pending')):
+            for page in self.ssm.get_paginator('list_commands').paginate(Filters=[{'key':key,'value':value}]):
                 for command in page.get('Commands',[]):
-                    active.append({'document':command['DocumentName'],'command_id':command['CommandId']})
+                    if command['CommandId'] not in seen:
+                        active.append({'document':command['DocumentName'],'command_id':command['CommandId']})
+                        seen.add(command['CommandId'])
         if active:raise RuntimeError('Active SSM automation must finish before DOWN: '+json.dumps(active))
 
     def plan(self,direction):
