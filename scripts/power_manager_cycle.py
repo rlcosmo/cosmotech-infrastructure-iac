@@ -24,7 +24,7 @@ class Controller:
         if not identity.startswith('arn:aws:sts::414053644145:assumed-role/cosmotech-power-deploy/'):
             raise ValueError('Controlled cycle requires the non-root GitHub OIDC publisher role')
         self.client=session.client('lambda',config=CONFIG)
-        self.ssm=session.client('ssm',config=CONFIG)
+        self.ssm=session.client('ssm',config=Config(connect_timeout=5,read_timeout=20,retries={'mode':'adaptive','total_max_attempts':5}))
         print(json.dumps({'oidc_identity':identity,'run_id':run_id}),flush=True)
 
     def request(self,method,path,payload=None,*,expected_status=None):
@@ -45,10 +45,17 @@ class Controller:
     def no_external_commands(self):
         # Unknown active automation can race with a snapshot or restart workloads.
         active=[]
-        for page in self.ssm.get_paginator('list_commands').paginate():
-            for command in page.get('Commands',[]):
-                if command['Status'] in ('Pending','InProgress','Delayed','Cancelling'):
-                    active.append({'document':command['DocumentName'],'command_id':command['CommandId']})
+        # Filter on the service, avoiding a scan of the 30-day command history.
+        # Executing includes commands still running/cancelling; explicitly query
+        # Pending as well. Cancelling is a response status, not a valid Status
+        # filter value (AWS API CommandFilter documentation).
+        seen=set()
+        for key,value in (('ExecutionStage','Executing'),('Status','Pending')):
+            for page in self.ssm.get_paginator('list_commands').paginate(Filters=[{'key':key,'value':value}]):
+                for command in page.get('Commands',[]):
+                    if command['CommandId'] not in seen:
+                        active.append({'document':command['DocumentName'],'command_id':command['CommandId']})
+                        seen.add(command['CommandId'])
         if active:raise RuntimeError('Active SSM automation must finish before DOWN: '+json.dumps(active))
 
     def plan(self,direction):
