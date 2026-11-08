@@ -42,3 +42,58 @@ def test_host_restore_refuses_missing_or_replaced_image(monkeypatch):
     command=Mock();monkeypatch.setattr(mod,'command',command)
     with pytest.raises(ValueError,match='drift'):mod.restore(baseline,'host')
     command.assert_not_called()
+
+
+def test_host_restore_refreshes_containers_after_starting_docker(monkeypatch):
+    mod=module('host_agent');calls=[]
+    original={'units':{'docker':True},'containers':[{'id':'a'*64,'name':'/database','image':'image','running':True,'mounts':[]}]}
+    unavailable={'units':{},'containers':[]}
+    stopped={'units':{'docker':True},'containers':[{**original['containers'][0],'running':False}]}
+    samples=iter([unavailable,stopped,original])
+    monkeypatch.setattr(mod,'collect',lambda _:next(samples))
+    monkeypatch.setattr(mod,'command',lambda args,**kw:calls.append(args))
+    assert mod.restore(original,'host')['complete']
+    assert calls==[['systemctl','start','docker'],['docker','start','a'*64]]
+
+
+def test_argo_restore_accepts_unchanged_automatic_application():
+    mod=module('agent')
+    app={'name':'orders-api-dev','spec_hash':'automatic-enabled','revision':'a'*40,'remote_revision':'a'*40}
+    mod.Agent.check_argo_restore({'argo':[app]},{'argo':[dict(app)]})
+
+
+def test_argo_restore_blocks_new_git_revision_and_application():
+    import pytest
+    mod=module('agent')
+    app={'name':'orders-api-dev','spec_hash':'automatic-enabled','revision':'a'*40,'remote_revision':'a'*40}
+    with pytest.raises(ValueError,match='keep Argo paused'):
+        mod.Agent.check_argo_restore({'argo':[app]},{'argo':[{**app,'remote_revision':'b'*40}]})
+    with pytest.raises(ValueError,match='inventory drift'):
+        mod.Agent.check_argo_restore({'argo':[app]},{'argo':[app,{**app,'name':'new'}]})
+
+
+def test_prepare_waits_for_local_argo_before_workload_mutation():
+    agent=module('agent').Agent.__new__(module('agent').Agent);events=[]
+    agent.scale=lambda r,n,**kw:events.append(('scale',r['name'],kw.get('local',False)))
+    agent.wait_workload=lambda r,n,**kw:events.append(('wait',r['name'],kw.get('local',False)))
+    agent.prepare({'blockers':[],'controllers':[{'name':'argocd-application-controller'}],
+        'workloads':[{'name':'orders-api','namespace':'orders-api'}]})
+    assert events==[('scale','argocd-application-controller',True),('wait','argocd-application-controller',True),('scale','orders-api',False)]
+
+
+def test_git_revision_rejects_untrusted_repository_before_running_commands():
+    import pytest
+    agent=module('agent').Agent.__new__(module('agent').Agent)
+    with pytest.raises(ValueError,match='Unreviewed GitOps repository'):
+        agent.git_revision({'repoURL':'ext::arbitrary-command','targetRevision':'main'})
+
+
+def test_verify_rejects_unrestored_replica_count_even_when_zero_is_healthy():
+    agent=module('agent').Agent.__new__(module('agent').Agent)
+    baseline={'nodes':[{'ready':True}],'workloads':[{'namespace':'orders-api','kind':'deployments','name':'orders-api','template_hash':'same','replicas':3,'ready':3}],
+        'daemonsets':[],'argo':[],'pvs':[],'endpoints':{}}
+    current={**baseline,'observed_at':1,'blockers':[],'workloads':[{**baseline['workloads'][0],'replicas':0,'ready':0}]}
+    agent.collect=lambda:current
+    result=agent.verify_once(baseline)
+    assert result['complete'] is False
+    assert result['differences']==['Workload não recuperado: orders-api/orders-api']

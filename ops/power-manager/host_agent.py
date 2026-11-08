@@ -49,10 +49,13 @@ def compare(baseline,current):
 
 
 def restore(baseline,host):
-    current=collect(host);by={r['id']:r for r in current['containers']}
+    current=collect(host);started_unit=False
     for unit in baseline['units']:
         if unit not in UNITS:raise ValueError('Unit outside allowlist')
-        if not current['units'].get(unit):command(['systemctl','start',unit])
+        if not current['units'].get(unit):
+            command(['systemctl','start',unit]);started_unit=True
+    if started_unit:current=collect(host)
+    by={r['id']:r for r in current['containers']}
     def priority(item):return 0 if any(s in item['name'].lower() for s in ('database','postgres','mariadb','-db')) else 1
     for old in sorted(baseline['containers'],key=priority):
         if not old['running']:continue

@@ -8,6 +8,8 @@ import copy
 import hashlib
 import json
 import os
+import re
+import shlex
 from pathlib import Path
 import subprocess
 import tempfile
@@ -79,10 +81,52 @@ class Agent:
         path.chmod(0o600)
         return json.loads(path.read_text())
 
+    def git_revision(self, source):
+        # Reuse the host's existing deploy key and pinned SSH host keys. Never
+        # clone, checkout, execute repository code, or accept arbitrary URLs.
+        if source.get('repoURL') != 'ssh://git@ssh.github.com:443/rlcosmo/cosmotech-gitops.git':
+            raise ValueError('Unreviewed GitOps repository')
+        target=source.get('targetRevision','')
+        if re.fullmatch(r'[0-9a-f]{40}',target):return target
+        if target!='main':raise ValueError('Unreviewed GitOps branch')
+        hosts=self.kube(['-n','argocd','get','configmap','argocd-ssh-known-hosts-cm','-o','json'],local=True)
+        pinned=hosts.get('data',{}).get('ssh_known_hosts','')
+        if not pinned.strip():raise ValueError('Missing pinned GitOps SSH host keys')
+        with tempfile.TemporaryDirectory(dir=self.directory) as folder:
+            path=Path(folder)/'known_hosts';path.write_text(pinned);path.chmod(0o600)
+            env=dict(os.environ,GIT_TERMINAL_PROMPT='0',GIT_CONFIG_NOSYSTEM='1')
+            env['GIT_SSH_COMMAND']='ssh -i /opt/cosmotech/argocd/github-deploy-key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile='+shlex.quote(str(path))
+            result=subprocess.run(['git','-c','core.hooksPath=/dev/null','ls-remote','--exit-code','--',source['repoURL'],'refs/heads/main'],env=env,capture_output=True,timeout=30,check=False)
+            lines=result.stdout.decode().strip().splitlines()
+            if result.returncode or len(lines)!=1:raise ValueError('Cannot verify GitOps remote revision')
+            revision,ref=lines[0].split()
+            if ref!='refs/heads/main' or not re.fullmatch(r'[0-9a-f]{40}',revision):raise ValueError('Invalid GitOps remote revision')
+            return revision
+
+    @staticmethod
+    def check_argo_restore(baseline, current):
+        apps={a['name']:a for a in current['argo']}
+        if set(apps)!={a['name'] for a in baseline['argo']}:raise ValueError('Argo Application inventory drift')
+        for app in baseline['argo']:
+            found=apps[app['name']]
+            if found['spec_hash']!=app['spec_hash']:raise ValueError('Argo Application drift')
+            if found.get('remote_revision')!=app['revision']:
+                raise ValueError('GitOps remote changed; keep Argo paused pending reviewed recovery')
+
     def collect(self):
         data = {'observed_at':int(time.time()), 'workloads':[], 'pvs':[], 'pvcs':[], 'hpa':[], 'pdb':[], 'nodes':[], 'daemonsets':[], 'argo':[], 'controllers':[], 'endpoints':{}, 'blockers':[]}
-        namespaces=self.kube(['get','namespaces','-o','json'])['items']
-        if any(r['metadata']['name'] not in set(NAMESPACES)|{'default','kube-public','kube-node-lease'} for r in namespaces):data['blockers'].append('Novo namespace fora do escopo aprovado; revisar dependências antes de desligar')
+        data['namespaces']=[r['metadata']['name'] for r in self.kube(['get','namespaces','-o','json'])['items']]
+        data['outside_scope']=[]
+        for kind in ('deployments','statefulsets','daemonsets','pods','jobs','cronjobs','pvc'):
+            for resource in self.kube(['get',kind,'--all-namespaces','-o','json']).get('items',[]):
+                ns=resource['metadata']['namespace']
+                if ns in NAMESPACES:continue
+                item={'namespace':ns,'kind':kind,'name':resource['metadata']['name']}
+                data['outside_scope'].append(item)
+                # Empty namespaces are harmless; any workload or persisted data
+                # outside the approved mutation scope requires dependency review.
+                terminal=kind in ('pods','jobs') and (resource.get('status',{}).get('phase') in ('Succeeded','Failed') or bool(resource.get('status',{}).get('completionTime')))
+                if not terminal:data['blockers'].append('Recurso fora do escopo operacional: '+ns+'/'+kind+'/'+item['name'])
         daemonsets={'kube-system':{'aws-node','ebs-csi-node','ebs-csi-node-windows','eks-pod-identity-agent','kube-proxy'},'observability':{'alloy','prometheus-prometheus-node-exporter'}}
         for ns in NAMESPACES:
             for r in self.kube(['-n',ns,'get','daemonsets','-o','json']).get('items',[]):
@@ -121,9 +165,10 @@ class Agent:
         apps = self.kube(['-n','argocd','get','applications','-o','json'], local=True)
         for app in apps.get('items',[]):
             spec = app['spec']
-            if spec.get('syncPolicy',{}).get('automated') is not None:
-                data['blockers'].append('GitOps automático exige estratégia de pausa revisada: '+app['metadata']['name'])
-            data['argo'].append({'name':app['metadata']['name'],'spec_hash':hash_value(spec),'revision':app.get('status',{}).get('sync',{}).get('revision'),'sync':app.get('status',{}).get('sync',{}).get('status')})
+            revision=app.get('status',{}).get('sync',{}).get('revision')
+            remote=self.git_revision(spec.get('source',{}))
+            if remote!=revision:data['blockers'].append('GitOps remoto diverge da revisão aplicada: '+app['metadata']['name'])
+            data['argo'].append({'name':app['metadata']['name'],'spec_hash':hash_value(spec),'revision':revision,'remote_revision':remote,'sync':app.get('status',{}).get('sync',{}).get('status')})
         for kind in ('deployments','statefulsets'):
             for r in self.kube(['-n','argocd','get',kind,'-o','json'],local=True).get('items',[]):
                 if any(k in r['metadata']['name'] for k in ('application-controller','applicationset-controller')):
@@ -151,21 +196,24 @@ class Agent:
         result=self.write(f'plans/{self.plan_id}/kubernetes.json',data)
         return {'phase':'SNAPSHOT','blockers':data['blockers'],'version':result.get('VersionId'),'workloads':len(data['workloads']),'safe_test':safe_test}
 
-    def wait_workload(self,r,replicas,timeout=120):
+    def wait_workload(self,r,replicas,timeout=120,*,local=False):
         deadline=time.time()+timeout
+        ns='argocd' if local else r['namespace']
         while True:
-            live=self.kube(['-n',r['namespace'],'get',r['kind'],r['name'],'-o','json'])
+            live=self.kube(['-n',ns,'get',r['kind'],r['name'],'-o','json'],local=local)
             if replicas==0:
                 selector=','.join(k+'='+v for k,v in live['spec']['selector']['matchLabels'].items())
-                pods=self.kube(['-n',r['namespace'],'get','pods','-l',selector,'-o','json'])['items']
+                pods=self.kube(['-n',ns,'get','pods','-l',selector,'-o','json'],local=local)['items']
                 if all(p.get('status',{}).get('phase') in ('Succeeded','Failed') for p in pods):return
             elif live.get('status',{}).get('readyReplicas',0)>=replicas:return
-            if time.time()>=deadline:raise ValueError('Workload did not reach requested state: '+r['namespace']+'/'+r['name'])
+            if time.time()>=deadline:raise ValueError('Workload did not reach requested state: '+ns+'/'+r['name'])
             time.sleep(3)
 
     def prepare(self, baseline):
         if baseline['blockers']:raise ValueError('Preflight blockers')
-        for r in baseline['controllers']:self.scale(r,0,local=True)
+        for r in baseline['controllers']:
+            self.scale(r,0,local=True)
+            self.wait_workload(r,0,local=True)
         # Pause controllers that could restore replicas before changing owned workloads.
         for r in baseline['workloads']:
             if 'autoscaler' in r['name'] or 'operator' in r['name'] or r['name']=='aws-load-balancer-controller' or (r['namespace']=='orders-api'):
@@ -213,9 +261,7 @@ class Agent:
             if r['name']=='aws-load-balancer-controller':self.scale(r,r['replicas'])
         # Argo CD resumes only with the unchanged Application spec. No Service,
         # Ingress or network sync is issued by the power agent.
-        apps={a['name']:a for a in current['argo']}
-        for app in baseline['argo']:
-            if apps.get(app['name'],{}).get('spec_hash')!=app['spec_hash']:raise ValueError('Argo Application drift')
+        self.check_argo_restore(baseline,current)
         for r in baseline['controllers']:self.scale(r,r['replicas'],local=True)
         for app in baseline['argo']:
             self.kube(['-n','argocd','annotate','application',app['name'],'argocd.argoproj.io/refresh=hard','--overwrite'],local=True,text=True)
@@ -230,7 +276,7 @@ class Agent:
         by={(r['namespace'],r['kind'],r['name']):r for r in current['workloads']}
         for r in baseline['workloads']:
             found=by.get((r['namespace'],r['kind'],r['name']))
-            if not found or found['template_hash']!=r['template_hash'] or found['ready']<found['replicas']:
+            if not found or found['template_hash']!=r['template_hash'] or found['replicas']!=r['replicas'] or found['ready']<r['replicas']:
                 differences.append('Workload não recuperado: '+r['namespace']+'/'+r['name'])
         if current['daemonsets']!=baseline['daemonsets']:differences.append('Configuração de DaemonSets divergente')
         for app in baseline['argo']:
