@@ -8,6 +8,7 @@ import re
 import time
 import uuid
 from functools import lru_cache
+from contextvars import ContextVar
 from decimal import Decimal
 import boto3
 from botocore.config import Config
@@ -15,6 +16,8 @@ from botocore.exceptions import ClientError, BotoCoreError
 from boto3.dynamodb.conditions import Attr
 from .core import plan, digest, PHRASES
 from .inventory import discover
+
+CORRELATION = ContextVar('power_correlation',default=None)
 
 CONFIG = Config(connect_timeout=3, read_timeout=10, retries={'mode': 'standard', 'total_max_attempts': 2})
 
@@ -35,7 +38,12 @@ def signing_secret():
 
 
 def response(code, value):
-    return {'statusCode': code, 'headers': {'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store'},
+    correlation=CORRELATION.get()
+    headers={'content-type':'application/json; charset=utf-8','cache-control':'no-store'}
+    if correlation:
+        headers['x-correlation-id']=correlation
+        value={**value,'correlation_id':correlation}
+    return {'statusCode': code, 'headers': headers,
             'body': json.dumps(value, default=lambda o: int(o) if isinstance(o, Decimal) and o % 1 == 0 else str(o), ensure_ascii=False)}
 
 
@@ -138,6 +146,13 @@ def submit_operation(result,actor,body):
         if existing['state']=='RUNNING':
             client('stepfunctions').start_execution(stateMachineArn=os.environ['STATE_MACHINE_ARN'],name=opid,input=json.dumps({'opid':opid}))
         return response(202,operation_view(opid))
+    if result['direction']=='DOWN':
+        version=os.environ.get('AGENT_HASH')
+        if not version or result.get('agent_hash')!=version:
+            return response(409,{'error':'A versão do executor mudou; prepare um novo plano','error_code':'PLAN_VERSION_CHANGED'})
+        certificate=table().get_item(Key={'pk':'CERTIFICATION'},ConsistentRead=True).get('Item',{})
+        if not certificate.get('complete') or certificate.get('agent_hash')!=version:
+            return response(409,{'error':'Certificação de segurança pendente; desligamento bloqueado','error_code':'CERTIFICATION_PENDING'})
     control=table().get_item(Key={'pk':'CONTROL'},ConsistentRead=True).get('Item',{'state':'ON'})
     if result['direction']=='DOWN' and control['state']!='ON':return response(409,{'error':'Laboratório não está no estado ON'})
     if result['direction']=='UP' and control['state'] not in ('OFF','RECOVERY_REQUIRED'):return response(409,{'error':'Recuperação não está disponível neste estado'})
@@ -149,7 +164,7 @@ def submit_operation(result,actor,body):
     except table().meta.client.exceptions.ConditionalCheckFailedException:
         return response(409,{'error':'Outra operação está em andamento'})
     op={'pk':'OP#'+opid,'id':opid,'actor':actor,'plan_id':result['id'],'direction':result['direction'],
-        'state':'RUNNING','phase':'queued','index':0,'revision':0,'started_at':int(time.time()),'confirmed':True,
+        'state':'RUNNING','phase':'queued','index':0,'revision':0,'started_at':int(time.time()),'confirmed':True,'created_correlation_id':CORRELATION.get(),
         'execution_arn':os.environ['STATE_MACHINE_ARN'].replace(':stateMachine:',':execution:')+':'+opid}
     if result['direction']=='DOWN':
         # Source data is from the actor-bound plan. Capacity is rechecked by the worker
@@ -166,7 +181,7 @@ def submit_operation(result,actor,body):
     table().put_item(Item=next_control)
     client('stepfunctions').start_execution(stateMachineArn=os.environ['STATE_MACHINE_ARN'],name=opid,input=json.dumps({'opid':opid}))
     table().put_item(Item={'pk':'AUDIT#'+str(time.time_ns())+'#'+opid,'actor':actor,'action':result['direction'],
-      'plan_id':result['id'],'operation_id':opid,'confirmed':True,'timestamp':int(time.time())})
+      'plan_id':result['id'],'operation_id':opid,'confirmed':True,'correlation_id':CORRELATION.get(),'timestamp':int(time.time())})
     return response(202,operation_view(opid))
 
 
@@ -202,7 +217,7 @@ def route(event,actor,body):
         if direction=='DOWN' and control['state']!='ON':blockers.append('Laboratório não está no estado ON')
         if direction=='UP' and not control.get('snapshot'):blockers.append('Nenhum snapshot original de desligamento disponível')
         if direction=='UP' and control['state'] not in ('OFF','RECOVERY_REQUIRED'):blockers.append('Sem desligamento ou recuperação pendente')
-        result={'id':str(uuid.uuid4()),'direction':direction,'actor':actor,'expires':int(time.time())+600,
+        result={'id':str(uuid.uuid4()),'direction':direction,'actor':actor,'expires':int(time.time())+600,'agent_hash':os.environ.get('AGENT_HASH'),
           'confirmation':PHRASES[direction],'blockers':blockers,'ready':False,'pending':False,
           'resources':inventory['resources'],'targets':[r for r in inventory['resources'] if r.get('action') in ('stop','scale')],
           'protected':[r for r in inventory['resources'] if r['classification']!='LAB'],
@@ -240,7 +255,7 @@ def route(event,actor,body):
     return response(404,{'error':'Rota não encontrada'})
 
 
-def handler(event, context):
+def handle_request(event, context):
     try:
         # Direct Lambda invocation is IAM-authorized. API Gateway always supplies
         # requestContext, so a browser body cannot select this administrative path.
@@ -255,11 +270,29 @@ def handler(event, context):
         actor, body = authenticate(event)
         return route(event, actor, body)
     except PermissionError:
-        return response(401, {'error': 'Não autorizado'})
+        return response(401, {'error': 'Não autorizado','error_code':'UNAUTHORIZED'})
     except (ValueError, KeyError, TypeError):
-        return response(400, {'error': 'Requisição inválida'})
+        return response(400, {'error': 'Requisição inválida','error_code':'INVALID_REQUEST'})
     except BotoCoreError:
-        return response(503, {'error': 'Conexão AWS indisponível; nenhuma nova operação pode ser confirmada'})
+        return response(503, {'error': 'Conexão AWS indisponível; nenhuma nova operação pode ser confirmada','error_code':'AWS_CONNECTION_ERROR'})
     except ClientError as exc:
-        print(json.dumps({'event': 'aws_error', 'code': exc.response['Error']['Code'], 'request_id': getattr(context, 'aws_request_id', None)}))
-        return response(503, {'error': 'AWS indisponível ou permissão insuficiente; plano bloqueado'})
+        print(json.dumps({'event': 'aws_error', 'code': exc.response['Error']['Code'], 'request_id': getattr(context, 'aws_request_id', None),'correlation_id':CORRELATION.get(),'operation':exc.operation_name,'aws_request_id':exc.response.get('ResponseMetadata',{}).get('RequestId')}))
+        return response(503, {'error': 'AWS indisponível ou permissão insuficiente; plano bloqueado','error_code':exc.response['Error']['Code']})
+
+
+def handler(event,context):
+    headers={k.lower():v for k,v in event.get('headers',{}).items()}
+    incoming=headers.get('x-power-correlation-id','')
+    correlation=incoming if re.fullmatch(r'[0-9a-fA-F-]{36}',incoming) else str(uuid.uuid4())
+    token=CORRELATION.set(correlation);started=time.monotonic();result=None
+    try:
+        result=handle_request(event,context)
+        return result
+    except Exception as exc:
+        # Never log headers, bodies, secret values or exception strings.
+        print(json.dumps({'event':'unexpected_error','type':type(exc).__name__,'correlation_id':correlation,'request_id':getattr(context,'aws_request_id',None)}))
+        result=response(500,{'error':'Erro interno do serviço de controle; operação não confirmada','error_code':'INTERNAL_ERROR'})
+        return result
+    finally:
+        print(json.dumps({'event':'power_request','correlation_id':correlation,'request_id':getattr(context,'aws_request_id',None),'status':result.get('statusCode') if result else 500,'duration_ms':int((time.monotonic()-started)*1000)}))
+        CORRELATION.reset(token)
