@@ -24,6 +24,7 @@ class Controller:
         if not identity.startswith('arn:aws:sts::414053644145:assumed-role/cosmotech-power-deploy/'):
             raise ValueError('Controlled cycle requires the non-root GitHub OIDC publisher role')
         self.client=session.client('lambda',config=CONFIG)
+        self.ssm=session.client('ssm',config=CONFIG)
         print(json.dumps({'oidc_identity':identity,'run_id':run_id}),flush=True)
 
     def request(self,method,path,payload=None):
@@ -37,6 +38,15 @@ class Controller:
         return body
 
     def state(self):return self.request('GET','/api/status')
+
+    def no_external_commands(self):
+        # Unknown active automation can race with a snapshot or restart workloads.
+        active=[]
+        for page in self.ssm.get_paginator('list_commands').paginate():
+            for command in page.get('Commands',[]):
+                if command['Status'] in ('Pending','InProgress','Delayed','Cancelling'):
+                    active.append({'document':command['DocumentName'],'command_id':command['CommandId']})
+        if active:raise RuntimeError('Active SSM automation must finish before DOWN: '+json.dumps(active))
 
     def plan(self,direction):
         value=self.request('POST','/api/plan',{'direction':direction})
@@ -78,6 +88,7 @@ def cycle(controller):
     initial=controller.state()
     if initial['state']['state']!='ON' or not initial.get('execution_enabled'):raise RuntimeError('Initial state/certification does not permit controlled shutdown')
     portal_alive()
+    controller.no_external_commands()
     failure=None
     try:
         controller.execute('DOWN')
