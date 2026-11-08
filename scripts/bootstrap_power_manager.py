@@ -73,7 +73,7 @@ def extend_execution_policies(policies, groups):
       statement(['eks:DescribeNodegroup','eks:UpdateNodegroupConfig'],f'arn:aws:eks:{REGION}:{ACCOUNT}:nodegroup/aws-eks-istio-lab-dev/aws-eks-istio-lab-dev-spot-named/*'),
       statement(['ec2:StartInstances','ec2:StopInstances'],[f'arn:aws:ec2:{REGION}:{ACCOUNT}:instance/{i}' for i in ['i-0def4e806c49cf60e','i-0b33fdd51332e04e5','i-02878f35eed1572d0']]),
       statement(['autoscaling:SuspendProcesses','autoscaling:ResumeProcesses'],[g['AutoScalingGroupARN'] for g in groups]),
-      statement(['ec2:ModifyInstanceAttribute'],f'arn:aws:ec2:{REGION}:{ACCOUNT}:instance/*',Condition={'StringEquals':{'ec2:Attribute':'blockDeviceMapping','ec2:ResourceTag/aws:autoscaling:groupName':[g['AutoScalingGroupName'] for g in groups]}}),
+      statement(['ec2:ModifyInstanceAttribute'],f'arn:aws:ec2:{REGION}:{ACCOUNT}:instance/*',Condition={'StringEquals':{'ec2:Attribute':'BlockDeviceMappings','ec2:ResourceTag/aws:autoscaling:groupName':[g['AutoScalingGroupName'] for g in groups]}}),
       statement(['s3:GetObject','s3:GetObjectVersion','s3:PutObject'],bucket+'/*'),own_table,
       statement(['route53:ListHostedZones','route53:ListResourceRecordSets'],'*'),
       statement(['sqs:GetQueueAttributes'],f'arn:aws:sqs:{REGION}:{ACCOUNT}:*'),
@@ -81,7 +81,7 @@ def extend_execution_policies(policies, groups):
       statement(['ssm:SendCommand'],[ssm_read,ssm_execute,host_read,host_execute,*hosts]),
       statement(['logs:CreateLogStream','logs:PutLogEvents'],f'arn:aws:logs:{REGION}:{ACCOUNT}:log-group:/aws/lambda/cosmotech-power-worker:*'),
       {'Effect':'Deny','Action':['ec2:TerminateInstances','ec2:DeleteVolume','ec2:DeleteSnapshot','ec2:ReleaseAddress','ec2:AssociateAddress','ec2:DisassociateAddress','ec2:DeleteNatGateway','ec2:CreateNatGateway','ec2:CreateRoute','ec2:ReplaceRoute','ec2:DeleteRoute','ec2:ModifyNetworkInterfaceAttribute','ec2:AuthorizeSecurityGroupIngress','ec2:RevokeSecurityGroupIngress','ec2:AuthorizeSecurityGroupEgress','ec2:RevokeSecurityGroupEgress','elasticloadbalancing:Create*','elasticloadbalancing:Delete*','elasticloadbalancing:Modify*','elasticloadbalancing:Set*','route53:Change*','iam:*','s3:DeleteObject','s3:DeleteObjectVersion','dynamodb:DeleteTable'],'Resource':'*'},
-      {'Effect':'Deny','Action':['ec2:ModifyInstanceAttribute'],'Resource':'*','Condition':{'StringNotEquals':{'ec2:Attribute':'blockDeviceMapping'}}}]
+      {'Effect':'Deny','Action':['ec2:ModifyInstanceAttribute'],'Resource':'*','Condition':{'StringNotEquals':{'ec2:Attribute':'BlockDeviceMappings'}}}]
     policies['worker']={'Version':'2012-10-17','Statement':worker}
     policies['orchestrator']={'Version':'2012-10-17','Statement':[statement(['lambda:InvokeFunction'],f'arn:aws:lambda:{REGION}:{ACCOUNT}:function:cosmotech-power-worker')]}
     # Publisher cannot edit IAM; these roles are provisioned by this initial bootstrap only.
