@@ -125,3 +125,15 @@ def test_collect_pvs_are_not_overwritten_by_pod_template_volumes(monkeypatch):
     snapshot=agent.collect()
     assert snapshot['pvs']==[{'name':'durable','spec':pv['spec'],'phase':None}]
     assert snapshot['blockers']==[]
+
+
+def test_host_mount_comparison_ignores_order_but_detects_storage_changes():
+    import copy
+    mod=module('host_agent')
+    mounts=[{'Type':'volume','Source':'/data/db','Destination':'/var/lib/db','RW':True},
+        {'Type':'bind','Source':'/config','Destination':'/etc/app','RW':False}]
+    baseline={'units':{},'containers':[{'id':'id','name':'database','running':True,'image':'same','mounts':mounts}]}
+    current=copy.deepcopy(baseline);current['containers'][0]['mounts'].reverse()
+    assert mod.compare(baseline,current)==[]
+    current['containers'][0]['mounts'][0]['Source']='/different-volume'
+    assert mod.compare(baseline,current)==['Mounts divergentes: database']
