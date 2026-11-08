@@ -113,20 +113,33 @@ class Agent:
             if found.get('remote_revision')!=app['revision']:
                 raise ValueError('GitOps remote changed; keep Argo paused pending reviewed recovery')
 
+    @staticmethod
+    def passive_retained_claim(resource, volumes):
+        volume=volumes.get(resource.get('spec',{}).get('volumeName'),{})
+        spec=volume.get('spec',{})
+        return (resource.get('status',{}).get('phase')=='Bound' and
+            spec.get('persistentVolumeReclaimPolicy')=='Retain' and
+            'local' not in spec and 'hostPath' not in spec)
+
     def collect(self):
         data = {'observed_at':int(time.time()), 'workloads':[], 'pvs':[], 'pvcs':[], 'hpa':[], 'pdb':[], 'nodes':[], 'daemonsets':[], 'argo':[], 'controllers':[], 'endpoints':{}, 'blockers':[]}
         data['namespaces']=[r['metadata']['name'] for r in self.kube(['get','namespaces','-o','json'])['items']]
+        volumes=self.kube(['get','pv','-o','json'])['items']
+        volume_by_name={r['metadata']['name']:r for r in volumes}
+        data['storageclasses']=self.kube(['get','storageclasses','-o','json'])['items']
         data['outside_scope']=[]
         for kind in ('deployments','statefulsets','daemonsets','pods','jobs','cronjobs','pvc'):
             for resource in self.kube(['get',kind,'--all-namespaces','-o','json']).get('items',[]):
                 ns=resource['metadata']['namespace']
                 if ns in NAMESPACES:continue
                 item={'namespace':ns,'kind':kind,'name':resource['metadata']['name']}
+                if kind=='pvc':item.update(volume=resource.get('spec',{}).get('volumeName'),phase=resource.get('status',{}).get('phase'),classification='PERSISTENTES')
                 data['outside_scope'].append(item)
                 # Empty namespaces are harmless; any workload or persisted data
                 # outside the approved mutation scope requires dependency review.
                 terminal=kind in ('pods','jobs') and (resource.get('status',{}).get('phase') in ('Succeeded','Failed') or bool(resource.get('status',{}).get('completionTime')))
-                if not terminal:data['blockers'].append('Recurso fora do escopo operacional: '+ns+'/'+kind+'/'+item['name'])
+                persistent=kind=='pvc' and self.passive_retained_claim(resource,volume_by_name)
+                if not terminal and not persistent:data['blockers'].append('Recurso fora do escopo operacional: '+ns+'/'+kind+'/'+item['name'])
         daemonsets={'kube-system':{'aws-node','ebs-csi-node','ebs-csi-node-windows','eks-pod-identity-agent','kube-proxy'},'observability':{'alloy','prometheus-prometheus-node-exporter'}}
         for ns in NAMESPACES:
             for r in self.kube(['-n',ns,'get','daemonsets','-o','json']).get('items',[]):
@@ -155,7 +168,7 @@ class Agent:
                         data[key].append({'namespace':ns,'name':r['metadata']['name'],'volume':r['spec'].get('volumeName'),'phase':r.get('status',{}).get('phase')})
                         if r.get('status',{}).get('phase') != 'Bound':data['blockers'].append('PVC não Bound: '+ns+'/'+r['metadata']['name'])
                     else:data[key].append({'namespace':ns,'name':r['metadata']['name'],'spec':r['spec']})
-        for r in self.kube(['get','pv','-o','json'])['items']:
+        for r in volumes:
             data['pvs'].append({'name':r['metadata']['name'],'spec':r['spec'],'phase':r.get('status',{}).get('phase')})
             if r['spec'].get('persistentVolumeReclaimPolicy') != 'Retain' or 'local' in r['spec'] or 'hostPath' in r['spec']:
                 data['blockers'].append('Volume sem retenção segura: '+r['metadata']['name'])

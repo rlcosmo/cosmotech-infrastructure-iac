@@ -97,3 +97,13 @@ def test_verify_rejects_unrestored_replica_count_even_when_zero_is_healthy():
     result=agent.verify_once(baseline)
     assert result['complete'] is False
     assert result['differences']==['Workload não recuperado: orders-api/orders-api']
+
+
+def test_passive_recovery_claim_is_preserved_without_authorizing_workloads():
+    agent=module('agent').Agent
+    claim={'spec':{'volumeName':'recovery'},'status':{'phase':'Bound'}}
+    volume={'spec':{'persistentVolumeReclaimPolicy':'Retain'}}
+    assert agent.passive_retained_claim(claim,{'recovery':volume})
+    assert not agent.passive_retained_claim(claim,{})
+    assert not agent.passive_retained_claim(claim,{'recovery':{'spec':{'persistentVolumeReclaimPolicy':'Delete'}}})
+    assert not agent.passive_retained_claim(claim,{'recovery':{'spec':{'persistentVolumeReclaimPolicy':'Retain','hostPath':{}}}})

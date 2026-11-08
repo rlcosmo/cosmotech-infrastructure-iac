@@ -1,0 +1,43 @@
+name: V2-004 Controlled Power Cycle
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        type: choice
+        options: [status, cycle]
+        default: status
+        description: 'cycle executes a real DOWN then UP under owner authorization'
+      authorization:
+        type: string
+        required: true
+        description: 'For cycle: OWNER_AUTHORIZED_CONTROLLED_CYCLE'
+permissions: {contents: read}
+concurrency: {group: cosmotech-power-control, cancel-in-progress: false}
+jobs:
+  cycle:
+    if: github.ref == 'refs/heads/main' && (inputs.action == 'status' || inputs.authorization == 'OWNER_AUTHORIZED_CONTROLLED_CYCLE')
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions: {contents: read, id-token: write}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install boto3==1.43.122
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.POWER_MANAGER_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: PowerCycle-${{ github.run_id }}
+          retry-max-attempts: 2
+      - name: Run approved cycle with automatic recovery
+        env: {POWER_ACTION: '${{ inputs.action }}'}
+        run: python scripts/power_manager_cycle.py --action "$POWER_ACTION" | tee /tmp/power-cycle-evidence.log
+      - name: Publish sanitized evidence
+        if: always()
+        run: |
+          if [[ -f /tmp/power-cycle-evidence.log ]]; then
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            cat /tmp/power-cycle-evidence.log >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
