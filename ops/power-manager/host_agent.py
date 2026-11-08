@@ -44,7 +44,7 @@ def compare(baseline,current):
         if not old['running']:continue
         now=by.get(old['id'])
         if not now or now['image']!=old['image'] or not now['running']:differences.append('Container não recuperado: '+old['name'])
-        elif now['mounts']!=old['mounts']:differences.append('Mounts divergentes: '+old['name'])
+        elif sorted(now['mounts'],key=lambda m:json.dumps(m,sort_keys=True))!=sorted(old['mounts'],key=lambda m:json.dumps(m,sort_keys=True)):differences.append('Mounts divergentes: '+old['name'])
     return differences
 
 
