@@ -42,3 +42,15 @@ def test_host_restore_refuses_missing_or_replaced_image(monkeypatch):
     command=Mock();monkeypatch.setattr(mod,'command',command)
     with pytest.raises(ValueError,match='drift'):mod.restore(baseline,'host')
     command.assert_not_called()
+
+
+def test_host_restore_refreshes_containers_after_starting_docker(monkeypatch):
+    mod=module('host_agent');calls=[]
+    original={'units':{'docker':True},'containers':[{'id':'a'*64,'name':'/database','image':'image','running':True,'mounts':[]}]}
+    unavailable={'units':{},'containers':[]}
+    stopped={'units':{'docker':True},'containers':[{**original['containers'][0],'running':False}]}
+    samples=iter([unavailable,stopped,original])
+    monkeypatch.setattr(mod,'collect',lambda _:next(samples))
+    monkeypatch.setattr(mod,'command',lambda args,**kw:calls.append(args))
+    assert mod.restore(original,'host')['complete']
+    assert calls==[['systemctl','start','docker'],['docker','start','a'*64]]
