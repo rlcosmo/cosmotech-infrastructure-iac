@@ -32,7 +32,10 @@ jobs:
           retry-max-attempts: 2
       - name: Run approved cycle with automatic recovery
         env: {POWER_ACTION: '${{ inputs.action }}'}
-        run: python scripts/power_manager_cycle.py --action "$POWER_ACTION" | tee /tmp/power-cycle-evidence.log
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/power_manager_cycle.py --action "$POWER_ACTION" | tee /tmp/power-cycle-evidence.log
       - name: Publish sanitized evidence
         if: always()
         run: |

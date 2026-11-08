@@ -99,8 +99,12 @@ def cycle(controller):
     finally:
         # Recovery is attempted even when DOWN partially fails. Never clear a
         # live lock or alter snapshots to make this guard pass.
+        recovery_deadline=time.monotonic()+3500
         for attempt in range(3):
             state=controller.state()['state']['state']
+            while state in ('SHUTTING_DOWN','STARTING','STARTING_UP') and time.monotonic()<recovery_deadline:
+                time.sleep(10)
+                state=controller.state()['state']['state']
             if state=='ON':break
             if state not in ('OFF','RECOVERY_REQUIRED'):
                 time.sleep(20);continue
