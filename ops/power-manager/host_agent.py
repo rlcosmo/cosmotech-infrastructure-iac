@@ -4,6 +4,7 @@ import base64
 import copy
 import hashlib
 import urllib.request
+import urllib.error
 import json
 import os
 from pathlib import Path
@@ -105,9 +106,9 @@ def automation(baseline, host, *, resume=False):
     return {'complete':True,'scheduler_disabled':disabled,'resumed':resume,'drained':not resume}
 
 
-def collect(host):
+def collect(host, *, include_automation=True):
     result={'host':host,'observed_at':int(time.time()),'units':{},'containers':[],'warnings':[]}
-    if host==ITSM:result['automation']=automation_state()
+    if host==ITSM and include_automation:result['automation']=automation_state()
     for unit in UNITS:
         if command(['systemctl','is-active','--quiet',unit],required=False) is not None:result['units'][unit]=True
     ids=command(['docker','ps','-aq'],required=False)
@@ -137,12 +138,15 @@ def compare(baseline,current):
 
 
 def restore(baseline,host):
-    current=collect(host);started_unit=False
+    def processes():
+        return collect(host,include_automation=False) if host==ITSM else collect(host)
+    # Recover processes before requiring their HTTP API to be available.
+    current=processes();started_unit=False
     for unit in baseline['units']:
         if unit not in UNITS:raise ValueError('Unit outside allowlist')
         if not current['units'].get(unit):
             command(['systemctl','start',unit]);started_unit=True
-    if started_unit:current=collect(host)
+    if started_unit:current=processes()
     by={r['id']:r for r in current['containers']}
     def priority(item):return 0 if any(s in item['name'].lower() for s in ('database','postgres','mariadb','-db')) else 1
     for old in sorted(baseline['containers'],key=priority):
@@ -153,7 +157,12 @@ def restore(baseline,host):
         if not now['running']:command(['docker','start',old['id']])
     deadline=time.time()+240
     while time.time()<deadline:
-        differences=compare(baseline,collect(host))
+        try:differences=compare(baseline,collect(host))
+        except urllib.error.HTTPError as error:
+            if error.code not in (502,503,504):raise
+            differences=['Application API warming up: HTTP '+str(error.code)]
+        except (urllib.error.URLError,TimeoutError):
+            differences=['Application API not ready yet']
         if not differences:return {'complete':True,'differences':[]}
         time.sleep(5)
     return {'complete':False,'differences':differences}
