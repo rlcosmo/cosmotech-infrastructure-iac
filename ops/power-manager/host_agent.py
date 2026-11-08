@@ -1,6 +1,7 @@
 """Snapshot/restore existing application processes without changing their config."""
 import argparse
 import base64
+import copy
 import hashlib
 import urllib.request
 import json
@@ -32,7 +33,8 @@ FLOW_PATH='/api/v1/main/flows/'+FLOW['namespace']+'/'+FLOW['id']
 
 def kestra_request(path, *, method='GET', payload=None):
     allowed={FLOW_PATH,'/api/v1/main/flows/disable/by-ids','/api/v1/main/flows/enable/by-ids'}
-    if path not in allowed:raise ValueError('Unreviewed Kestra operation')
+    if path not in allowed and not (method=='GET' and re.fullmatch(re.escape(FLOW_PATH)+r'\?revision=[0-9]{1,9}',path)):
+        raise ValueError('Unreviewed Kestra operation')
     credential=Path('/opt/cosmotech/secrets/itsm/runtime.env')
     info=credential.lstat()
     if info.st_uid!=0 or info.st_mode&0o022 or credential.is_symlink():raise ValueError('Unprotected host credential source')
@@ -51,9 +53,30 @@ def kestra_request(path, *, method='GET', payload=None):
 def automation_state():
     flow=kestra_request(FLOW_PATH)
     if any(flow.get(k)!=v for k,v in FLOW.items()):raise ValueError('Unexpected scheduler identity')
-    spec={k:v for k,v in flow.items() if k not in {'disabled','revision','source'}}
     return {**FLOW,'disabled':bool(flow.get('disabled',False)),
-        'spec_hash':hashlib.sha256(json.dumps(spec,sort_keys=True).encode()).hexdigest()}
+        'spec_hash':flow_hash(flow),'hash_schema':2,'revision':flow['revision']}
+
+
+def flow_hash(flow, *, legacy=False):
+    ignored={'disabled','revision','source'}
+    if not legacy:ignored.add('updated')
+    return hashlib.sha256(json.dumps({k:v for k,v in flow.items() if k not in ignored},sort_keys=True).encode()).hexdigest()
+
+
+def normalize_legacy_snapshot(baseline,host):
+    original=baseline.get('automation')
+    if host!=ITSM or not original or original.get('hash_schema')==2:return baseline
+    # Recover an immutable v1 snapshot using the authoritative revision history.
+    # Never accept the current configuration merely because its timestamp changed.
+    current=kestra_request(FLOW_PATH);revision=int(current['revision'])
+    for number in range(revision,max(0,revision-8),-1):
+        historical=kestra_request(FLOW_PATH+'?revision='+str(number))
+        if any(historical.get(k)!=v for k,v in FLOW.items()):raise ValueError('Unexpected historical scheduler identity')
+        if flow_hash(historical,legacy=True)==original['spec_hash']:
+            result=copy.deepcopy(baseline)
+            result['automation'].update(spec_hash=flow_hash(historical),hash_schema=2,revision=number)
+            return result
+    raise ValueError('Original scheduler revision not proven; refuse recovery overwrite')
 
 
 def automation(baseline, host, *, resume=False):
@@ -157,6 +180,7 @@ def main():
         command(['aws','s3api','get-object','--bucket',args.bucket,'--key',key,'--version-id',args.version,str(path)])
         baseline=json.loads(path.read_text())
         if baseline['host']!=host:raise ValueError('Snapshot belongs to another host')
+        baseline=normalize_legacy_snapshot(baseline,host)
         if args.mode in ('PAUSE_AUTOMATION','RESUME_AUTOMATION'):
             result=automation(baseline,host,resume=args.mode=='RESUME_AUTOMATION')
         else:result=restore(baseline,host) if args.mode=='RESTORE' else {'complete':not compare(baseline,collect(host)),'differences':compare(baseline,collect(host))}

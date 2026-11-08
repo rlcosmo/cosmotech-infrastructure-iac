@@ -170,3 +170,28 @@ def test_scheduler_drift_blocks_without_overwriting_configuration(monkeypatch):
 def test_ephemeral_kestra_runner_is_not_restarted_as_a_service():
     mod=module('host_agent');old={'units':{},'containers':[{'id':'job','name':'finished-task','running':True,'ephemeral':True}]}
     assert mod.compare(old,{'units':{},'containers':[]})==[]
+
+
+def test_scheduler_hash_ignores_audit_timestamp_but_keeps_tasks():
+    mod=module('host_agent')
+    old={**mod.FLOW,'revision':1,'updated':'old','disabled':False,'tasks':[{'id':'reconcile'}]}
+    current={**old,'revision':2,'updated':'new','disabled':True}
+    assert mod.flow_hash(old)==mod.flow_hash(current)
+    assert mod.flow_hash(old,legacy=True)!=mod.flow_hash(current,legacy=True)
+    assert mod.flow_hash(old)!=mod.flow_hash({**current,'tasks':[{'id':'changed'}]})
+
+
+def test_legacy_scheduler_snapshot_requires_matching_historical_revision(monkeypatch):
+    import copy,pytest
+    mod=module('host_agent')
+    old={**mod.FLOW,'revision':1,'updated':'old','disabled':False,'tasks':[{'id':'reconcile'}]}
+    current={**old,'revision':2,'updated':'new','disabled':True}
+    baseline={'host':mod.ITSM,'automation':{**mod.FLOW,'disabled':False,'spec_hash':mod.flow_hash(old,legacy=True)}}
+    saved=copy.deepcopy(baseline)
+    monkeypatch.setattr(mod,'kestra_request',lambda path:old if path.endswith('?revision=1') else current)
+    upgraded=mod.normalize_legacy_snapshot(baseline,mod.ITSM)
+    assert baseline==saved
+    assert upgraded['automation']['spec_hash']==mod.flow_hash(old)
+    assert upgraded['automation']['disabled'] is False
+    monkeypatch.setattr(mod,'kestra_request',lambda path:current)
+    with pytest.raises(ValueError,match='not proven'):mod.normalize_legacy_snapshot(baseline,mod.ITSM)
