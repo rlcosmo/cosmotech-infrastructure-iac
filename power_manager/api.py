@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import time
 import uuid
 from functools import lru_cache
@@ -241,6 +242,16 @@ def route(event,actor,body):
 
 def handler(event, context):
     try:
+        # Direct Lambda invocation is IAM-authorized. API Gateway always supplies
+        # requestContext, so a browser body cannot select this administrative path.
+        # No visitor impersonation or Sites service-access consent is used.
+        if event.get('source')=='cosmotech.power.iam-admin' and 'requestContext' not in event:
+            run_id=str(event.get('run_id',''))
+            if not re.fullmatch(r'[0-9]{1,24}-[0-9]{1,4}',run_id):raise PermissionError()
+            method,path=event.get('method'),event.get('path','')
+            if not ((method=='GET' and (path in ('/api/status','/api/inventory') or re.fullmatch(r'/api/(plans|operations)/[0-9a-f-]{36}',path))) or (method=='POST' and path in ('/api/plan','/api/operations'))):raise PermissionError()
+            if event.get('authorization')!='OWNER_AUTHORIZED_CONTROLLED_CYCLE':raise PermissionError()
+            return route({'requestContext':{'http':{'method':method}},'rawPath':path},'github-actions:'+run_id,event.get('payload',{}))
         actor, body = authenticate(event)
         return route(event, actor, body)
     except PermissionError:

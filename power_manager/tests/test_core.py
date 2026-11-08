@@ -72,3 +72,23 @@ def test_signed_api_and_replay_expiry():
         event['rawPath'] = '/api/operations'
         with pytest.raises(PermissionError):
             authenticate(event, now=1000)
+
+
+def test_iam_admin_route_is_not_selectable_by_public_http_body():
+    from power_manager import api
+    event={'source':'cosmotech.power.iam-admin','run_id':'123-1','authorization':'OWNER_AUTHORIZED_CONTROLLED_CYCLE',
+        'method':'POST','path':'/api/operations','payload':{},'requestContext':{'http':{'method':'POST'}},'rawPath':'/api/operations'}
+    with patch.object(api,'route') as route:
+        assert api.handler(event,None)['statusCode']==401
+        route.assert_not_called()
+
+
+def test_iam_admin_route_preserves_audit_actor_without_impersonating_visitor():
+    from power_manager import api
+    event={'source':'cosmotech.power.iam-admin','run_id':'123-1','authorization':'OWNER_AUTHORIZED_CONTROLLED_CYCLE',
+        'method':'POST','path':'/api/plan','payload':{'direction':'DOWN'}}
+    with patch.object(api,'route',return_value={'statusCode':200}) as route:
+        assert api.handler(event,None)['statusCode']==200
+        assert route.call_args.args[1:] == ('github-actions:123-1',{'direction':'DOWN'})
+    event['path']='/api/arbitrary'
+    assert api.handler(event,None)['statusCode']==401
