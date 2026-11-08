@@ -27,13 +27,16 @@ class Controller:
         self.ssm=session.client('ssm',config=CONFIG)
         print(json.dumps({'oidc_identity':identity,'run_id':run_id}),flush=True)
 
-    def request(self,method,path,payload=None):
+    def request(self,method,path,payload=None,*,expected_status=None):
         event={'source':'cosmotech.power.iam-admin','authorization':'OWNER_AUTHORIZED_CONTROLLED_CYCLE',
             'run_id':self.run_id,'method':method,'path':path,'payload':payload or {}}
         response=self.client.invoke(FunctionName='cosmotech-power-api',InvocationType='RequestResponse',Payload=json.dumps(event).encode())
         with response['Payload'] as stream:result=json.load(stream)
         if response.get('FunctionError'):raise RuntimeError('Administrative API invocation failed')
         body=json.loads(result['body'])
+        if expected_status is not None:
+            if result['statusCode']!=expected_status:raise RuntimeError('Unexpected guard response: '+str(result['statusCode']))
+            return body
         if result['statusCode']>=400:raise RuntimeError(json.dumps({'http':result['statusCode'],'error':body},ensure_ascii=False))
         return body
 
@@ -59,8 +62,16 @@ class Controller:
 
     def execute(self,direction):
         plan=self.plan(direction)
-        op=self.request('POST','/api/operations',{'planId':plan['id'],'confirmation':plan['confirmation'],
-            'idempotencyKey':str(uuid.uuid4()),'firstShutdownConsent':True})
+        payload={'planId':plan['id'],'confirmation':plan['confirmation'],
+            'idempotencyKey':str(uuid.uuid4()),'firstShutdownConsent':True}
+        self.request('POST','/api/operations',{**payload,'confirmation':'INVALID_CONFIRMATION'},expected_status=400)
+        if direction=='DOWN':
+            self.request('POST','/api/operations',{**payload,'firstShutdownConsent':False},expected_status=400)
+        op=self.request('POST','/api/operations',payload)
+        repeated=self.request('POST','/api/operations',payload)
+        if repeated['id']!=op['id']:raise RuntimeError('Idempotency failed')
+        self.request('POST','/api/operations',{**payload,'idempotencyKey':str(uuid.uuid4())},expected_status=409)
+        print(json.dumps({'live_guards':{'confirmation':True,'down_consent':direction=='DOWN','idempotency':True,'concurrent_operation_rejected':True},'operation_id':op['id']}),flush=True)
         print(json.dumps({'submitted':direction,'operation_id':op['id'],'execution_arn':op.get('execution_arn')}),flush=True)
         deadline=time.monotonic()+3400;previous=None
         while True:
