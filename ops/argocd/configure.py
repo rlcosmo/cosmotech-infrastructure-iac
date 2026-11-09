@@ -35,7 +35,7 @@ def main() -> None:
     apply({'apiVersion': 'v1', 'kind': 'Secret', 'metadata': {
         'name': 'cosmotech-eks', 'namespace': 'argocd',
         'labels': {'argocd.argoproj.io/secret-type': 'cluster'}}, 'stringData': {
-            'name': cluster['name'], 'server': cluster['endpoint'], 'namespaces': 'orders-api,orders-worker',
+            'name': cluster['name'], 'server': cluster['endpoint'], 'namespaces': 'orders-api,orders-worker,observability',
             'clusterResources': 'false', 'config': json.dumps(config)}})
     initial = command(['kubectl', '-n', 'argocd', 'get', 'secret',
                        'argocd-initial-admin-secret', '-o', 'json'])

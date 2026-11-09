@@ -1,0 +1,12 @@
+{
+  "enable_standby": true,
+  "standby_region": "us-east-2",
+  "desired_nodes": 0,
+  "account_restricted": true,
+  "release_evidence": "",
+  "monthly_budget_usd": 0,
+  "estimated_monthly_cost_usd": 117.05,
+  "admin_role_arn": "",
+  "admin_cidrs": [],
+  "enable_recovery_host": false
+}

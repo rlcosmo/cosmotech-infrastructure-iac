@@ -117,5 +117,5 @@ jobs:
           umask 077
           terraform -chdir=terraform/environments/dr plan -lock=false -input=false -var-file="$RUNNER_TEMP/dr-reviewed.tfvars.json" -out="$RUNNER_TEMP/dr.tfplan" >/dev/null
           terraform -chdir=terraform/environments/dr show -json "$RUNNER_TEMP/dr.tfplan" > "$RUNNER_TEMP/dr-plan.json"
-          python scripts/dr/check_plan.py "$RUNNER_TEMP/dr-plan.json"
+          python scripts/dr/check_plan.py "$RUNNER_TEMP/dr-plan.json" --require-provisioning
 # No apply workflow exists. Destination enablement requires reviewed tfvars and scoped deployment IAM.
