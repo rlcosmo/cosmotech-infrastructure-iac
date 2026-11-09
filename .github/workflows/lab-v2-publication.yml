@@ -10,7 +10,7 @@ on:
       phase:
         description: Bootstrap requires a separately authorized write role; publication cannot edit IAM
         type: choice
-        options: [plan, deploy, bootstrap-plan, bootstrap-apply]
+        options: [plan, deploy, validate, bootstrap-plan, bootstrap-apply]
         default: plan
 permissions:
   contents: read
@@ -43,7 +43,7 @@ jobs:
             bootstrap-plan) role="$PLAN_ROLE" ;;
             bootstrap-apply) role="$BOOTSTRAP_ROLE" ;;
             plan) role="$PLAN_ROLE" ;;
-            deploy) role="$DEPLOY_ROLE" ;;
+            deploy|validate) role="$DEPLOY_ROLE" ;;
             *) exit 2 ;;
           esac
           if [[ "$PHASE" == bootstrap-apply ]]; then
@@ -77,6 +77,7 @@ jobs:
         if: inputs.phase == 'bootstrap-apply' || inputs.phase == 'deploy'
         run: python3 scripts/recover_lab_v2_document.py
       - name: Create and gate an isolated saved plan
+        if: inputs.phase != 'validate'
         shell: bash
         run: |
           set -euo pipefail
@@ -112,7 +113,7 @@ jobs:
           fi
           echo "Scoped Terraform apply completed for $GITHUB_SHA / $GITHUB_RUN_ID" >> "$GITHUB_STEP_SUMMARY"
       - name: Pin the applied document version and content hash
-        if: inputs.phase == 'deploy' || inputs.phase == 'bootstrap-apply'
+        if: inputs.phase == 'deploy' || inputs.phase == 'bootstrap-apply' || inputs.phase == 'validate'
         run: |
           python3 - <<'PINDOC'
           import json, os, re, subprocess
@@ -128,7 +129,7 @@ jobs:
           test -n "$ITSM_INSTANCE" || { echo 'LAB_V2_ITSM_INSTANCE_ID is required'; exit 1; }
           python3 scripts/run_lab_v2_ssm.py --instance-id "$ITSM_INSTANCE" --document-version "$PUBLICATION_DOCUMENT_VERSION" --document-sha256 "$PUBLICATION_DOCUMENT_SHA256" --mode install
       - name: Validate authenticated services and real metrics
-        if: inputs.phase == 'deploy' || inputs.phase == 'bootstrap-apply'
+        if: inputs.phase == 'deploy' || inputs.phase == 'bootstrap-apply' || inputs.phase == 'validate'
         run: python3 scripts/run_lab_v2_ssm.py --instance-id "$ITSM_INSTANCE" --document-version "$PUBLICATION_DOCUMENT_VERSION" --document-sha256 "$PUBLICATION_DOCUMENT_SHA256" --mode validate
       - name: Remove raw state/plan workspace
         if: always()
