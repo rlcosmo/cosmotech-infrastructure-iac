@@ -37,7 +37,8 @@ class UpgradeTests(unittest.TestCase):
     def test_upsert_reuses_owned_ids_and_rejects_ambiguity(self):
         api=bootstrap.API.__new__(bootstrap.API)
         with patch.object(api,'call',side_effect=[[{'itemid':'12'}],{'itemids':['12']}]) as call:
-            self.assertEqual(api.upsert('item','itemid',{'key_':'v2010.owned'},{'name':'owned'}),'12')
+            self.assertEqual(api.upsert('item','itemid',{'key_':'v2010.owned'},{'hostid':'5','name':'owned'}),'12')
             self.assertEqual([c.args[0] for c in call.call_args_list],['item.get','item.update'])
+            self.assertNotIn('hostid',call.call_args_list[1].args[1])
         with patch.object(api,'call',return_value=[{'itemid':'1'},{'itemid':'2'}]):
             with self.assertRaises(ValueError):api.upsert('item','itemid',{},{} )

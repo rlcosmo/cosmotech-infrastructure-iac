@@ -33,7 +33,11 @@ class API:
         rows=self.call(kind+'.get',{'filter':filter,'output':[idfield],**get})
         if len(rows)>1:raise ValueError('Ambiguous owned resource')
         if rows:
-            self.call(kind+'.update',{idfield:rows[0][idfield],**payload});return rows[0][idfield]
+            changes=dict(payload)
+            immutable={'item':{'hostid'},'itemprototype':{'hostid','ruleid'},
+                       'discoveryrule':{'hostid'},'usermacro':{'hostid'},'action':{'eventsource'}}
+            for field in immutable.get(kind,set()):changes.pop(field,None)
+            self.call(kind+'.update',{idfield:rows[0][idfield],**changes});return rows[0][idfield]
         return self.call(kind+'.create',payload)[idfield+'s'][0]
 
 
