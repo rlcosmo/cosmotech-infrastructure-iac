@@ -25,6 +25,8 @@ def compile_plan(manifest):
         if point.get('state')!='COMPLETED' or not point.get('integrity_reference'):
             raise ValueError('Recovery point not independently verified')
         metadata=point['restore_metadata']
+        if not isinstance(metadata,dict) or any(not isinstance(v,str) or 'us-east-1' in v for v in metadata.values()):
+            raise ValueError('Restore metadata must be destination-only string values')
         if point['type']=='DynamoDB':
             if metadata.get('targetTableName')!='cosmotech-dr-orders-restored':
                 raise ValueError('Restore into a NEW isolated table only')

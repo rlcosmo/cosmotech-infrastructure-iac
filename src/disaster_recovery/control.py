@@ -32,7 +32,7 @@ def promotion_plan(evidence: dict, now: datetime | None = None) -> dict:
         raise ValueError("Recovery checks incomplete; no promotion")
     if not evidence.get("fence_reference") or not evidence.get("snapshot_version"):
         raise ValueError("Require an independently verifiable fence and immutable backup")
-    if not evidence.get("change_reference") or not isinstance(evidence.get("epoch"), int) or evidence["epoch"] < 1:
+    if not evidence.get("change_reference") or type(evidence.get("epoch")) is not int or evidence["epoch"] < 1:
         raise ValueError("Require a change record and increasing fencing epoch")
     if not re.fullmatch(r"[0-9a-f]{64}", evidence.get("protected_primary_hash", "")):
         raise ValueError("Missing protected baseline")
@@ -71,7 +71,8 @@ def replay_events(events: list[dict], completed_ids: set[str]) -> list[dict]:
         if (not isinstance(order_id, str) or not order_id or len(order_id) > 128
                 or order_id.startswith(("INVENTORY#", "IDEMPOTENCY#"))
                 or event.get("event_type") != "order.created"
-                or event.get("order", {}).get("order_id") != order_id
+                or not isinstance(event.get("order"), dict)
+                or event["order"].get("order_id") != order_id
                 or type(event.get("version")) is not int or event["version"] != 2
                 or not event.get("created_at")):
             raise ValueError("Invalid durable journal event")
@@ -92,7 +93,8 @@ def guard_chaos_target(target: dict) -> None:
     if (target.get("account") != ACCOUNT or target.get("region") != SECONDARY
             or target.get("cluster") != "cosmotech-dr" or target.get("namespace") != "dr-test"
             or target.get("environment") != "dr-test" or target.get("synthetic_only") is not True
-            or target.get("duration_seconds", 0) not in range(1, 121)
+            or type(target.get("duration_seconds")) is not int
+            or target["duration_seconds"] not in range(1, 121)
             or target.get("kind") not in {"pod-loss", "node-loss", "az-loss", "dependency-outage"}
             or target.get("telemetry_ready") is not True):
         raise ValueError("Chaos is restricted to synthetic isolated DR targets for <=120s")

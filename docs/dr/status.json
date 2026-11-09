@@ -10,5 +10,17 @@
   "measured_rto_seconds": null,
   "measured_rpo_seconds": null,
   "primary_modified": false,
-  "power_manager_modified": false
+  "power_manager_modified": false,
+  "gitops_pr": "https://github.com/rlcosmo/cosmotech-gitops/pull/19",
+  "gitops_merge_commit": "65cce79928071d81979ae97bdf76d4810bb037e3",
+  "infrastructure_pr": "https://github.com/rlcosmo/cosmotech-infrastructure-iac/pull/48",
+  "remaining_gates": [
+    "official AWS account release",
+    "reviewed spending limit and fresh estimate",
+    "scoped deployment IAM and verified live state owners",
+    "completed cross-region backup and isolated restore",
+    "source durable acceptance journal or proven queue reconciliation plus fencing",
+    "real application E2E and secondary chaos certification",
+    "production routing/TLS and Zabbix recovery not implemented in this phase"
+  ]
 }

@@ -66,12 +66,12 @@
     },
     {
       "release": "tempo",
-      "repository": "https://grafana.github.io/helm-charts",
+      "repository": "https://grafana-community.github.io/helm-charts",
       "chart": "tempo",
-      "version": "1.24.4",
+      "version": "3.2.1",
       "namespace": "observability",
-      "upstream_chart_digest": "f1f6e318d5bca3b5097cb676077796cdf8135beb2c1f71c4d14614ccf9b0081b",
-      "archive_url": "https://github.com/grafana/helm-charts/releases/download/tempo-1.24.4/tempo-1.24.4.tgz"
+      "upstream_chart_digest": "3389c896bd3c8f2a54f054ac00eb1881c34eff2b8e53053e3ad42c9f394925c3",
+      "archive_url": "https://github.com/grafana-community/helm-charts/releases/download/tempo-3.2.1/tempo-3.2.1.tgz"
     }
   ]
 }

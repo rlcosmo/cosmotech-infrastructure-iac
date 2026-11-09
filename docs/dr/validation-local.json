@@ -1,0 +1,19 @@
+{
+  "scope": "local/offline validation only; not an AWS restore or chaos certification",
+  "python_infrastructure_tests": 71,
+  "python_dr_tests": 17,
+  "python_gitops_existing_tests": 11,
+  "terraform_mock_runs": 13,
+  "helm_chart_archives_sha256_verified": 8,
+  "kubernetes_schema": {
+    "standard_valid": 178,
+    "invalid": 0,
+    "errors": 0,
+    "custom_resources_without_schema_skipped": 78
+  },
+  "aws_dr_resources_created": 0,
+  "aws_destructive_tests": 0,
+  "primary_modified": false,
+  "power_manager_modified": false,
+  "gitops_ci": "https://github.com/rlcosmo/cosmotech-gitops/actions/runs/42538159745"
+}
