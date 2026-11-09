@@ -24,7 +24,10 @@
    `uvx iam-policy-autopilot@latest generate-policies --help` then use its documented
    Terraform plan input with account 414053644145/us-east-2. Review output against
    resource allowlist and forbid primary IDs, network/DNS mutations and deletions.
-   No blanket permanent AdministratorAccess or root workflow.
+   No blanket permanent AdministratorAccess or root workflow. An optional
+   `cosmotech-dr-operator` role trusts only an explicitly provided human/SSO role
+   and can scale ONLY the destination node group/start the tagged recovery host.
+   It does not grant primary power/network/data deletion or Terraform apply.
 6. Create destination first using its isolated backend. Defaults are all OFF;
    enable only after the full preflight, allowlisted plan and financial limit.
    `terraform -chdir=terraform/environments/dr plan -out=<private-plan>`;
@@ -56,7 +59,11 @@ uncertain. Do not fall back to another account/region/service to bypass a hold.
 - Use a NEW temporary KUBECONFIG. Assert its server equals the Terraform output for
   `cosmotech-dr`, account 414053644145/us-east-2. Do not change the user's default
   context. Ensure primary Argo and Power Manager never register this cluster.
-- Scale destination nodes only; record prior capacity. EKS control plane, nodes,
+- Scale destination nodes only; record prior capacity. Once DR IAM/data/images
+  are pre-positioned, the recovery operator can use regional EKS UpdateNodegroupConfig
+  directly, without the us-east-1 Terraform backend; use min=0/desired=3/max=3,
+  then wait for the exact update ID. Do not alter Terraform state during this
+  emergency path; reconcile desired capacity afterward with a reviewed plan. EKS control plane, nodes,
   CNI/Pod Identity, EBS CSI and DNS must be healthy before restores. Three AZs are
   configured, but actual node placement/spare subnet IPs must be verified.
 - Render chart bundle (`python scripts/dr/render_platform.py --output <private-dir>`)
@@ -113,8 +120,11 @@ uncertain. Do not fall back to another account/region/service to bypass a hold.
    harmless known Kestra value using the restored key. Sanitize regional URLs;
    disable schedules/triggers/webhooks/mail before opting into `recovery-apps`.
    Keep external egress disabled; no Docker socket, no primary AWS/GitHub credentials.
-   Grafana needs its DB/plugins/datasource secrets; Loki/Tempo/Zabbix restoration
-   remains a separate unvalidated checklist (do not claim recovery from pod Ready).
+   Grafana needs its DB/plugins/datasource secrets. Loki/Tempo have pinned
+   destination charts/exporters/datasources with retained volumes; restore their
+   historical volumes consistently before chart activation and verify log/trace
+   queries. Zabbix deployment/recovery remains a separate unvalidated checklist
+   (do not claim recovery from pod Ready).
 8. End RTO only at successful application E2E + storage/integrity evidence. Compute
    RPO against last client ACK and last verified recovered commit, not snapshot age
    alone. `metrics.py` rejects simulation sources and omits unknown RTO entirely.

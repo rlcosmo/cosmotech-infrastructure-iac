@@ -68,7 +68,9 @@ stable Helm catalog offers Istio 1.30.8; the official Istio support matrix inclu
 Kubernetes 1.36 for that release (not 1.37). Pinned chart SHA256s are verified by
 `render_platform.py`. Before AWS deployment, recheck support windows and resolve
 compatible EKS add-on versions. The Terraform add-ons currently request the AWS
-compatible default; a real deployment must record/pin the resolved versions.
+compatible default; a real deployment must record/pin the resolved versions and verify platform
+container digests/scanning before activation. Chart digests do not freeze upstream
+container tags.
 
 ## Owners and state isolation
 
@@ -113,7 +115,8 @@ compatible default; a real deployment must record/pin the resolved versions.
 | Argo / Istio / API / Worker | pinned platform render; local-only Argo project; immutable image refs; replicas=0; worker mode=pause | No HPA/canary/Ingress from primary. No second Argo controlling the first cluster. New endpoint/runtime validation and approved activation commit required. |
 | Grafana/Prometheus | pinned chart, external admin secret, Retain volume, RTO/RPO dashboard and alerts | Restore Grafana DB/plugins/dashboards consistently, validate datasource region and credentials; no exporter falsely filling absent metrics with zero. |
 | Kestra / GLPI | clean optional SSM recovery VM; isolated digest-pinned database restore Compose; apps opt-in profile | Never boot a copied primary VM with active schedules or mount primary Docker socket. Restore dumps/files, encryption key securely, disable automation/webhooks/mail and sanitize regional URLs before enabling apps. Sandbox network is internal-only. |
-| Loki/Tempo/Zabbix | source backup runbooks + storage copy/restore as explicit selected volumes | Not deployed by the new platform chart bundle. Destination manifests/config/secret validation and end-to-end restore remain pending; recovery of historical telemetry is not claimed. |
+| Loki/Tempo | pinned isolated Loki/Tempo charts, retained storage, OTel trace/log exporters and Grafana datasources | Offline rendered only. Historical telemetry copy/restore, configuration/secrets and end-to-end queries remain unvalidated. |
+| Zabbix | source backup runbooks and selected-volume restore | No destination Zabbix deployment included; separately validate config/DB/host integrations before claiming full lab DR. |
 
 RTO objectives (provisional, not SLAs): Orders isolated recovery <=120 minutes;
 ITSM <=240 minutes; observability <=120 minutes. Persisted data RPO objective <=60

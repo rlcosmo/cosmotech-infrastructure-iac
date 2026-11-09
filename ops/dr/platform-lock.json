@@ -54,6 +54,24 @@
       "namespace": "observability",
       "upstream_chart_digest": "4c9732611ab301e1d5532f62fa0c715c2c89765ee74f88ec1825601b3f172324",
       "archive_url": "https://github.com/open-telemetry/opentelemetry-helm-charts/releases/download/opentelemetry-collector-0.178.2/opentelemetry-collector-0.178.2.tgz"
+    },
+    {
+      "release": "loki",
+      "repository": "https://grafana.github.io/helm-charts",
+      "chart": "loki",
+      "version": "7.5.0",
+      "namespace": "observability",
+      "upstream_chart_digest": "bb8b254a57afc6b31ab23a6061216760c91c8ad3499d340442398b88ec603ca8",
+      "archive_url": "https://github.com/grafana/helm-charts/releases/download/helm-loki-7.5.0/loki-7.5.0.tgz"
+    },
+    {
+      "release": "tempo",
+      "repository": "https://grafana.github.io/helm-charts",
+      "chart": "tempo",
+      "version": "1.24.4",
+      "namespace": "observability",
+      "upstream_chart_digest": "f1f6e318d5bca3b5097cb676077796cdf8135beb2c1f71c4d14614ccf9b0081b",
+      "archive_url": "https://github.com/grafana/helm-charts/releases/download/tempo-1.24.4/tempo-1.24.4.tgz"
     }
   ]
 }

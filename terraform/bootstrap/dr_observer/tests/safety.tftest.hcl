@@ -11,3 +11,8 @@ run "held_account_rejected" {
   variables { enabled = true }
   expect_failures = [var.enabled]
 }
+run "root_operator_source_rejected" {
+  command = plan
+  variables { operator_source_role_arn = "arn:aws:iam::414053644145:root" }
+  expect_failures = [var.operator_source_role_arn]
+}

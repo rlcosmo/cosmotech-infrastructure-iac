@@ -61,3 +61,35 @@ resource "aws_iam_role_policy" "observer" {
   ] })
 }
 output "role_arn" { value = try(aws_iam_role.observer[0].arn, null) }
+variable "operator_source_role_arn" {
+  description = "Existing authorized human/SSO role; empty means no recovery operator is created."
+  type        = string
+  default     = ""
+  validation {
+    condition     = var.operator_source_role_arn == "" || can(regex("^arn:aws:iam::414053644145:role/[A-Za-z0-9+=,.@_/-]+$", var.operator_source_role_arn))
+    error_message = "Only an explicitly authorized non-root local role may assume the recovery operator."
+  }
+}
+resource "aws_iam_role" "operator" {
+  count                = var.enabled && var.operator_source_role_arn != "" ? 1 : 0
+  name                 = "cosmotech-dr-operator"
+  max_session_duration = 3600
+  assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{
+    Effect = "Allow", Action = "sts:AssumeRole", Principal = { AWS = var.operator_source_role_arn }
+  }] })
+  tags = { Project = "CosmoTech", Environment = "dr", Purpose = "secondary-recovery-only" }
+}
+resource "aws_iam_role_policy" "operator" {
+  count = var.enabled && var.operator_source_role_arn != "" ? 1 : 0
+  role  = aws_iam_role.operator[0].id
+  policy = jsonencode({ Version = "2012-10-17", Statement = [
+    { Effect = "Allow", Action = ["eks:DescribeCluster"], Resource = "arn:aws:eks:us-east-2:414053644145:cluster/cosmotech-dr" },
+    { Effect = "Allow", Action = ["eks:DescribeNodegroup", "eks:UpdateNodegroupConfig"], Resource = "arn:aws:eks:us-east-2:414053644145:nodegroup/cosmotech-dr/dr-ondemand/*" },
+    { Effect = "Allow", Action = ["ec2:DescribeInstances", "ec2:DescribeVolumes"], Resource = "*", Condition = { StringEquals = { "aws:RequestedRegion" = "us-east-2" } } },
+    { Effect = "Allow", Action = ["ec2:StartInstances"], Resource = "arn:aws:ec2:us-east-2:414053644145:instance/*", Condition = { StringEquals = { "ec2:ResourceTag/Name" = "cosmotech-dr-itsm-recovery" } } },
+    { Effect = "Allow", Action = ["ssm:StartSession"], Resource = "arn:aws:ec2:us-east-2:414053644145:instance/*", Condition = { StringEquals = { "ssm:resourceTag/Name" = "cosmotech-dr-itsm-recovery" } } },
+    { Effect = "Allow", Action = ["ssm:StartSession"], Resource = ["arn:aws:ssm:us-east-2::document/AWS-StartPortForwardingSession", "arn:aws:ssm:us-east-2:414053644145:document/SSM-SessionManagerRunShell"] },
+    { Effect = "Deny", Action = ["ec2:TerminateInstances", "ec2:DeleteVolume", "eks:DeleteCluster", "route53:ChangeResourceRecordSets", "elasticloadbalancing:DeleteLoadBalancer", "ec2:DeleteNatGateway", "ec2:ReleaseAddress"], Resource = "*" }
+  ] })
+}
+output "operator_role_arn" { value = try(aws_iam_role.operator[0].arn, null) }
