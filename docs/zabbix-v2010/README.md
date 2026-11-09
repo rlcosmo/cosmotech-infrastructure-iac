@@ -24,7 +24,7 @@ Snapshot EBS criptografado pré-upgrade: snap-0a4278c92060be577, volume original
 
 Plano de rollback: parar somente os componentes Zabbix, preservar/quarentenar os volumes pós-upgrade, verificar hashes e extrair as seis cópias para diretórios NOVOS. Gerar override Compose com as imagens anteriores do manifest e bind mounts desses diretórios nos mesmos targets; manter portas/projeto/segredos anteriores. Subir PostgreSQL/ClickHouse antigos, validar schema e inventário, depois server/web/proxy/coletor. Nunca iniciar binário antigo sobre o banco alterado, nunca apagar o volume atual e nunca executar down -v. O ensaio testa a restauração das cópias; rollback preserva também os dados pós-cutover para reconciliação, sem prometer RPO zero. O snapshot é uma segunda cópia fora do host, não um restore completo de boot já certificado.
 
-O comando apply reserva 25 GiB para cópias de rollback, preserva o digest PostgreSQL, a configuração OTLP ativa e os nomes dos três volumes. Faz build/validação antes da interrupção e registra applied.json somente após core GA e mounts verificados. Falha exige reconciliação pelo operador; não apaga dados automaticamente.
+Antes do corte, apply também gera checkpoint recente do PostgreSQL e exporta as seis tabelas APM em Native, verificando contagens com o binário ClickHouse anterior em container sem rede. O backup frio/snapshot permanece disponível. O comando apply reserva 25 GiB para cópias de rollback, preserva o digest PostgreSQL, a configuração OTLP ativa e os nomes dos três volumes. Faz build/validação antes da interrupção e registra applied.json somente após core GA e mounts verificados. Falha exige reconciliação pelo operador; não apaga dados automaticamente.
 
 ## ClickHouse e APM
 

@@ -80,13 +80,40 @@ def verify_archives(directory):
     return directory,m
 
 
+def checkpoint(directory, old_clickhouse_image):
+    """Fresh application data checkpoint; full cold volumes remain the rollback baseline."""
+    from xml.sax.saxutils import escape
+    directory=Path(directory)/('checkpoint-'+datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ'))
+    directory.mkdir(mode=0o700)
+    with (directory/'postgres.dump').open('wb') as f:
+        compose('exec','-T','postgres','pg_dump','-U','zabbix','-Fc','zabbix',output=f)
+    password=(ROOT/'secrets/clickhouse_password').read_text().strip()
+    config=('<config><host>localhost</host><port>9000</port><user>zabbix</user><password>'+escape(password)+'</password></config>').encode()
+    client='umask 077; f=$(mktemp); cat > "$f"; clickhouse-client --config-file "$f" --query "$1"; rc=$?; rm -f "$f"; exit "$rc"'
+    result={'postgres_dump_sha256':digest(directory/'postgres.dump'),'tables':{}}
+    for table in ['otel_traces','otel_logs','otel_metrics_sum','otel_metrics_gauge','otel_metrics_histogram','otel_metrics_exponential_histogram']:
+        with (directory/(table+'.native')).open('wb') as f:
+            compose('exec','-T','clickhouse','sh','-c',client,'client','SELECT * FROM zabbix.'+table+' FORMAT Native',input=config,output=f)
+        expected=int(compose('exec','-T','clickhouse','sh','-c',client,'client','SELECT count() FROM zabbix.'+table,input=config).strip())
+        ddl=compose('exec','-T','clickhouse','sh','-c',client,'client','SHOW CREATE TABLE zabbix.'+table+' FORMAT TSVRaw',input=config)
+        (directory/(table+'.sql')).write_bytes(ddl)
+        observed=int(run(['docker','run','--rm','--network','none','--memory','512m','--volume',str(directory)+':/checkpoint:ro','--entrypoint','clickhouse',old_clickhouse_image,'local','--query',"SELECT count() FROM file('/checkpoint/"+table+".native', Native)"]).strip())
+        if expected!=observed:raise RuntimeError('Native checkpoint validation failed')
+        result['tables'][table]={'rows':expected,'sha256':digest(directory/(table+'.native'))}
+    (directory/'manifest.json').write_text(json.dumps(result,indent=2)+'\n')
+    os.sync()
+    print(json.dumps({'fresh_checkpoint':str(directory),'native_tables_verified':len(result['tables'])}),flush=True)
+    return directory
+
+
 def apply(directory, source):
     import shutil
     directory,manifest=verify_archives(directory)
     if json.loads((directory/'rehearsal-ok.json').read_text()).get('rehearsal')!='passed':
         raise ValueError('A successful isolated restore rehearsal is required')
     snapshot=json.loads((directory/'snapshot-verified.json').read_text())
-    if snapshot.get('State')!='completed' or snapshot.get('Encrypted') is not True:
+    if (snapshot.get('State')!='completed' or snapshot.get('Encrypted') is not True
+            or snapshot.get('VolumeId')!='vol-0cf8b3eaf7cc6ea10'):
         raise ValueError('Completed encrypted off-host snapshot is required')
     if shutil.disk_usage(ROOT).free<25*1024**3:
         raise ValueError('Reserve at least 25 GiB for non-destructive rollback copies')
@@ -107,8 +134,12 @@ def apply(directory, source):
     compose('config','--quiet')
     compose('build','web','notifications',timeout=600)
     # The application collectors and every existing data volume remain in place.
+    changed_database=False
     try:
-        compose('stop','--timeout','60','telemetry','web','proxy','server','clickhouse')
+        compose('stop','--timeout','60','telemetry','web','proxy','server')
+        fresh=checkpoint(directory,manifest['services']['clickhouse']['image'])
+        compose('stop','--timeout','60','clickhouse')
+        changed_database=True
         compose('up','-d','postgres','clickhouse','notifications','server','proxy','web','telemetry',timeout=180)
         for _ in range(60):
             try:
@@ -127,11 +158,14 @@ def apply(directory, source):
             current=json.loads(run(['docker','inspect',compose('ps','-q',service).decode().strip()]))[0]
             if name not in [m.get('Name') for m in current['Mounts']]:raise RuntimeError('Original data volume changed')
         result={'core_upgrade':'passed','version':'8.0.0','postgres_image_preserved':True,
-                'original_named_volumes_preserved':True,'snapshot':snapshot['SnapshotId'],
+                'original_named_volumes_preserved':True,'snapshot':snapshot['SnapshotId'],'fresh_checkpoint':str(fresh),
                 'operational_certification':'pending full APM/bootstrap/webhook validation'}
         (directory/'applied.json').write_text(json.dumps(result,indent=2)+'\n')
         print(json.dumps(result),flush=True)
     except Exception:
+        if not changed_database:
+            (ROOT/'docker-compose.yml').write_text(json.dumps(previous))
+            compose('start',*SERVICES)
         # Never downgrade a changed database in place. Keep all originals for inspection.
         (directory/'apply-failed.json').write_text(json.dumps({'failed_at':datetime.now(timezone.utc).isoformat(),
             'data_volumes_preserved':True,'rollback':'restore archives into fresh directories; never erase current data'}))
