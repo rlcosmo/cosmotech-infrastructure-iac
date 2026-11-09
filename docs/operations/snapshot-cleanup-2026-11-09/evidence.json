@@ -380,5 +380,126 @@
       "status": "request_submitted",
       "response": {}
     }
+  ],
+  "other_native_backup_inventory": [
+    {
+      "region": "ap-south-1",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "eu-north-1",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "eu-west-3",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "eu-west-2",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "eu-west-1",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "ap-northeast-3",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "ap-northeast-2",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "ap-northeast-1",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "ca-central-1",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "sa-east-1",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "ap-southeast-1",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "ap-southeast-2",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "eu-central-1",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "us-east-1",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "us-east-2",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "us-west-1",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "us-west-2",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    }
   ]
 }
