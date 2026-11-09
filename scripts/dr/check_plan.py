@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Reject destructive/primary/global/foreign changes in the standby root plan."""
+import argparse
+from collections import Counter
 import json
-import sys
+import math
 
 ALLOWED = {
     "aws_instance", "aws_security_group", "aws_iam_instance_profile", "aws_vpc", "aws_subnet", "aws_internet_gateway", "aws_route_table", "aws_route",
@@ -14,7 +16,17 @@ ALLOWED = {
     "aws_dynamodb_table", "aws_backup_plan", "aws_backup_selection", "aws_sqs_queue", "aws_sqs_queue_redrive_allow_policy",
 }
 
-def check_plan(plan):
+REQUIRED_COUNTS = {
+    "aws_vpc": 1, "aws_subnet": 3, "aws_eks_cluster": 1, "aws_eks_node_group": 1,
+    "aws_eks_addon": 5, "aws_sqs_queue": 2, "aws_dynamodb_table": 1,
+    "aws_ecr_repository": 3, "aws_s3_bucket": 1, "aws_kms_key": 1,
+    "aws_backup_vault": 1, "aws_iam_role": 1,
+}
+
+
+def check_plan(plan, *, require_provisioning=False):
+    if plan.get('errored') or plan.get('deferred_changes') or plan.get('complete') is False:
+        raise ValueError('Incomplete plan cannot establish provisioning scope')
     for change in plan.get("resource_changes", []):
         if change.get("mode") == "data":
             continue
@@ -31,8 +43,29 @@ def check_plan(plan):
         serialized = json.dumps(after)
         if "aws-eks-istio-lab-dev-spot" in serialized or '"us-east-1"' in serialized:
             raise ValueError("Primary resource in standby plan")
+    if require_provisioning:
+        changes = [r for r in plan.get('resource_changes', []) if r.get('mode', 'managed') == 'managed']
+        if not any(r['change']['actions'] != ['no-op'] for r in changes):
+            raise ValueError('Empty/no-op plan is not provisioning evidence')
+        counts = Counter(r['type'] for r in changes if r['address'].startswith(
+            ('module.standby[0].', 'module.standby_sqs[0].')))
+        if any(counts[kind] < minimum for kind, minimum in REQUIRED_COUNTS.items()):
+            raise ValueError('Expected full standby resource graph is missing')
+        readiness = plan.get('output_changes', {}).get('readiness', {}).get('after') or {}
+        if (readiness.get('provisioning_enabled') is not True or readiness.get('mode') != 'passive'
+                or readiness.get('selected_region') != 'us-east-2'
+                or readiness.get('state_key') != 'aws-serverless-lab/dr/terraform.tfstate'
+                or type(readiness.get('financial_ceiling_usd')) not in (int, float)
+                or not math.isfinite(readiness['financial_ceiling_usd'])
+                or readiness['financial_ceiling_usd'] <= 0):
+            raise ValueError('Enabled isolated Ohio configuration with a positive budget is required')
     return True
 
 if __name__ == "__main__":
-    check_plan(json.load(open(sys.argv[1])))
+    parser = argparse.ArgumentParser()
+    parser.add_argument('plan')
+    parser.add_argument('--require-provisioning', action='store_true')
+    args = parser.parse_args()
+    with open(args.plan) as source:
+        check_plan(json.load(source), require_provisioning=args.require_provisioning)
     print("PASS: standby plan scope; no deletion/replacement or primary resource")
