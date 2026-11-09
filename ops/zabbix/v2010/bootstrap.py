@@ -57,11 +57,25 @@ def trigger(api,host,name,expression,tags):
     return api.upsert('trigger','triggerid',{'description':name},{'description':name,'expression':expression,'priority':3,'tags':tags},hostids=[host])
 
 
-def reconcile(api,secret):
+def trapper_allowed_hosts():
+    """Docker DNAT presents host loopback traffic as the dedicated bridge gateway."""
+    import ipaddress
+    import subprocess
+    cid=subprocess.check_output(['docker','compose','ps','-q','server'],cwd=ROOT,text=True).strip()
+    server=json.loads(subprocess.check_output(['docker','inspect',cid],text=True))[0]
+    gateways={n['Gateway'] for n in server['NetworkSettings']['Networks'].values() if n.get('Gateway')}
+    if not gateways or any(not ipaddress.ip_address(g).is_private for g in gateways):
+        raise ValueError('A private dedicated Docker gateway is required')
+    return ','.join(['127.0.0.1','::1',*sorted(gateways)])
+
+
+def reconcile(api,secret,allowed_hosts='127.0.0.1,::1'):
     group=api.upsert('hostgroup','groupid',{'name':PREFIX},{'name':PREFIX})
     hosts=api.call('host.get',{'filter':{'host':LAB},'output':['hostid']})
     if hosts:host=hosts[0]['hostid']
     else:host=api.call('host.create',{'host':LAB,'name':PREFIX+' isolated faults','groups':[{'groupid':group}],'tags':TAGS})['hostids'][0]
+    api.upsert('usermacro','hostmacroid',{'macro':'{$TRAPPER.ALLOWED_HOSTS}'},
+        {'hostid':host,'macro':'{$TRAPPER.ALLOWED_HOSTS}','value':allowed_hosts,'type':0},hostids=[host])
     widgets={}
     expressions={'http_errors':'>0','latency_ms':'>500','service_available':'=0','agent_available':'=0'}
     for key,suffix in expressions.items():
@@ -114,5 +128,5 @@ def reconcile(api,secret):
 
 if __name__=='__main__':
     secret=credentials();api=API()
-    try:print(json.dumps(reconcile(api,secret)))
+    try:print(json.dumps(reconcile(api,secret,trapper_allowed_hosts())))
     finally:api.call('user.logout',[])
