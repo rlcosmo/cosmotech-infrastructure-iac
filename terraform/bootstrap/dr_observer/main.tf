@@ -48,6 +48,7 @@ resource "aws_iam_role_policy" "observer" {
     { Effect = "Allow", Action = ["ec2:Describe*", "eks:DescribeClusterVersions", "eks:DescribeAddonVersions", "servicequotas:ListServiceQuotas"], Resource = "*", Condition = { StringEquals = { "aws:RequestedRegion" = "us-east-2" } } },
     { Effect = "Allow", Action = ["eks:DescribeCluster", "eks:DescribeNodegroup", "eks:DescribeAddon", "eks:ListAccessEntries", "eks:DescribeAccessEntry", "eks:ListAssociatedAccessPolicies", "eks:ListPodIdentityAssociations", "eks:DescribePodIdentityAssociation"], Resource = ["arn:aws:eks:us-east-2:414053644145:cluster/cosmotech-dr", "arn:aws:eks:us-east-2:414053644145:*/cosmotech-dr/*"] },
     { Effect = "Allow", Action = ["iam:GetRole", "iam:GetRolePolicy", "iam:ListRolePolicies", "iam:ListAttachedRolePolicies"], Resource = "arn:aws:iam::414053644145:role/cosmotech-dr-*" },
+    { Effect = "Allow", Action = ["iam:GetInstanceProfile"], Resource = "arn:aws:iam::414053644145:instance-profile/cosmotech-dr-*" },
     { Effect = "Allow", Action = ["s3:ListBucket"], Resource = "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1", Condition = { StringLike = { "s3:prefix" = ["aws-serverless-lab/dr/*", "env:/"] } } },
     { Effect = "Allow", Action = ["s3:GetBucketLocation"], Resource = "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1" },
     { Effect = "Allow", Action = ["s3:GetObject"], Resource = "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1/aws-serverless-lab/dr/terraform.tfstate" },

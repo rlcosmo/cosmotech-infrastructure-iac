@@ -32,7 +32,7 @@ jobs:
       - run: python scripts/dr/simulate_chaos.py > chaos-simulation.json
       - run: python scripts/dr/render_platform.py --output "$RUNNER_TEMP/dr-platform"
       - run: bash scripts/dr/install_kubeconform.sh "$RUNNER_TEMP/dr-schema"
-      - run: '"$RUNNER_TEMP/dr-schema/kubeconform" -strict -summary -ignore-missing-schemas -kubernetes-version 1.36.0 "$RUNNER_TEMP/dr-platform" ops/dr/storage-class.json' 
+      - run: '"$RUNNER_TEMP/dr-schema/kubeconform" -strict -summary -ignore-missing-schemas -kubernetes-version 1.36.0 "$RUNNER_TEMP/dr-platform" ops/dr/storage-class.json'
       - run: terraform -chdir=terraform/environments/dr fmt -check -recursive
       - run: terraform -chdir=terraform/modules/dr_standby fmt -check
       - run: terraform -chdir=terraform/environments/dr init -backend=false -input=false
