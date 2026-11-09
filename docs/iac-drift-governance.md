@@ -59,3 +59,24 @@ issue #47 stays open. V2-002 is not declared complete or started by this change.
 - [Managed node groups and their Auto Scaling groups](https://docs.aws.amazon.com/eks/latest/userguide/managed-node-groups.html).
 - [DLM system tags](https://docs.aws.amazon.com/ebs/latest/userguide/dlm-elements.html).
 - [CSI tagging contract](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/docs/tagging.md).
+
+## Publication evidence (2026-11-09)
+
+- PR #50 merged: `3b5b0afe5b6184cf0bffef2e0ab0dd2717424480`.
+- Scoped governance CI: run `42595303722` (106 tests + JS syntax/bundle passed).
+- Publication plan: run `42595526396` passed using the existing non-root OIDC role.
+- Publication deploy: run `42595688177` updated the gated SSM document and ran
+  install command `3f0e0c43-25f1-44dd-b873-fb03c90014e6`. Installation reached the
+  Grafana stage AFTER installing/restarting the portal/observer; Grafana returned
+  HTTP 503. No destructive rollback or repeated dashboard attempt was performed.
+- Public HTTP checks: portal 401 without authentication, Grafana health 503.
+  These do not prove an authenticated comparison is healthy.
+
+The official workflow now accepts `phase=validate`, using only the existing
+deploy role, persisted numeric document version/SHA256 and read-only publisher
+validation. It skips plan/apply, installation, dashboard publication and IAM
+changes. This allows collecting portal evidence before the existing Grafana/metric
+checks without reinstalling the host or declaring unrelated components healthy.
+The existing validation mode performs service GETs and emits sanitized counts;
+it never reports credential values. A failed observer or Grafana check remains
+a failed workflow and is not suppressed.
