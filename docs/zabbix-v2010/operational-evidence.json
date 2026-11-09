@@ -1,0 +1,851 @@
+{
+  "certification": {
+    "certified": true,
+    "at": 1794237122,
+    "scope": "Zabbix V2-010 GA upgrade and isolated observability lab",
+    "problems_recovered": 4,
+    "webhooks_delivered": 8,
+    "cep_roots": 1,
+    "cep_symptoms": 3,
+    "primary_faults_injected": false,
+    "earlier_failed_alerts_retained": 6,
+    "event_ids": [
+      "153",
+      "154",
+      "155",
+      "156",
+      "157",
+      "158",
+      "159",
+      "160"
+    ],
+    "gui_login_and_dashboard": "passed separately via public frontend cookie session",
+    "production_rollback_exercised": false,
+    "isolated_restore_rehearsal": "passed"
+  },
+  "core": {
+    "core_upgrade": "passed",
+    "version": "8.0.0",
+    "postgres_image_preserved": true,
+    "original_named_volumes_preserved": true,
+    "snapshot": "snap-0a4278c92060be577",
+    "fresh_checkpoint": "/opt/cosmotech/zabbix/backups/v2010-20261109T114434Z/checkpoint-20261109T150159Z",
+    "operational_certification": "pending full APM/bootstrap/webhook validation"
+  },
+  "live": {
+    "at": 1794237082,
+    "frontend_http": 200,
+    "notifications_unauth_http": 401,
+    "notifications_reader_http": 200,
+    "authenticated_public_api": true,
+    "inventory": {
+      "host": "31",
+      "template": "390",
+      "item": "11710",
+      "trigger": "4247",
+      "dashboard": "8",
+      "mediatype": "41",
+      "action": "6",
+      "ceprule": "8"
+    },
+    "apm_samples_24h": {
+      "apmtrace": 1,
+      "apmmetric": 1,
+      "apmlog": 1
+    },
+    "native_apm_items": [
+      {
+        "itemid": "74061",
+        "name": "CosmoTech V2-010 orders-api error logs in 5m",
+        "key_": "v2010.apm.error_logs.count",
+        "type": "18",
+        "value_type": "3",
+        "state": "0",
+        "error": "",
+        "lastclock": "1794237080"
+      },
+      {
+        "itemid": "74063",
+        "name": "CosmoTech V2-010 orders-worker error logs in 5m",
+        "key_": "v2010.apm.error_logs.count",
+        "type": "18",
+        "value_type": "3",
+        "state": "0",
+        "error": "",
+        "lastclock": "1794237082"
+      },
+      {
+        "itemid": "74060",
+        "name": "CosmoTech V2-010 native orders-api error logs",
+        "key_": "v2010.apm.error_logs.query",
+        "type": "24",
+        "value_type": "6",
+        "state": "0",
+        "error": "",
+        "lastclock": "1794237080"
+      },
+      {
+        "itemid": "74062",
+        "name": "CosmoTech V2-010 native orders-worker error logs",
+        "key_": "v2010.apm.error_logs.query",
+        "type": "24",
+        "value_type": "6",
+        "state": "0",
+        "error": "",
+        "lastclock": "1794237082"
+      }
+    ],
+    "lab_problem_events": [
+      {
+        "eventid": "146",
+        "name": "CosmoTech V2-010 isolated http",
+        "value": "1",
+        "r_eventid": "147",
+        "cause_eventid": "0",
+        "tags": [
+          {
+            "tag": "cosmotech_scope",
+            "value": "v2-010"
+          },
+          {
+            "tag": "service",
+            "value": "v2010-isolated-lab"
+          },
+          {
+            "tag": "scenario",
+            "value": "http"
+          },
+          {
+            "tag": "managed_by",
+            "value": "cosmotech-v2010"
+          },
+          {
+            "tag": "symptoms",
+            "value": "2"
+          }
+        ]
+      },
+      {
+        "eventid": "148",
+        "name": "CosmoTech V2-010 isolated latency",
+        "value": "1",
+        "r_eventid": "149",
+        "cause_eventid": "146",
+        "tags": [
+          {
+            "tag": "cosmotech_scope",
+            "value": "v2-010"
+          },
+          {
+            "tag": "service",
+            "value": "v2010-isolated-lab"
+          },
+          {
+            "tag": "scenario",
+            "value": "latency"
+          },
+          {
+            "tag": "managed_by",
+            "value": "cosmotech-v2010"
+          }
+        ]
+      },
+      {
+        "eventid": "150",
+        "name": "CosmoTech V2-010 isolated unavailable",
+        "value": "1",
+        "r_eventid": "151",
+        "cause_eventid": "146",
+        "tags": [
+          {
+            "tag": "cosmotech_scope",
+            "value": "v2-010"
+          },
+          {
+            "tag": "service",
+            "value": "v2010-isolated-lab"
+          },
+          {
+            "tag": "scenario",
+            "value": "unavailable"
+          },
+          {
+            "tag": "managed_by",
+            "value": "cosmotech-v2010"
+          }
+        ]
+      },
+      {
+        "eventid": "153",
+        "name": "CosmoTech V2-010 isolated http",
+        "value": "1",
+        "r_eventid": "154",
+        "cause_eventid": "0",
+        "tags": [
+          {
+            "tag": "cosmotech_scope",
+            "value": "v2-010"
+          },
+          {
+            "tag": "service",
+            "value": "v2010-isolated-lab"
+          },
+          {
+            "tag": "scenario",
+            "value": "http"
+          },
+          {
+            "tag": "managed_by",
+            "value": "cosmotech-v2010"
+          },
+          {
+            "tag": "symptoms",
+            "value": "3"
+          }
+        ]
+      },
+      {
+        "eventid": "155",
+        "name": "CosmoTech V2-010 isolated latency",
+        "value": "1",
+        "r_eventid": "156",
+        "cause_eventid": "153",
+        "tags": [
+          {
+            "tag": "cosmotech_scope",
+            "value": "v2-010"
+          },
+          {
+            "tag": "service",
+            "value": "v2010-isolated-lab"
+          },
+          {
+            "tag": "scenario",
+            "value": "latency"
+          },
+          {
+            "tag": "managed_by",
+            "value": "cosmotech-v2010"
+          }
+        ]
+      },
+      {
+        "eventid": "157",
+        "name": "CosmoTech V2-010 isolated unavailable",
+        "value": "1",
+        "r_eventid": "158",
+        "cause_eventid": "153",
+        "tags": [
+          {
+            "tag": "cosmotech_scope",
+            "value": "v2-010"
+          },
+          {
+            "tag": "service",
+            "value": "v2010-isolated-lab"
+          },
+          {
+            "tag": "scenario",
+            "value": "unavailable"
+          },
+          {
+            "tag": "managed_by",
+            "value": "cosmotech-v2010"
+          }
+        ]
+      },
+      {
+        "eventid": "159",
+        "name": "CosmoTech V2-010 isolated agent",
+        "value": "1",
+        "r_eventid": "160",
+        "cause_eventid": "153",
+        "tags": [
+          {
+            "tag": "cosmotech_scope",
+            "value": "v2-010"
+          },
+          {
+            "tag": "service",
+            "value": "v2010-isolated-lab"
+          },
+          {
+            "tag": "scenario",
+            "value": "agent"
+          },
+          {
+            "tag": "managed_by",
+            "value": "cosmotech-v2010"
+          }
+        ]
+      }
+    ],
+    "webhook_alerts": [
+      {
+        "alertid": "1",
+        "eventid": "146",
+        "status": "2",
+        "has_error": true
+      },
+      {
+        "alertid": "2",
+        "eventid": "147",
+        "status": "2",
+        "has_error": true
+      },
+      {
+        "alertid": "3",
+        "eventid": "148",
+        "status": "2",
+        "has_error": true
+      },
+      {
+        "alertid": "4",
+        "eventid": "149",
+        "status": "2",
+        "has_error": true
+      },
+      {
+        "alertid": "5",
+        "eventid": "150",
+        "status": "2",
+        "has_error": true
+      },
+      {
+        "alertid": "6",
+        "eventid": "151",
+        "status": "2",
+        "has_error": true
+      },
+      {
+        "alertid": "7",
+        "eventid": "153",
+        "status": "1",
+        "has_error": false
+      },
+      {
+        "alertid": "8",
+        "eventid": "154",
+        "status": "1",
+        "has_error": false
+      },
+      {
+        "alertid": "9",
+        "eventid": "155",
+        "status": "1",
+        "has_error": false
+      },
+      {
+        "alertid": "10",
+        "eventid": "156",
+        "status": "1",
+        "has_error": false
+      },
+      {
+        "alertid": "11",
+        "eventid": "157",
+        "status": "1",
+        "has_error": false
+      },
+      {
+        "alertid": "12",
+        "eventid": "158",
+        "status": "1",
+        "has_error": false
+      },
+      {
+        "alertid": "13",
+        "eventid": "159",
+        "status": "1",
+        "has_error": false
+      },
+      {
+        "alertid": "14",
+        "eventid": "160",
+        "status": "1",
+        "has_error": false
+      }
+    ],
+    "cep_rules": [
+      {
+        "cep_ruleid": "7",
+        "name": "CosmoTech V2-010 enrichment",
+        "status": "0"
+      },
+      {
+        "cep_ruleid": "8",
+        "name": "CosmoTech V2-010 service cause and symptoms",
+        "status": "0"
+      }
+    ],
+    "agents": [
+      {
+        "host": "cosmotech-zabbix-dev",
+        "items": [
+          {
+            "itemid": "72039",
+            "key_": "agent.ping",
+            "state": "0",
+            "lastclock": "1794237039",
+            "lastvalue": "1"
+          },
+          {
+            "itemid": "72041",
+            "key_": "agent.version",
+            "state": "0",
+            "lastclock": "1794236441",
+            "lastvalue": "8.0.0"
+          }
+        ]
+      },
+      {
+        "host": "cosmotech-itsm-dev",
+        "items": [
+          {
+            "itemid": "72119",
+            "key_": "agent.ping",
+            "state": "0",
+            "lastclock": "1794237059",
+            "lastvalue": "1"
+          },
+          {
+            "itemid": "72121",
+            "key_": "agent.version",
+            "state": "0",
+            "lastclock": "1794236521",
+            "lastvalue": "8.0.0"
+          }
+        ]
+      },
+      {
+        "host": "cosmotech-argocd-dev",
+        "items": [
+          {
+            "itemid": "72199",
+            "key_": "agent.ping",
+            "state": "0",
+            "lastclock": "1794237019",
+            "lastvalue": "1"
+          },
+          {
+            "itemid": "72201",
+            "key_": "agent.version",
+            "state": "0",
+            "lastclock": "1794236601",
+            "lastvalue": "8.0.0"
+          }
+        ]
+      }
+    ],
+    "notification_list_http": 200,
+    "notification_list": {
+      "incidents": [
+        {
+          "event_id": "159",
+          "service": "v2010-isolated-lab",
+          "severity": 3,
+          "opened_at": 1794237046,
+          "recovered_at": 1794237049,
+          "received_at": 1794237049,
+          "state": "recovery"
+        },
+        {
+          "event_id": "157",
+          "service": "v2010-isolated-lab",
+          "severity": 3,
+          "opened_at": 1794237032,
+          "recovered_at": 1794237037,
+          "received_at": 1794237037,
+          "state": "recovery"
+        },
+        {
+          "event_id": "155",
+          "service": "v2010-isolated-lab",
+          "severity": 3,
+          "opened_at": 1794237019,
+          "recovered_at": 1794237023,
+          "received_at": 1794237023,
+          "state": "recovery"
+        },
+        {
+          "event_id": "153",
+          "service": "v2010-isolated-lab",
+          "severity": 3,
+          "opened_at": 1794236995,
+          "recovered_at": 1794237007,
+          "received_at": 1794237007,
+          "state": "recovery"
+        }
+      ]
+    }
+  },
+  "health": {
+    "lab_items": [
+      {
+        "itemid": "74054",
+        "key_": "v2010.lab.http_errors",
+        "state": "0",
+        "error": "",
+        "lastclock": "1794237046",
+        "lastvalue": "0"
+      },
+      {
+        "itemid": "74055",
+        "key_": "v2010.lab.latency_ms",
+        "state": "0",
+        "error": "",
+        "lastclock": "1794237046",
+        "lastvalue": "0"
+      },
+      {
+        "itemid": "74056",
+        "key_": "v2010.lab.service_available",
+        "state": "0",
+        "error": "",
+        "lastclock": "1794237046",
+        "lastvalue": "1"
+      },
+      {
+        "itemid": "74057",
+        "key_": "v2010.lab.agent_available",
+        "state": "0",
+        "error": "",
+        "lastclock": "1794237046",
+        "lastvalue": "1"
+      },
+      {
+        "itemid": "74064",
+        "key_": "v2010.lab.state[http]",
+        "state": "0",
+        "error": "",
+        "lastclock": "1794237046",
+        "lastvalue": "0"
+      },
+      {
+        "itemid": "74065",
+        "key_": "v2010.lab.state[latency]",
+        "state": "0",
+        "error": "",
+        "lastclock": "1794237046",
+        "lastvalue": "0"
+      },
+      {
+        "itemid": "74066",
+        "key_": "v2010.lab.state[unavailable]",
+        "state": "0",
+        "error": "",
+        "lastclock": "1794237046",
+        "lastvalue": "0"
+      },
+      {
+        "itemid": "74067",
+        "key_": "v2010.lab.state[agent]",
+        "state": "0",
+        "error": "",
+        "lastclock": "1794237046",
+        "lastvalue": "0"
+      }
+    ],
+    "apm_triggers": [
+      {
+        "triggerid": "33267",
+        "description": "orders-api: APM received no spans in 15 minutes",
+        "status": "0",
+        "value": "0",
+        "state": "0",
+        "error": ""
+      },
+      {
+        "triggerid": "33268",
+        "description": "orders-api: sustained APM error percentage above 20",
+        "status": "0",
+        "value": "0",
+        "state": "0",
+        "error": ""
+      },
+      {
+        "triggerid": "33269",
+        "description": "orders-api: APM p95 latency above 5 seconds",
+        "status": "0",
+        "value": "0",
+        "state": "0",
+        "error": ""
+      },
+      {
+        "triggerid": "33270",
+        "description": "orders-api: APM storage query unavailable",
+        "status": "0",
+        "value": "0",
+        "state": "0",
+        "error": ""
+      },
+      {
+        "triggerid": "33271",
+        "description": "orders-worker: APM received no spans in 15 minutes",
+        "status": "0",
+        "value": "0",
+        "state": "0",
+        "error": ""
+      },
+      {
+        "triggerid": "33272",
+        "description": "orders-worker: sustained APM error percentage above 20",
+        "status": "0",
+        "value": "0",
+        "state": "0",
+        "error": ""
+      },
+      {
+        "triggerid": "33273",
+        "description": "orders-worker: APM p95 latency above 5 seconds",
+        "status": "0",
+        "value": "0",
+        "state": "0",
+        "error": ""
+      },
+      {
+        "triggerid": "33274",
+        "description": "orders-worker: APM storage query unavailable",
+        "status": "0",
+        "value": "0",
+        "state": "0",
+        "error": ""
+      },
+      {
+        "triggerid": "33337",
+        "description": "orders-api: APM metrics missing for 15 minutes",
+        "status": "0",
+        "value": "0",
+        "state": "0",
+        "error": ""
+      },
+      {
+        "triggerid": "33338",
+        "description": "orders-api: APM logs missing for 15 minutes",
+        "status": "0",
+        "value": "0",
+        "state": "0",
+        "error": ""
+      },
+      {
+        "triggerid": "33339",
+        "description": "orders-api: APM log errors detected",
+        "status": "0",
+        "value": "0",
+        "state": "0",
+        "error": ""
+      },
+      {
+        "triggerid": "33340",
+        "description": "orders-worker: APM metrics missing for 15 minutes",
+        "status": "0",
+        "value": "0",
+        "state": "0",
+        "error": ""
+      },
+      {
+        "triggerid": "33341",
+        "description": "orders-worker: APM logs missing for 15 minutes",
+        "status": "0",
+        "value": "0",
+        "state": "0",
+        "error": ""
+      },
+      {
+        "triggerid": "33342",
+        "description": "orders-worker: APM log errors detected",
+        "status": "0",
+        "value": "0",
+        "state": "0",
+        "error": ""
+      },
+      {
+        "triggerid": "33867",
+        "description": "CosmoTech V2-010 orders-api error logs",
+        "status": "0",
+        "value": "0",
+        "state": "0",
+        "error": ""
+      },
+      {
+        "triggerid": "33868",
+        "description": "CosmoTech V2-010 orders-worker error logs",
+        "status": "0",
+        "value": "0",
+        "state": "0",
+        "error": ""
+      }
+    ],
+    "containers": [
+      {
+        "Service": "clickhouse",
+        "State": "running",
+        "Health": ""
+      },
+      {
+        "Service": "notifications",
+        "State": "running",
+        "Health": ""
+      },
+      {
+        "Service": "postgres",
+        "State": "running",
+        "Health": "healthy"
+      },
+      {
+        "Service": "proxy",
+        "State": "running",
+        "Health": ""
+      },
+      {
+        "Service": "server",
+        "State": "running",
+        "Health": ""
+      },
+      {
+        "Service": "telemetry",
+        "State": "running",
+        "Health": ""
+      },
+      {
+        "Service": "web",
+        "State": "running",
+        "Health": "healthy"
+      }
+    ],
+    "wrong_webhook_token_http": 401
+  },
+  "data": {
+    "clickhouse_version": "26.8.36.3",
+    "telemetry": {
+      "otel_traces": {
+        "count": "30615",
+        "ttl": "toDateTime(Timestamp) + toIntervalSecond(259200)",
+        "services_recent": [
+          {
+            "ServiceName": "orders-api",
+            "count()": 14,
+            "toString(max(Timestamp))": "2026-11-09 15:11:27.161209408"
+          },
+          {
+            "ServiceName": "orders-worker",
+            "count()": 10,
+            "toString(max(Timestamp))": "2026-11-09 15:11:27.159363429"
+          }
+        ]
+      },
+      "otel_logs": {
+        "count": "17265",
+        "ttl": "toDateTime(Timestamp) + toIntervalSecond(259200)",
+        "services_recent": [
+          {
+            "ServiceName": "orders-api",
+            "count()": 14,
+            "toString(max(Timestamp))": "2026-11-09 15:11:27.200074807"
+          },
+          {
+            "ServiceName": "orders-worker",
+            "count()": 10,
+            "toString(max(Timestamp))": "2026-11-09 15:11:27.159560558"
+          }
+        ]
+      },
+      "otel_metrics_sum": {
+        "count": "65174",
+        "ttl": "toDateTime(TimeUnix) + toIntervalSecond(259200)",
+        "services_recent": [
+          {
+            "ServiceName": "orders-api",
+            "count()": 90,
+            "toString(max(TimeUnix))": "2026-11-09 15:11:37.108374057"
+          },
+          {
+            "ServiceName": "orders-worker",
+            "count()": 50,
+            "toString(max(TimeUnix))": "2026-11-09 15:11:04.371516949"
+          }
+        ]
+      },
+      "otel_metrics_gauge": {
+        "count": "0",
+        "ttl": "toDateTime(TimeUnix) + toIntervalSecond(259200)",
+        "services_recent": []
+      },
+      "otel_metrics_histogram": {
+        "count": "65151",
+        "ttl": "toDateTime(TimeUnix) + toIntervalSecond(259200)",
+        "services_recent": [
+          {
+            "ServiceName": "orders-api",
+            "count()": 90,
+            "toString(max(TimeUnix))": "2026-11-09 15:11:37.108374057"
+          },
+          {
+            "ServiceName": "orders-worker",
+            "count()": 50,
+            "toString(max(TimeUnix))": "2026-11-09 15:11:04.371516949"
+          }
+        ]
+      },
+      "otel_metrics_exponential_histogram": {
+        "count": "0",
+        "ttl": "toDateTime(TimeUnix) + toIntervalSecond(259200)",
+        "services_recent": []
+      }
+    },
+    "schema": "8000000|8000000",
+    "server": "zabbix_server (Zabbix) 8.0.0",
+    "proxy": "zabbix_proxy (Zabbix) 8.0.0",
+    "volumes": [
+      "cosmotech-zabbix-postgres",
+      "cosmotech-zabbix-clickhouse",
+      "cosmotech-zabbix-proxy"
+    ]
+  },
+  "snapshot": {
+    "SnapshotId": "snap-0a4278c92060be577",
+    "State": "completed",
+    "Encrypted": true,
+    "VolumeId": "vol-0cf8b3eaf7cc6ea10",
+    "VolumeSize": 120,
+    "FullSnapshotSizeInBytes": 72202846208
+  },
+  "rehearsal": {
+    "rehearsal": "passed",
+    "backup": "/opt/cosmotech/zabbix/backups/v2010-20261109T114434Z",
+    "server": "8.0.0",
+    "proxy": "8.0.0",
+    "web_api": "8.0.0",
+    "clickhouse": "26.8.36.3",
+    "bootstrap_idempotent": true,
+    "internal_network_only": true,
+    "original_volumes_unmodified": true,
+    "actions_disabled_in_clone": true
+  },
+  "source_prs": [
+    54,
+    55,
+    56
+  ],
+  "source_commits": [
+    "0fa9408",
+    "93bacb5",
+    "b9da6af"
+  ],
+  "source_merges": [
+    "7dc3ac11118f938625926088659d375be3d25c07",
+    "d0cecd63979615910c61b409f2083f2a7b387b38",
+    "c4b09a9a1a382548f52a834c6dc29ac5cbb561ce"
+  ],
+  "test_suite": {
+    "run": 120,
+    "skipped": 2,
+    "result": "passed"
+  },
+  "evidence_ssm_commands": {
+    "gui_login": "f6ec6811-6eb9-477d-b23d-5cec19a0869f",
+    "final_four_faults": "8d1ddde2-ee99-49b4-a28b-11be7c30a162",
+    "live_api": "7aad1ba4-0c05-496c-9d82-b9b356fdc5a7",
+    "final_gate": "0b1f0f92-f5ca-49ad-8af6-984a27da9fe6"
+  }
+}

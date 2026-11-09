@@ -8,6 +8,26 @@ Inventário API anterior: 30 hosts visíveis, 390 templates, 11.698 itens, 4.241
 
 **Não declarar migração concluída sem evidência operacional final.** O snapshot/cópia de arquivos, API info.version e testes locais, isoladamente, não certificam uma migração.
 
+## Aceite operacional em 09/11/2026
+
+**Upgrade certificado ao vivo às 15:12 UTC.** Server, frontend, proxy e três Agent 2 passaram de 8.0.0rc3 para 8.0.0 GA. ClickHouse passou de 25.8.33.6 para 26.8.36.3; PostgreSQL 17.11 e schema 8000000/8000000 foram preservados. O aceite combina binários oficiais, frontend com sessão autenticada, API pública autenticada, dashboard real, amostras recentes dos três sinais para API/Worker, estados suportados dos itens nativos, agentes ativos e eventos/entregas reais. Isso certifica o escopo do Zabbix V2-010, sem certificar Grafana ou DR.
+
+Inventário depois do bootstrap: 31 hosts, 390 templates, 11.710 itens, 4.247 triggers, oito dashboards, 41 media types, seis actions e oito CEP rules. As diferenças correspondem aos objetos do laboratório: um host, 12 itens, seis triggers, um dashboard, um media type, uma action e duas regras CEP. Os 390 templates existentes permanecem. O bootstrap passou duas vezes com os mesmos IDs; a LLD gerou quatro itens e quatro triggers concretos.
+
+Frontend público HTTP 200, login com cookie de sessão e dashboard 443 HTTP 200; API pública autenticada. A página de notificações retorna 401 sem credencial e 200 para o leitor, e POST com token inválido retorna 401. As credenciais permanecem no catálogo SecureString existente, nunca nesta documentação.
+
+O ensaio final `all --duration 12 --live` passou nos quatro cenários: HTTP 503, latência observada de 801 ms, serviço loopback indisponível e parada temporária do container Agent 2 isolado. Todos restauraram baseline automaticamente. Eventos de problema 153, 155, 157 e 159 tiveram recuperação 154, 156, 158 e 160; oito alertas constam enviados, sem erro. A página mostra os quatro incidentes recuperados. CEP adicionou managed_by a todos e relacionou três sintomas à causa 153. O container lab-agent foi removido; os sete serviços permanentes estavam running e os quatro estados voltaram a zero.
+
+Os seis alertas falhos anteriores à habilitação explícita do media type foram mantidos como evidência, não apagados. O primeiro ensaio de agente não reconheceu o resultado string `[s|1]`; o código agora aceita string ou unsigned igual a um. A rejeição inicial do trapper levou à exceção de gateway somente no host isolado. Esses achados estão corrigidos nos PRs #55 e #56.
+
+Os itens nativos tipo 24/JSON e dependentes estão supported, sem erro, com coleta recente. As 16 triggers APM auditadas (taxa de erro, P95, ausência de sinais, consulta e logs de erro) estavam habilitadas e normais. Traces, logs e métricas sum/histogram recentes foram observados para os dois serviços; gauge e exponential histogram vazios refletem ausência desses sinais, não foram preenchidos artificialmente. A retenção efetiva de todas as seis tabelas é 259.200 segundos (três dias). Nenhuma falha foi injetada nas aplicações primárias.
+
+Os agentes dos hosts Zabbix, ITSM e ArgoCD informam versão 8.0.0 e ping ativo no server; backups locais de configuração/binário foram preservados em `/var/backups/cosmotech-v2010-agent`, e checksums confirmaram a configuração intacta. Os documentos SSM de instalação/monitoramento foram atualizados por planos restritos: primeiro três documentos, depois apenas o documento de bootstrap nas duas correções. Zero recursos AWS criados/destruídos nesses applies; o snapshot é a única criação AWS específica desta operação.
+
+Evidências sem segredos: [operational-evidence.json](operational-evidence.json). No host, os artefatos protegidos ficam em `/opt/cosmotech/zabbix/backups/v2010-20261109T114434Z`: manifest/archives, snapshot-verified.json, rehearsal-ok.json, checkpoint recente, applied.json (aceite do core), operational-certification.json e certified.json (aceite final). A cópia de restauração foi desligada sem remover volumes/dados. O rollback real de produção não foi necessário nem exercitado.
+
+PRs de implementação: [#54](https://github.com/rlcosmo/cosmotech-infrastructure-iac/pull/54), [#55](https://github.com/rlcosmo/cosmotech-infrastructure-iac/pull/55), [#56](https://github.com/rlcosmo/cosmotech-infrastructure-iac/pull/56), todos integrados após CI aprovado. Suíte local: 120 testes, dois skips de SDK; oito testes focados de upgrade/notificações, builds dos dois containers e quatro cenários offline no CI. A documentação/evidência final segue PR próprio.
+
 ## Artefatos e compatibilidade
 
 Server, frontend, proxy e Agent 2 são pinados em artefatos oficiais 8.0.0. O frontend recebe somente uma camada de configuração Nginx para `/lab-notifications/`; seu binário e entrypoint permanecem oficiais. Python do receptor também é pinado por digest. Não se usa trunk/latest para resolver Zabbix.
@@ -25,6 +45,8 @@ Snapshot EBS criptografado pré-upgrade: snap-0a4278c92060be577, volume original
 Plano de rollback: parar somente os componentes Zabbix, preservar/quarentenar os volumes pós-upgrade, verificar hashes e extrair as seis cópias para diretórios NOVOS. Gerar override Compose com as imagens anteriores do manifest e bind mounts desses diretórios nos mesmos targets; manter portas/projeto/segredos anteriores. Subir PostgreSQL/ClickHouse antigos, validar schema e inventário, depois server/web/proxy/coletor. Nunca iniciar binário antigo sobre o banco alterado, nunca apagar o volume atual e nunca executar down -v. O ensaio testa a restauração das cópias; rollback preserva também os dados pós-cutover para reconciliação, sem prometer RPO zero. O snapshot é uma segunda cópia fora do host, não um restore completo de boot já certificado.
 
 Antes do corte, apply também gera checkpoint recente do PostgreSQL e exporta as seis tabelas APM em Native, verificando contagens com o binário ClickHouse anterior em container sem rede. O backup frio/snapshot permanece disponível. O comando apply reserva 25 GiB para cópias de rollback, preserva o digest PostgreSQL, a configuração OTLP ativa e os nomes dos três volumes. Faz build/validação antes da interrupção e registra applied.json somente após core GA e mounts verificados. Falha exige reconciliação pelo operador; não apaga dados automaticamente.
+
+Para recuperar o ponto do corte, restaurar também o dump PostgreSQL recente em um banco NOVO e criar/importar as seis tabelas pelos DDLs/arquivos Native do checkpoint em um diretório ClickHouse NOVO, com o binário anterior validado. Não importar o export completo sobre tabelas já preenchidas: isso duplicaria histórico. Validar contagens/hashes antes de publicar. O backup frio continua sendo a referência integral; esse replay recente não foi executado contra produção e não estabelece RPO zero para a janela de manutenção.
 
 ## ClickHouse e APM
 
@@ -48,9 +70,15 @@ Credenciais são geradas uma vez, fora do Git; leitura fica no registro SecureSt
 
 `v2010/bootstrap.py` preserva IDs em reruns, recusa recursos ambíguos e não implementa delete. Configura grupo, host, LLD/protótipos, itens/triggers nativos, dashboard, macros secretas, mediatype/action e regras CEP. Os grupos anteriores dos dois hosts APM são mantidos. O instalador inicial recusa volumes PostgreSQL existentes: upgrades devem usar o fluxo com backup/ensaio.
 
+O Zabbix 8.0 usa por padrão a macro `{$TRAPPER.ALLOWED_HOSTS}`. O tráfego enviado ao loopback publicado pelo Docker chega ao server como o gateway da bridge. O bootstrap deriva os IPs privados reais do container e grava a exceção somente na macro do host isolado, sem ampliar a macro global nem regras AWS. O media type próprio é explicitamente habilitado; os demais permanecem sob suas configurações existentes.
+
 ## Custos e limites
 
 Não cria EC2, EKS, RDS, rede, NAT, ALB, volume ou chave KMS. Reutiliza a EC2 m7i.xlarge e seu EBS 120 GiB. O novo receptor tem limite de 96 MiB/0,25 CPU; o agente de falhas só existe durante testes. O custo adicional recorrente vem do snapshot e de eventuais retenções/cópias, além de CI/tráfego. O snapshot é incremental e cobrado por blocos armazenados; não confundir 120 GiB de volume com tamanho faturado. A tag de revisão em 16/11 não apaga backups automaticamente. Logs internos do ClickHouse e espaço de ensaio devem ser acompanhados; não purgar histórico para acomodar o upgrade.
+
+O snapshot reportou FullSnapshotSizeInBytes 72.202.846.208 (aproximadamente 67,24 GiB); esse campo não é uma medição de faturamento incremental. Usando apenas como hipótese US$0,05/GiB-mês, 67,24 GiB custariam aproximadamente US$3,36/mês, ou US$6/mês para os 120 GiB lógicos completos, além de tráfego e CI. Confirmar cobrança real e retenção: a revisão de 16/11/2026 não é exclusão automática. Não foi criado banco/cluster ClickHouse adicional permanente.
+
+Pendências de operação: acompanhar estabilidade e espaço livre; decidir retenção dos backups/snapshot na revisão; registrar faturamento real. O restore isolado passou, mas não equivale a um teste de boot do snapshot EC2 nem a um rollback de produção. Não há bloqueio restante para o aceite do Zabbix V2-010 observado nesta janela.
 
 ## Fontes oficiais
 
