@@ -392,6 +392,26 @@ def install() -> None:
                       'recipient_parameter': PARAM + 'evidence-public-key', 'authenticated_live_validation': 'pending'}))
 
 
+def comparison_diagnostics(comparison: dict) -> None:
+    """Copy only bounded enums and AWS identifiers; never upstream error text."""
+    state = comparison.get('state')
+    if state in {'ready', 'starting', 'checking', 'unavailable', 'stale'}:
+        FAILURE['observer_state'] = state
+    stage = comparison.get('failed_stage') or comparison.get('current_stage')
+    if stage in {'identity', 'git', 'source_artifacts', 'terraform_init', 'git_vs_aws_plan',
+                 'inventory', 'comparison', 'active_roots', 'gitops'}:
+        FAILURE['observer_stage'] = stage
+    diagnostics = comparison.get('diagnostics', {})
+    if isinstance(diagnostics, dict):
+        for key, pattern in [('denied_actions', r'[a-z0-9-]+:[A-Za-z0-9]+'),
+                             ('aws_operations', r'[A-Za-z0-9]+:[A-Za-z0-9]+'),
+                             ('aws_error_codes', r'[A-Za-z0-9]+')]:
+            values = diagnostics.get(key, [])
+            if isinstance(values, list):
+                FAILURE[key] = sorted({value for value in values if isinstance(value, str)
+                    and len(value) <= 80 and re.fullmatch(pattern, value)})[:20]
+
+
 def validate() -> None:
     global STAGE
     STAGE = 'validate-portal'
@@ -410,11 +430,13 @@ def validate() -> None:
     with urllib.request.urlopen(request, timeout=20) as response:
         if response.status != 200:
             raise ValueError('Authenticated portal failed')
+    print(json.dumps({'portal_authenticated': True}), flush=True)
     request = urllib.request.Request(PORTAL + 'api/comparison', headers=request.headers)
     comparison = {}
     for attempt in range(100):
         with urllib.request.urlopen(request, timeout=20) as response:
             comparison = json.load(response)
+        comparison_diagnostics(comparison)
         if comparison.get('state') == 'ready':
             break
         if comparison.get('state') == 'unavailable':
@@ -441,9 +463,14 @@ def validate() -> None:
             if FAILURE.get('reason') != 'queue_evidence_stale_or_missing' or attempt == 3:
                 raise
             time.sleep(30)
+    alerts = validate_alerts(token)
+    print(json.dumps({'live_alert_rules': alerts}), flush=True)
+    if alerts['loaded'] != alerts['expected'] or alerts['unhealthy']:
+        FAILURE['reason'] = 'live_alert_rules_missing_or_unhealthy'
+        raise ValueError('Live alert rules missing or unhealthy')
     print(json.dumps({'portal_authenticated': True, 'grafana_authenticated': True,
                       'portal_reports_available': 0,
-                      'live_metric_series': metrics, 'live_alert_rules': validate_alerts(token)}))
+                      'live_metric_series': metrics, 'live_alert_rules': alerts}))
 
 
 if __name__ == '__main__':
@@ -460,6 +487,9 @@ if __name__ == '__main__':
                  'Unauthenticated portal access must be denied': 'portal_auth_not_enforced',
                  'Authenticated portal failed': 'portal_authenticated_request_failed',
                  'Unsupported credential schema': 'credential_schema_unsupported',
+                 'Direct Git AWS observer failed': 'observer_unavailable',
+                 'Direct Git AWS observation not ready': 'observer_not_ready',
+                 'Canonical Git revision unavailable': 'canonical_revision_unavailable',
                  'Queue evidence is stale': 'queue_evidence_stale_or_missing'}
         if str(error) in codes:
             FAILURE['reason'] = codes[str(error)]

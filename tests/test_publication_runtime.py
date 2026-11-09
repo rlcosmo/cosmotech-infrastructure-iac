@@ -12,6 +12,21 @@ spec.loader.exec_module(runtime)
 
 
 class RuntimeTests(unittest.TestCase):
+    def test_observer_diagnostics_allow_only_bounded_identifiers(self):
+        runtime.FAILURE.clear()
+        runtime.comparison_diagnostics({'state': 'unavailable', 'failed_stage': 'git_vs_aws_plan',
+            'diagnostics': {'aws_error_codes': ['AccessDeniedException', 'secret=value', 'x'*81],
+                            'denied_actions': ['eks:DescribeCluster', 'password=secret'],
+                            'message': 'must-not-leak'}})
+        self.assertEqual(runtime.FAILURE, {'observer_state': 'unavailable',
+            'observer_stage': 'git_vs_aws_plan', 'aws_error_codes': ['AccessDeniedException'],
+            'denied_actions': ['eks:DescribeCluster'], 'aws_operations': []})
+        runtime.FAILURE.clear()
+        runtime.comparison_diagnostics({'state': 'password=secret', 'failed_stage': 'secret',
+                                     'diagnostics': {'aws_error_codes': 'secret'}})
+        self.assertNotIn('secret', str(runtime.FAILURE))
+        runtime.FAILURE.clear()
+
     def test_absent_live_alert_rules_remain_absent(self):
         def query(path, auth):
             if path == '/api/datasources':
@@ -19,6 +34,31 @@ class RuntimeTests(unittest.TestCase):
             return {'status': 'success', 'data': {'groups': []}}
         with patch.object(runtime, 'api', side_effect=query):
             self.assertEqual(runtime.validate_alerts('test-token'), {'expected': 8, 'loaded': 0, 'firing': 0, 'unhealthy': 0})
+
+    def test_live_validation_rejects_missing_or_unhealthy_alerts(self):
+        import io
+        from unittest.mock import MagicMock
+        import urllib.error
+        for alerts in [{'expected': 8, 'loaded': 0, 'firing': 0, 'unhealthy': 0},
+                       {'expected': 8, 'loaded': 8, 'firing': 0, 'unhealthy': 1}]:
+            runtime.FAILURE.clear()
+            page = MagicMock()
+            page.__enter__.return_value.status = 200
+            comparison = MagicMock()
+            comparison.__enter__.return_value = io.BytesIO(json.dumps({'state': 'ready',
+                'source': {'repository': 'https://github.com/rlcosmo/cosmotech-infrastructure-iac.git',
+                           'commit': 'a'*40}, 'resources': []}).encode())
+            denied = urllib.error.HTTPError(runtime.PORTAL, 401, 'Denied', {}, None)
+            with patch.object(runtime, 'parameter', return_value={'username': 'test', 'password': 'private'}), \
+                 patch.object(runtime.urllib.request, 'urlopen', side_effect=[denied, page, comparison]), \
+                 patch.object(runtime, 'publisher_token', return_value='private'), \
+                 patch.object(runtime, 'api', return_value={}), \
+                 patch.object(runtime, 'validate_real_data', return_value={}), \
+                 patch.object(runtime, 'validate_alerts', return_value=alerts), patch('builtins.print'):
+                with self.assertRaisesRegex(ValueError, 'Live alert rules missing or unhealthy'):
+                    runtime.validate()
+            self.assertEqual(runtime.FAILURE['reason'], 'live_alert_rules_missing_or_unhealthy')
+        runtime.FAILURE.clear()
 
     def test_private_cli_payload_is_removed_even_when_command_fails(self):
         with tempfile.TemporaryDirectory() as directory:

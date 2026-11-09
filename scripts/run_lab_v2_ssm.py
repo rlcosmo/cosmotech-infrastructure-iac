@@ -48,6 +48,20 @@ for _ in range(130):
                 safe['failure_identifiers'] = {key: value for key, value in identifiers.items()
                     if key in ['binary','aws_error_code','aws_operation','aws_service','cli_error','reason','metric'] and isinstance(value, str)
                     and re.fullmatch(r'[A-Za-z0-9_-]{1,80}', value)}
+                for key, allowed in {
+                    'observer_state': {'ready','starting','checking','unavailable','stale'},
+                    'observer_stage': {'identity','git','source_artifacts','terraform_init','git_vs_aws_plan',
+                                       'inventory','comparison','active_roots','gitops'},
+                }.items():
+                    if isinstance(identifiers.get(key), str) and identifiers[key] in allowed:
+                        safe['failure_identifiers'][key] = identifiers[key]
+                for key, pattern in [('denied_actions', r'[a-z0-9-]+:[A-Za-z0-9]+'),
+                                     ('aws_operations', r'[A-Za-z0-9]+:[A-Za-z0-9]+'),
+                                     ('aws_error_codes', r'[A-Za-z0-9]+')]:
+                    values = identifiers.get(key, [])
+                    if isinstance(values, list):
+                        safe['failure_identifiers'][key] = sorted({value for value in values
+                            if isinstance(value, str) and len(value) <= 80 and re.fullmatch(pattern, value)})[:20]
                 if type(identifiers.get('http_status')) is int and 100 <= identifiers['http_status'] <= 599:
                     safe['failure_identifiers']['http_status'] = identifiers['http_status']
                 if type(identifiers.get('queue_data_max_age_seconds')) is int:
