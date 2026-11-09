@@ -10,8 +10,8 @@ import subprocess
 import urllib.request
 from pathlib import Path
 
-PACKAGE_URL = 'https://repo.zabbix.com/zabbix/8.0/unstable/ubuntu/pool/main/z/zabbix/zabbix-agent2_8.0.0~rc3-1%2Bubuntu24.04_amd64.deb'
-PACKAGE_SHA256 = '17164a3b492da5805f15e130de994431591ab5494f614a62cb736360552b7be0'
+PACKAGE_URL = 'https://repo.zabbix.com/zabbix/8.0/stable/ubuntu/pool/main/z/zabbix/zabbix-agent2_8.0.0-1%2Bubuntu24.04_amd64.deb'
+PACKAGE_SHA256 = '1ff8566528c3ee39cc11721877f776cb409493ac11468750f405e873b770fd60'
 HOSTS = {'cosmotech-itsm-dev','cosmotech-argocd-dev','cosmotech-zabbix-dev'}
 
 
@@ -21,7 +21,7 @@ def main() -> None:
     args = parser.parse_args()
     os.umask(0o077)
     result = subprocess.run(['dpkg-query','-W','-f=${Version}','zabbix-agent2'],capture_output=True,text=True,check=False)
-    if result.returncode or result.stdout != '2:8.0.0~rc3-1+ubuntu24.04':
+    if result.returncode or result.stdout != '2:8.0.0-1+ubuntu24.04':
         directory = Path('/var/cache/cosmotech-zabbix');directory.mkdir(parents=True,exist_ok=True)
         package = directory/'agent2.deb'
         with urllib.request.urlopen(PACKAGE_URL,timeout=60) as response:
@@ -56,7 +56,7 @@ def main() -> None:
     subprocess.run(['systemctl','enable','zabbix-agent2'],check=True,capture_output=True)
     subprocess.run(['systemctl','restart' if changed else 'start','zabbix-agent2'],check=True)
     subprocess.run(['systemctl','is-active','--quiet','zabbix-agent2'],check=True)
-    print(json.dumps({'hostname':args.hostname,'agent':'8.0.0rc3','active':True,'transport':'TLS-PSK','server':'10.20.11.207:10051'}))
+    print(json.dumps({'hostname':args.hostname,'agent':'8.0.0','active':True,'transport':'TLS-PSK','server':'10.20.11.207:10051'}))
 
 
 if __name__ == '__main__':

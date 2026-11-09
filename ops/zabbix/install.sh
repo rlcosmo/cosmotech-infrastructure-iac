@@ -15,6 +15,11 @@ if ! command -v aws >/dev/null; then
   /tmp/zabbix-awscli/aws/install >/dev/null
   rm -rf /tmp/zabbix-awscliv2.zip /tmp/zabbix-awscli
 fi
+# Existing data can only be upgraded through the backup/rehearsal-gated workflow.
+if docker volume inspect cosmotech-zabbix-postgres >/dev/null 2>&1; then
+  echo 'Existing PostgreSQL volume: use the validated V2-010 upgrade workflow; no volume was changed.' >&2
+  exit 2
+fi
 install -m 0600 "$source_dir/docker-compose.yml" /opt/cosmotech/zabbix/docker-compose.yml
 install -m 0644 "$source_dir/telemetry-collector.yaml" /opt/cosmotech/zabbix/telemetry-collector.yaml
 install -m 0600 "$source_dir/images.json" /opt/cosmotech/zabbix/images.json
@@ -35,7 +40,9 @@ if not p.exists():p.write_text(json.dumps({'username':'Admin','password':secrets
 PY
 cd /opt/cosmotech/zabbix
 docker compose config --quiet
-docker compose pull --quiet > /opt/cosmotech/zabbix/image-pull.log 2>&1
+python3 "$source_dir/v2010/install_runtime.py"
+docker compose build --quiet web notifications > /opt/cosmotech/zabbix/build.log 2>&1
+docker compose pull --quiet postgres clickhouse server proxy telemetry > /opt/cosmotech/zabbix/image-pull.log 2>&1
 docker compose up -d > /opt/cosmotech/zabbix/startup.log 2>&1
 for attempt in $(seq 1 90); do
   if docker compose exec -T postgres psql -U zabbix -d zabbix -Atc "SELECT 1 FROM users WHERE username='Admin'" 2>/dev/null | grep -qx 1; then break; fi
@@ -43,6 +50,7 @@ for attempt in $(seq 1 90); do
 done
 python3 "$source_dir/initialize_telemetry.py"
 python3 "$source_dir/configure.py"
+python3 "$source_dir/v2010/bootstrap.py"
 aws ssm put-parameter --name /cosmotech/zabbix/credentials --type SecureString --overwrite \
   --value file:///opt/cosmotech/zabbix/secrets/credentials.json >/dev/null
 # Logical configuration backup; EC2/EBS backup provides crash-consistent telemetry recovery.

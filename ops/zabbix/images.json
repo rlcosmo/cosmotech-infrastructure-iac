@@ -1,18 +1,20 @@
 {
   "server": {
-    "image": "zabbix/zabbix-server-pgsql@sha256:ef5267cf0b6898ef704d1e72353c12fe5f94c55571ec494a090d21d2e47c8cc1",
-    "source_tag": "ubuntu-trunk",
-    "version": "8.0.0rc3"
+    "image": "zabbix/zabbix-server-pgsql@sha256:1bf249a89ec489fca1ac0a3a638ca9d5e667dba415c275fd79e6b55cb83e4cc6",
+    "source_tag": "ubuntu-8.0.0",
+    "version": "8.0.0"
   },
   "web": {
-    "image": "zabbix/zabbix-web-nginx-pgsql@sha256:a5a71884542fe78d542bc32bf7ab95cc497b088ca01ea4c1db1ca67c654ef4e7",
-    "source_tag": "ubuntu-trunk",
-    "version": "8.0.0rc3"
+    "image": "zabbix/zabbix-web-nginx-pgsql@sha256:dacace5416e2447ff18e8a10214025cffaf09eb1ec5c3e6952aeeaf3eb163eda",
+    "source_tag": "ubuntu-8.0.0",
+    "version": "8.0.0",
+    "compose_image": "cosmotech-v2010-web:8.0.0",
+    "configuration_layer": "v2010/Dockerfile.web; official Zabbix binary and entrypoint preserved"
   },
   "proxy": {
-    "image": "zabbix/zabbix-proxy-sqlite3@sha256:a379f2f8b40eb83b700e0edcb30412107d8be4a35577be6b666dcfe91d419c06",
-    "source_tag": "ubuntu-trunk",
-    "version": "8.0.0rc3"
+    "image": "zabbix/zabbix-proxy-sqlite3@sha256:85083a36eda0d382aaf4111d9d79d026a734d317dcd02a9b6a775115d60ea930",
+    "source_tag": "ubuntu-8.0.0",
+    "version": "8.0.0"
   },
   "postgres": {
     "image": "library/postgres@sha256:0b81cec82228160abfa753aeaad0609b709eb26eeb950f2e404ad2326e1cc370",
@@ -20,13 +22,18 @@
     "version": "17.11-1.pgdg13+2"
   },
   "clickhouse": {
-    "image": "clickhouse/clickhouse-server@sha256:4ff0d6c199a9ebb906af75ae406496e8a96edd0187afdc16d51c0fb77ffca588",
-    "source_tag": "25.8",
-    "version": "25.8.33.6"
+    "image": "clickhouse/clickhouse-server@sha256:0805f9f529673d2a68d1fb50dfef90f30f1710bb1b62d4c3f1d1a99d37459ecc",
+    "source_tag": "26.8.36.3",
+    "version": "26.8.36.3"
   },
   "telemetry": {
     "image": "otel/opentelemetry-collector-contrib@sha256:989669581ee1f89184f3fd9dd5adfc6615ed6c9692c026aaea89e07a20dfb177",
     "source_tag": "0.163.2",
     "version": "0.163.2"
+  },
+  "agent2": {
+    "image": "zabbix/zabbix-agent2@sha256:ebff3cee33def73ef623700642e2ff0440c183c7393b8d8da4a5fc58fb15f04c",
+    "source_tag": "ubuntu-8.0.0",
+    "version": "8.0.0"
   }
 }

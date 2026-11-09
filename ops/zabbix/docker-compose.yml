@@ -28,7 +28,7 @@ services:
         max-size: 10m
         max-file: '3'
   clickhouse:
-    image: clickhouse/clickhouse-server@sha256:4ff0d6c199a9ebb906af75ae406496e8a96edd0187afdc16d51c0fb77ffca588
+    image: clickhouse/clickhouse-server@sha256:0805f9f529673d2a68d1fb50dfef90f30f1710bb1b62d4c3f1d1a99d37459ecc
     environment:
       CLICKHOUSE_DB: zabbix
       CLICKHOUSE_USER: zabbix
@@ -50,7 +50,7 @@ services:
   server:
     ports:
     - 10051:10051
-    image: zabbix/zabbix-server-pgsql@sha256:ef5267cf0b6898ef704d1e72353c12fe5f94c55571ec494a090d21d2e47c8cc1
+    image: zabbix/zabbix-server-pgsql@sha256:1bf249a89ec489fca1ac0a3a638ca9d5e667dba415c275fd79e6b55cb83e4cc6
     environment:
       DB_SERVER_HOST: postgres
       POSTGRES_USER: zabbix
@@ -75,7 +75,7 @@ services:
     - backend
     logging: *id001
   web:
-    image: zabbix/zabbix-web-nginx-pgsql@sha256:a5a71884542fe78d542bc32bf7ab95cc497b088ca01ea4c1db1ca67c654ef4e7
+    image: cosmotech-v2010-web:8.0.0
     environment:
       DB_SERVER_HOST: postgres
       POSTGRES_USER: zabbix
@@ -85,7 +85,7 @@ services:
       ZBX_TELEMETRYPROVIDER_0_USERNAME: zabbix
       ZBX_TELEMETRYPROVIDER_0_PASSWORD_FILE: /run/secrets/clickhouse_password
       ZBX_SERVER_HOST: server
-      ZBX_SERVER_NAME: CosmoTech APM - Zabbix 8.0 pre-release
+      ZBX_SERVER_NAME: CosmoTech APM - Zabbix 8.0 LTS
       PHP_TZ: America/Sao_Paulo
       ENABLE_WEB_ACCESS_LOG: 'false'
     secrets:
@@ -98,13 +98,19 @@ services:
         condition: service_healthy
       server:
         condition: service_started
+      notifications:
+        condition: service_started
     mem_limit: 1g
     restart: unless-stopped
     networks:
     - backend
     logging: *id001
+    build:
+      context: /opt/cosmotech/zabbix/v2010
+      dockerfile: Dockerfile.web
+    pull_policy: never
   proxy:
-    image: zabbix/zabbix-proxy-sqlite3@sha256:a379f2f8b40eb83b700e0edcb30412107d8be4a35577be6b666dcfe91d419c06
+    image: zabbix/zabbix-proxy-sqlite3@sha256:85083a36eda0d382aaf4111d9d79d026a734d317dcd02a9b6a775115d60ea930
     environment:
       ZBX_TELEMETRYPROVIDER_0: '{"provider":"clickhouse","url":"http://clickhouse:8123","db":"zabbix"}'
       ZBX_TELEMETRYPROVIDER_0_USERNAME: zabbix
@@ -153,6 +159,50 @@ services:
       options:
         max-size: 10m
         max-file: '3'
+  notifications:
+    image: cosmotech-v2010-notifications:8.0.0
+    build:
+      context: /opt/cosmotech/zabbix/v2010
+    pull_policy: never
+    user: 10001:10001
+    read_only: true
+    cap_drop:
+    - ALL
+    security_opt:
+    - no-new-privileges:true
+    mem_limit: 96m
+    cpus: 0.25
+    restart: unless-stopped
+    networks:
+    - backend
+    volumes:
+    - type: bind
+      source: /opt/cosmotech/zabbix/notifications
+      target: /data
+    secrets:
+    - source: notifications
+      target: notifications
+    logging:
+      driver: local
+      options:
+        max-size: 2m
+        max-file: '3'
+  lab-agent:
+    image: zabbix/zabbix-agent2@sha256:ebff3cee33def73ef623700642e2ff0440c183c7393b8d8da4a5fc58fb15f04c
+    profiles:
+    - v2010-lab
+    environment:
+      ZBX_HOSTNAME: cosmotech-v2010-isolated-agent
+      ZBX_SERVER_HOST: server
+      ZBX_PASSIVE_ALLOW: 'true'
+      ZBX_ACTIVE_ALLOW: 'false'
+    networks:
+    - backend
+    mem_limit: 96m
+    cpus: 0.25
+    restart: 'no'
+    labels:
+      cosmotech.lab: v2-010
 networks:
   backend: {}
 volumes:
@@ -169,3 +219,5 @@ secrets:
     file: /opt/cosmotech/zabbix/secrets/clickhouse_password
   clickhouse_password_otel:
     file: /opt/cosmotech/zabbix/secrets/clickhouse_password_otel
+  notifications:
+    file: /opt/cosmotech/zabbix/secrets/notifications.json

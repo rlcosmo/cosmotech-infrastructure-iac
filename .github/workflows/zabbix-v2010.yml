@@ -1,0 +1,22 @@
+name: Zabbix V2-010 upgrade guards
+on:
+  pull_request:
+    paths: ['ops/zabbix/**', 'ops/zabbix-monitoring/install_agent.py', 'lab.sh', 'tests/test_zabbix_v2010*', 'terraform/environments/dev/zabbix.tf', '.github/workflows/zabbix-v2010.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  isolated:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install PyYAML==6.0.3
+      - run: python -m unittest discover -s tests -p 'test_zabbix_v2010*' -v
+      - run: bash -n lab.sh ops/zabbix/install.sh
+      - run: ./lab.sh all --duration 1
+      - run: docker compose -f ops/zabbix/docker-compose.yml config --quiet
+      - run: docker build -t cosmotech-v2010-notifications:ci ops/zabbix/v2010
+      - run: docker run --rm --network none --entrypoint python -e PYTHONPYCACHEPREFIX=/tmp/pycache cosmotech-v2010-notifications:ci -m py_compile notifications.py
+      - run: docker build -f ops/zabbix/v2010/Dockerfile.web -t cosmotech-v2010-web:ci ops/zabbix/v2010
