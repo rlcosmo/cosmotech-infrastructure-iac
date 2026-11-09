@@ -110,6 +110,22 @@ def checkpoint(directory, old_clickhouse_image):
     return directory
 
 
+def verify_live_snapshot(snapshot):
+    """Historical backup metadata is not proof that the off-host snapshot still exists."""
+    import re
+    ident=snapshot.get('SnapshotId','')
+    if not isinstance(ident,str) or not re.fullmatch(r'snap-[0-9a-f]{8,17}',ident):
+        raise ValueError('A valid snapshot identifier is required')
+    response=json.loads(run(['aws','--region','us-east-1','ec2','describe-snapshots','--snapshot-ids',ident,'--output','json']))
+    snapshots=response.get('Snapshots',[])
+    if len(snapshots)!=1:
+        raise ValueError('Required off-host snapshot is unavailable')
+    live=snapshots[0]
+    if (live.get('SnapshotId')!=ident or live.get('State')!='completed'
+            or live.get('Encrypted') is not True or live.get('VolumeId')!=snapshot.get('VolumeId')):
+        raise ValueError('Live off-host snapshot does not match the verified backup')
+
+
 def apply(directory, source):
     import shutil
     directory,manifest=verify_archives(directory)
@@ -119,6 +135,7 @@ def apply(directory, source):
     if (snapshot.get('State')!='completed' or snapshot.get('Encrypted') is not True
             or snapshot.get('VolumeId')!='vol-0cf8b3eaf7cc6ea10'):
         raise ValueError('Completed encrypted off-host snapshot is required')
+    verify_live_snapshot(snapshot)
     if shutil.disk_usage(ROOT).free<25*1024**3:
         raise ValueError('Reserve at least 25 GiB for non-destructive rollback copies')
     source=Path(source).resolve();source.relative_to('/opt/cosmotech')
