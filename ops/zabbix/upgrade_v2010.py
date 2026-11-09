@@ -97,7 +97,11 @@ def checkpoint(directory, old_clickhouse_image):
         expected=int(compose('exec','-T','clickhouse','sh','-c',client,'client','SELECT count() FROM zabbix.'+table,input=config).strip())
         ddl=compose('exec','-T','clickhouse','sh','-c',client,'client','SHOW CREATE TABLE zabbix.'+table+' FORMAT TSVRaw',input=config)
         (directory/(table+'.sql')).write_bytes(ddl)
-        observed=int(run(['docker','run','--rm','--network','none','--memory','512m','--volume',str(directory)+':/checkpoint:ro','--entrypoint','clickhouse',old_clickhouse_image,'local','--query',"SELECT count() FROM file('/checkpoint/"+table+".native', Native)"]).strip())
+        # Empty Native exports contain no schema; the matching DDL is saved above.
+        if (directory/(table+'.native')).stat().st_size==0:
+            observed=0
+        else:
+            observed=int(run(['docker','run','--rm','--network','none','--memory','512m','--volume',str(directory)+':/checkpoint:ro','--entrypoint','clickhouse',old_clickhouse_image,'local','--query',"SELECT count() FROM file('/checkpoint/"+table+".native', Native)"]).strip())
         if expected!=observed:raise RuntimeError('Native checkpoint validation failed')
         result['tables'][table]={'rows':expected,'sha256':digest(directory/(table+'.native'))}
     (directory/'manifest.json').write_text(json.dumps(result,indent=2)+'\n')
