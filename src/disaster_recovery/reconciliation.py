@@ -45,12 +45,18 @@ def verify_snapshot(document):
     return {r['order_id']:r for r in document['records']}
 
 
-def reconcile(source, target, business_records, receipts, *, receipt_inventory_complete=False):
+def reconcile(source, target, business_records, receipts, *, receipt_inventory_complete=False, expected_business_records=None):
     """Require trusted independent receipts to claim coverage; hash is not authenticity.
 
     Restore business table + inventory/idempotency checkpoints consistently before
     replay. This compares logical orders, not all stock/payment side effects.
     """
+    dataset_consistent=None;dataset_digest=None
+    if expected_business_records is not None:
+        from .integrity import compare_datasets
+        comparison=compare_datasets(expected_business_records,business_records)
+        dataset_consistent=comparison['matches'];dataset_digest=comparison['source_digest']
+        if not dataset_consistent:raise ValueError('Business/inventory/checkpoint dataset divergence; replay blocked')
     expected, recovered = verify_snapshot(source), verify_snapshot(target)
     divergent = [key for key in expected.keys() & recovered.keys() if expected[key] != recovered[key]]
     if divergent:
@@ -87,6 +93,7 @@ def reconcile(source, target, business_records, receipts, *, receipt_inventory_c
         extra_target_ids=sorted(recovered.keys()-expected.keys()),
         receipt_coverage_verified=coverage, message_loss_count=0 if coverage and not missing else None,
         unrecovered_ack_count=len(receipt_map.keys()-recovered.keys()),
+        business_dataset_consistent=dataset_consistent, business_dataset_digest=dataset_digest,
         safe_to_promote=False,  # independent fence + whole-business integrity + E2E still required
         replay_requires=['verified-fence','consistent-business-table-inventory-checkpoints','restore-missing-journal','new-epoch'])
 

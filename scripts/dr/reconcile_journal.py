@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Offline cross-region consistency/replay compiler; sensitive output mode 0600."""
 import argparse
+from decimal import Decimal
 import json
 import os
 from pathlib import Path
@@ -14,13 +15,15 @@ def main():
     for name in ['source','target','business','receipts','output']:
         p.add_argument('--'+name,type=Path,required=True)
     p.add_argument('--epoch',type=int,required=True);p.add_argument('--now-ms',type=int,required=True)
+    p.add_argument('--expected-business',type=Path)
     p.add_argument('--receipt-inventory-complete',action='store_true')
     p.add_argument('--verify-target-online',action='store_true');p.add_argument('--fence-evidence',type=Path)
     a=p.parse_args()
     source=json.loads(a.source.read_text())
     target=json.loads(a.target.read_text())
-    report=reconcile(source,target,json.loads(a.business.read_text()),
-        json.loads(a.receipts.read_text()),receipt_inventory_complete=a.receipt_inventory_complete)
+    report=reconcile(source,target,json.loads(a.business.read_text(),parse_float=Decimal),
+        json.loads(a.receipts.read_text()),receipt_inventory_complete=a.receipt_inventory_complete,
+        expected_business_records=json.loads(a.expected_business.read_text(),parse_float=Decimal) if a.expected_business else None)
     rows=replay_records(source,report,epoch=a.epoch,now_ms=a.now_ms)
     evidence_source='offline-or-simulation';fingerprint=None;observed=None
     if a.verify_target_online:

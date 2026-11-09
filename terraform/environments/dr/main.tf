@@ -42,7 +42,7 @@ variable "enable_standby_queues" {
   default     = false
   validation {
     condition = !var.enable_standby_queues || (
-      !var.account_restricted && length(var.release_evidence) > 10 &&
+      var.standby_region == "us-east-2" && !var.account_restricted && length(var.release_evidence) > 10 &&
       var.monthly_budget_usd > 0 && var.estimated_monthly_cost_usd > 0 &&
       var.estimated_monthly_cost_usd <= var.monthly_budget_usd
     )
@@ -100,7 +100,7 @@ variable "enable_standby" {
   default = false
   validation {
     condition = !var.enable_standby || (
-      !var.account_restricted && length(var.release_evidence) > 10 &&
+      var.standby_region == "us-east-2" && !var.account_restricted && length(var.release_evidence) > 10 &&
       var.monthly_budget_usd > 0 && var.estimated_monthly_cost_usd > 0 &&
       var.estimated_monthly_cost_usd <= var.monthly_budget_usd &&
       length(var.admin_cidrs) > 0 && var.admin_role_arn != ""

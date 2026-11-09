@@ -164,7 +164,7 @@
       },
       "targets": [
         {
-          "expr": "cosmotech_dr_sqs_visible + cosmotech_dr_sqs_inflight",
+          "expr": "cosmotech_dr_sqs_visible{region=\"us-east-2\"} + cosmotech_dr_sqs_inflight{region=\"us-east-2\"}",
           "refId": "A"
         }
       ],

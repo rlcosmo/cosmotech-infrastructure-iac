@@ -201,3 +201,25 @@ class VerifiedReportTests(unittest.TestCase):
         self.assertIsNone(verified_report({**envelope,'evidence_source':'simulation'},rows,1000001))
         self.assertIsNone(verified_report(envelope,rows,2000000))
         self.assertIsNone(verified_report(envelope,rows+[make_record(order('another'),1000)],1000001))
+
+class FullDataIntegrityTests(unittest.TestCase):
+    def test_inventory_checkpoint_corruption_missing_and_extra_rows_detected(self):
+        from src.disaster_recovery.integrity import compare_datasets
+        from decimal import Decimal
+        expected=[{'order_id':'INVENTORY#LAB','stock':{'LAB-SKU-001':99}},
+                  {'order_id':'dr-one','items':[{'sku':'LAB-SKU-001','quantity':1}],'status':'RESERVED'}]
+        same=[{'order_id':'dr-one','status':'RESERVED','items':[{'quantity':Decimal('1'),'sku':'LAB-SKU-001'}]},
+              {'stock':{'LAB-SKU-001':Decimal('99')},'order_id':'INVENTORY#LAB'}]
+        self.assertTrue(compare_datasets(expected,same)['matches'])
+        corrupt=copy.deepcopy(same);corrupt[1]['stock']['LAB-SKU-001']=100
+        self.assertEqual(compare_datasets(expected,corrupt)['changed_keys'],['INVENTORY#LAB'])
+        self.assertFalse(compare_datasets(expected,same[:1])['matches'])
+        self.assertFalse(compare_datasets(expected,same+[{'order_id':'unexpected'}])['matches'])
+
+    def test_reconciliation_blocks_stock_mismatch_even_when_order_payloads_match(self):
+        row=make_record(order(),1000)
+        source=snapshot([row],snapshot_id='source',region='us-east-1',fenced=True)
+        target=snapshot([row],snapshot_id='target',region='us-east-2',fenced=True)
+        with self.assertRaises(ValueError):
+            reconcile(source,target,[{'order_id':'INVENTORY#LAB','stock':{'LAB-SKU-001':98}}],[],
+                expected_business_records=[{'order_id':'INVENTORY#LAB','stock':{'LAB-SKU-001':99}}])

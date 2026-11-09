@@ -11,10 +11,20 @@ from src.disaster_recovery.outbox import bucket
 from src.disaster_recovery.reconciliation import verify_snapshot, immutable, replay_records
 
 
-def apply(store, source, report, *, epoch, now_ms, still_fenced):
+def apply(store, source, report, *, epoch, now_ms, still_fenced, business_records=None):
+    if report.get('business_dataset_consistent') is not True:
+        raise ValueError('Full business/inventory/checkpoint integrity required before replay execution')
     if not report['receipt_coverage_verified']:
         raise ValueError('Complete independent receipt inventory required before automated replay')
+    from src.disaster_recovery.integrity import fingerprint
+    if business_records is None or fingerprint(business_records)[1]!=report.get('business_dataset_digest'):
+        raise ValueError('Business dataset changed since reconciliation; no replay write')
     rows=verify_snapshot(source)
+    # Preflight ALL existing journal rows before performing any import.
+    for existing in store.records():
+        key=existing['order_id']
+        if key not in rows or immutable(existing)!=immutable(rows[key]):
+            raise ValueError('Current target journal diverged; no import started')
     pending=replay_records(source,report,epoch=epoch,now_ms=now_ms)
     count=0
     # Restore all immutable acceptance records, including completed business orders;
@@ -47,8 +57,10 @@ def main():
     evidence=json.loads(a.evidence.read_text());promotion_plan(evidence)
     if evidence['epoch']!=a.epoch:raise SystemExit('Replay epoch does not match fence evidence')
     from src.disaster_recovery.runtime import aws_runtime
-    _,_,outbox,_=aws_runtime()
+    _,_,outbox,resource=aws_runtime()
+    from src.disaster_recovery.dynamo_outbox import DynamoOutbox
+    business=list(DynamoOutbox(resource.Table('cosmotech-dr-orders-restored')).records())
     def live():promotion_plan(evidence);return True
-    print(json.dumps(apply(outbox.store,source,report,epoch=a.epoch,now_ms=int(time.time()*1000),still_fenced=live)))
+    print(json.dumps(apply(outbox.store,source,report,epoch=a.epoch,now_ms=int(time.time()*1000),still_fenced=live,business_records=business)))
 
 if __name__=='__main__':main()

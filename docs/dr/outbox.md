@@ -74,7 +74,8 @@ Example offline preparation (file inputs must be private, verified evidence):
 
 ```
 python scripts/dr/reconcile_journal.py --source source.json --target target.json \
-  --business business.json --receipts receipts.json --receipt-inventory-complete \
+  --business business.json --expected-business expected-business.json \
+  --receipts receipts.json --receipt-inventory-complete \
   --epoch 2 --now-ms <reviewed-time-ms> --output private-replay.json
 python scripts/dr/apply_replay.py --source source.json --report private-replay.json --epoch 2
 ```
@@ -167,3 +168,10 @@ zero. The metrics process can read a read-only report via DR_RECONCILIATION_REPO
 without such evidence its reconciliation/loss panels deliberately remain unknown.
 Use the optional online verification mode only after release/quiescence. Report
 mounting/publication and live alert delivery remain part of AWS certification.
+
+Before actual replay, the reconciler compares the ENTIRE restored business dataset
+against the expected recovery cohort, including inventory and idempotency/checkpoint
+rows. Lossless numeric/binary/map fingerprints detect stock changes even when order
+bodies match. Execution rereads business/journal data and rejects stale/divergent
+reports before any import. This is a consistency check, not a promise that separately
+scheduled regional backups form an application-consistent cohort automatically.

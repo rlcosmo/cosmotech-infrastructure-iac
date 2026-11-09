@@ -89,11 +89,11 @@ class ReplayExecutionTests(unittest.TestCase):
         source=snapshot([row],snapshot_id='verified-source-version',region='us-east-1',fenced=True)
         target=snapshot([],snapshot_id='verified-target-version',region='us-east-2',fenced=True)
         receipt={'order_id':row['order_id'],'payload_hash':row['payload_hash']}
-        report=reconcile(source,target,[],[receipt],receipt_inventory_complete=True)
-        result=runner.apply(store,source,report,epoch=2,now_ms=1000000,still_fenced=lambda:True)
+        report=reconcile(source,target,[],[receipt],receipt_inventory_complete=True,expected_business_records=[])
+        result=runner.apply(store,source,report,epoch=2,now_ms=1000000,still_fenced=lambda:True,business_records=[])
         self.assertEqual(result['replay_scheduled'],1)
         claim=store.claim(row['order_id'],'active',2,1000000,1060000)
-        runner.apply(store,source,report,epoch=2,now_ms=1000001,still_fenced=lambda:True)
+        runner.apply(store,source,report,epoch=2,now_ms=1000001,still_fenced=lambda:True,business_records=[])
         current=table.get_item(Key={'order_id':row['order_id']})['Item']
         self.assertEqual(current['lease_token'],'active');self.assertEqual(current['due_at'],claim['due_at'])
-        with self.assertRaises(ValueError):runner.apply(store,source,report,epoch=3,now_ms=1000002,still_fenced=lambda:False)
+        with self.assertRaises(ValueError):runner.apply(store,source,report,epoch=3,now_ms=1000002,still_fenced=lambda:False,business_records=[])

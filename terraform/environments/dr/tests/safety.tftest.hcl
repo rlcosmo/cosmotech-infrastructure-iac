@@ -53,3 +53,19 @@ run "outbox_retains_durable_journal" {
     error_message = "Outbox must retain durable records, PITR and minimal index projection."
   }
 }
+
+run "runtime_cannot_target_an_unreviewed_region" {
+  command   = plan
+  providers = { aws.standby = aws }
+  variables {
+    enable_standby             = true
+    standby_region             = "us-west-2"
+    account_restricted         = false
+    release_evidence           = "MOCK-NOT-AWS-RELEASE"
+    monthly_budget_usd         = 500
+    estimated_monthly_cost_usd = 150
+    admin_cidrs                = ["192.0.2.10/32"]
+    admin_role_arn             = "arn:aws:iam::414053644145:role/cosmotech-dr-operator"
+  }
+  expect_failures = [var.enable_standby]
+}
