@@ -44,10 +44,14 @@ class Zabbix:
         return found[0]['groupid'] if found else self.api('hostgroup.create', {'name': name})['groupids'][0]
 
     def host(self, name: str, group: str, **extra) -> str:
-        found = self.api('host.get', {'filter': {'host': name}, 'output': ['hostid']})
+        found = self.api('host.get', {'filter': {'host': name}, 'output': ['hostid'],
+            'selectHostGroups': ['groupid'], 'selectTags': 'extend'})
         value = {'host': name, 'name': name, 'groups': [{'groupid': group}],
             'tags': [{'tag': 'owner', 'value': 'cosmotech'}], **extra}
         if found:
+            # Other owned bootstraps may append read-scope groups/tags; never remove them.
+            value['groups'] = list({str(g['groupid']): g for g in found[0].get('hostgroups', []) + value['groups']}.values())
+            value['tags'] = list({(t['tag'],t['value']): t for t in found[0].get('tags', []) + value['tags']}.values())
             value['hostid'] = found[0]['hostid']
             self.api('host.update', value)
             return value['hostid']

@@ -61,6 +61,7 @@ jobs:
           with open(os.environ['GITHUB_ENV'], 'a') as output:
               output.write('EVIDENCE_PUBLIC_KEY<<PUBLIC_KEY_END\n' + key + '\nPUBLIC_KEY_END\n')
           PYKEY
+      - run: python3 -m pip install PyYAML==6.0.3
       - run: python3 -m unittest discover -s tests -v
       - run: python3 scripts/build_lambda_artifacts.py
       - run: python3 scripts/build_lab_v2_bundle.py

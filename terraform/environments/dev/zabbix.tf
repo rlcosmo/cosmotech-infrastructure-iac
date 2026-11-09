@@ -125,11 +125,11 @@ resource "aws_ssm_document" "zabbix_install" {
   document_type = "Command"
   content = jsonencode({
     schemaVersion = "2.2"
-    description   = "Install the owner-authorized pinned Zabbix 8.0 pre-release APM stack on the new private host"
+    description   = "Install official Zabbix 8.0 LTS on a new host; existing data requires validated V2-010 upgrade"
     mainSteps = [{ action = "aws:runShellScript", name = "installZabbixAPM", inputs = {
       timeoutSeconds = "1800"
-      runCommand = concat(["#!/bin/bash", "set -Eeuo pipefail", "umask 077", "install -d -m 0700 /opt/cosmotech/zabbix-source"],
-        [for name in fileset("${path.module}/../../../ops/zabbix", "*") : "printf '%s' '${base64encode(file("${path.module}/../../../ops/zabbix/${name}"))}' | base64 --decode > '/opt/cosmotech/zabbix-source/${name}'"],
+      runCommand = concat(["#!/bin/bash", "set -Eeuo pipefail", "umask 077", "install -d -m 0700 /opt/cosmotech/zabbix-source/v2010"],
+        [for name in concat(tolist(fileset("${path.module}/../../../ops/zabbix", "*")), ["v2010/Dockerfile", "v2010/Dockerfile.web", "v2010/notifications.py", "v2010/index.html", "v2010/nginx-location.conf", "v2010/bootstrap.py", "v2010/fault_lab.py", "v2010/install_runtime.py"]) : "printf '%s' '${base64gzip(file("${path.module}/../../../ops/zabbix/${name}"))}' | base64 --decode | gzip --decompress > '/opt/cosmotech/zabbix-source/${name}'"],
       ["bash /opt/cosmotech/zabbix-source/install.sh"])
     } }]
   })

@@ -1,0 +1,5 @@
+FROM zabbix/zabbix-web-nginx-pgsql@sha256:dacace5416e2447ff18e8a10214025cffaf09eb1ec5c3e6952aeeaf3eb163eda
+USER root
+COPY nginx-location.conf /etc/nginx/includes/notifications-location.conf
+RUN printf '\ninclude /etc/nginx/includes/notifications-location.conf;\n' >> /etc/nginx/includes/server-common.conf
+USER 1997
