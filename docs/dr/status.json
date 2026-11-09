@@ -29,6 +29,9 @@
     "runtime": "isolated-dr-api-publisher-worker",
     "primary_producer": "legacy-direct-sqs-unmodified",
     "delivery": "at-least-once; consumer transactional checkpoints",
-    "regional_loss_certification": false
+    "regional_loss_certification": false,
+    "primary_integration_kit": "prepared and tested against approved API release; not applied",
+    "gitops_pr": "https://github.com/rlcosmo/cosmotech-gitops/pull/20",
+    "gitops_merge_commit": "daa15dd444c14e7b15a015c07f6b9c73c1b0d015"
   }
 }

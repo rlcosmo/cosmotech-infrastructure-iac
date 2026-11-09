@@ -175,3 +175,33 @@ rows. Lossless numeric/binary/map fingerprints detect stock changes even when or
 bodies match. Execution rereads business/journal data and rejects stale/divergent
 reports before any import. This is a consistency check, not a promise that separately
 scheduled regional backups form an application-consistent cohort automatically.
+
+## Primary rollout kit, intentionally NOT applied/deployed
+
+`ops/dr/integrations/primary-outbox.patch` prepares the API hook and a separate
+publisher against the approved API source SHA
+`8cf95ca042ee90a8c5697603029d0bb8be4eca62`. The preparation tool only accepts a
+pristine disposable checkout at that exact revision, applies the patch and vendors
+the reviewed core with per-file SHA256s. CI exercises legacy behavior unchanged,
+202-after-journal, conflict/503 handling, no SQS dependency for acceptance and
+explicit IDs when opted in. No branch/commit/PR is published in the primary API
+repository, so its automatic image promotion cannot run.
+
+The feature flag defaults OFF. The kit includes `orders.producer.outbox_dispatcher`
+for a separate primary publisher process with an explicit renewed source-region
+activation file; it is not a hidden API-side synchronous send. The new
+`orders-outbox-source` Terraform root defaults OFF, creates only a NEW protected
+source journal and unattached least-scope policies, and never imports/modifies the
+existing table/API/role/queue. The existing source backup root can explicitly
+include the new source journal only after verified readiness. No role is attached
+and no setting is enabled automatically.
+
+After release: verify source ownership/effective Pod Identity permissions, deploy
+new journal/backups, publish the reviewed kit through the existing primary GMUD
+pipeline, stage the paused publisher, migrate clients to stable order IDs, then
+activate both only with journal/queue/rollback probes. SQS failure should grow the
+journal backlog without losing acknowledged orders. Rolling the flag back must
+NOT abandon new pending journal records: stop new accepts/drain the durable backlog
+or preserve the publisher until all durable records are reconciled. Never revert
+to direct SQS acceptance and discard the journal during failback. None of this
+primary rollout was executed while the account remains restricted.
