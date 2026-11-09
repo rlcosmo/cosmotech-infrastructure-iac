@@ -42,3 +42,14 @@ class UpgradeTests(unittest.TestCase):
             self.assertNotIn('hostid',call.call_args_list[1].args[1])
         with patch.object(api,'call',return_value=[{'itemid':'1'},{'itemid':'2'}]):
             with self.assertRaises(ValueError):api.upsert('item','itemid',{},{} )
+
+    def test_periodic_monitoring_preserves_other_owned_groups_and_tags(self):
+        spec=importlib.util.spec_from_file_location('monitoring',ROOT/'ops/zabbix-monitoring/configure_monitoring.py')
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        obj=module.Zabbix.__new__(module.Zabbix)
+        existing={'hostid':'1','hostgroups':[{'groupid':'original'}],'tags':[{'tag':'custom','value':'keep'}]}
+        with patch.object(obj,'api',side_effect=[[existing],{}]) as api:
+            self.assertEqual(obj.host('owned','canonical'),'1')
+            payload=api.call_args_list[1].args[1]
+            self.assertEqual({g['groupid'] for g in payload['groups']},{'original','canonical'})
+            self.assertIn({'tag':'custom','value':'keep'},payload['tags'])
