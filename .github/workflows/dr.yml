@@ -1,0 +1,96 @@
+name: V2-003 isolated DR validation
+on:
+  pull_request:
+    paths: ['terraform/environments/dr/**', 'terraform/environments/dr-backup-source/**', 'terraform/modules/dr_standby/**', 'terraform/bootstrap/dr_observer/**', 'src/disaster_recovery/**', 'scripts/dr/**', 'tests/test_dr*', 'docs/dr/**', 'ops/dr/**', '.github/workflows/dr.yml']
+  workflow_dispatch:
+    inputs:
+      live_plan:
+        description: Read-only cloud plan after official AWS release
+        type: boolean
+        default: false
+      aws_release_reference:
+        description: Official release reference (not merely active credits)
+        type: string
+        default: ""
+permissions: {contents: read}
+concurrency:
+  group: dr-validation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: azure/setup-helm@v4
+        with: {version: v3.19.0}
+      - uses: hashicorp/setup-terraform@v3
+        with: {terraform_version: 1.17.1, terraform_wrapper: false}
+      - run: python -m unittest discover -s tests -p 'test_dr*.py' -v
+      - run: python scripts/dr/simulate_chaos.py > chaos-simulation.json
+      - run: python scripts/dr/render_platform.py --output "$RUNNER_TEMP/dr-platform"
+      - run: bash scripts/dr/install_kubeconform.sh "$RUNNER_TEMP/dr-schema"
+      - run: '"$RUNNER_TEMP/dr-schema/kubeconform" -strict -summary -ignore-missing-schemas -kubernetes-version 1.36.0 "$RUNNER_TEMP/dr-platform" ops/dr/storage-class.json' 
+      - run: terraform -chdir=terraform/environments/dr fmt -check -recursive
+      - run: terraform -chdir=terraform/modules/dr_standby fmt -check
+      - run: terraform -chdir=terraform/environments/dr init -backend=false -input=false
+      - run: terraform -chdir=terraform/environments/dr validate
+      - run: terraform -chdir=terraform/environments/dr test -no-color
+      - run: terraform -chdir=terraform/environments/dr-backup-source fmt -check -recursive
+      - run: terraform -chdir=terraform/environments/dr-backup-source init -backend=false -input=false
+      - run: terraform -chdir=terraform/environments/dr-backup-source validate
+      - run: terraform -chdir=terraform/environments/dr-backup-source test -no-color
+      - run: terraform -chdir=terraform/bootstrap/dr_observer init -backend=false -input=false
+      - run: terraform -chdir=terraform/bootstrap/dr_observer validate
+      - run: terraform -chdir=terraform/bootstrap/dr_observer test -no-color
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dr-simulation-only-${{ github.run_id }}
+          path: chaos-simulation.json
+          retention-days: 14
+# Validation has no cloud credentials. Cloud-plan below is read-only and release-gated.
+
+  cloud-plan:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.live_plan && vars.DR_AWS_RELEASE_CONFIRMED == 'true'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions: {contents: read, id-token: write}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with: {terraform_version: 1.17.1, terraform_wrapper: false}
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::414053644145:role/cosmotech-dr-observer
+          aws-region: us-east-2
+          role-session-name: DRReadOnly-${{ github.run_id }}
+      - name: Verify release reference and destination prerequisites
+        env:
+          RELEASE_REFERENCE: ${{ inputs.aws_release_reference }}
+        run: python scripts/dr/preflight.py --aws-release-reference "$RELEASE_REFERENCE"
+      - run: terraform -chdir=terraform/environments/dr init -input=false
+      - name: Load reviewed DR plan configuration
+        env:
+          PLAN_CONFIGURATION: ${{ vars.DR_PLAN_TFVARS_JSON }}
+          RELEASE_REFERENCE: ${{ inputs.aws_release_reference }}
+        run: |
+          python - <<'PYCONFIG'
+          import json,os,pathlib
+          config=json.loads(os.environ['PLAN_CONFIGURATION'])
+          assert config['enable_standby'] is True
+          assert config['standby_region']=='us-east-2'
+          assert config['account_restricted'] is False
+          assert config['release_evidence']==os.environ['RELEASE_REFERENCE']
+          path=pathlib.Path(os.environ['RUNNER_TEMP'])/'dr-reviewed.tfvars.json'
+          path.write_text(json.dumps(config));path.chmod(0o600)
+          PYCONFIG
+      - name: Read-only plan with isolated state, never apply
+        run: |
+          umask 077
+          terraform -chdir=terraform/environments/dr plan -lock=false -input=false -var-file="$RUNNER_TEMP/dr-reviewed.tfvars.json" -out="$RUNNER_TEMP/dr.tfplan" >/dev/null
+          terraform -chdir=terraform/environments/dr show -json "$RUNNER_TEMP/dr.tfplan" > "$RUNNER_TEMP/dr-plan.json"
+          python scripts/dr/check_plan.py "$RUNNER_TEMP/dr-plan.json"
+# No apply workflow exists. Destination enablement requires reviewed tfvars and scoped deployment IAM.

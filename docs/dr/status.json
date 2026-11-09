@@ -1,0 +1,14 @@
+{
+  "issue": 47,
+  "account": "414053644145",
+  "primary_region": "us-east-1",
+  "secondary_region": "us-east-2",
+  "aws_release_confirmed": false,
+  "support_case": "179418083900558",
+  "provisioned_dr_resources": [],
+  "real_chaos_executed": false,
+  "measured_rto_seconds": null,
+  "measured_rpo_seconds": null,
+  "primary_modified": false,
+  "power_manager_modified": false
+}

@@ -1,0 +1,67 @@
+{
+  "observed_at": "2026-11-09T00:00:51.929479+00:00",
+  "read_only": true,
+  "provisioning_validated": false,
+  "candidates": [
+    {
+      "region": "us-east-2",
+      "checks": {
+        "sqs": {
+          "read_api_ok": true,
+          "resource_count": 0,
+          "error": null
+        },
+        "dynamodb": {
+          "read_api_ok": true,
+          "resource_count": 0,
+          "error": null
+        },
+        "ecr": {
+          "read_api_ok": true,
+          "resource_count": null,
+          "error": null
+        }
+      }
+    },
+    {
+      "region": "us-west-2",
+      "checks": {
+        "sqs": {
+          "read_api_ok": true,
+          "resource_count": 0,
+          "error": null
+        },
+        "dynamodb": {
+          "read_api_ok": true,
+          "resource_count": 0,
+          "error": null
+        },
+        "ecr": {
+          "read_api_ok": true,
+          "resource_count": null,
+          "error": null
+        }
+      }
+    },
+    {
+      "region": "sa-east-1",
+      "checks": {
+        "sqs": {
+          "read_api_ok": true,
+          "resource_count": 0,
+          "error": null
+        },
+        "dynamodb": {
+          "read_api_ok": true,
+          "resource_count": 0,
+          "error": null
+        },
+        "ecr": {
+          "read_api_ok": true,
+          "resource_count": null,
+          "error": null
+        }
+      }
+    }
+  ]
+}

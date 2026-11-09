@@ -1,0 +1,100 @@
+{
+  "istio-base": {},
+  "istiod": {
+    "pilot": {
+      "replicaCount": 1
+    }
+  },
+  "istio-ingress": {
+    "replicaCount": 1,
+    "service": {
+      "type": "ClusterIP"
+    },
+    "labels": {
+      "istio": "dr-ingress"
+    }
+  },
+  "argocd": {
+    "configs": {
+      "params": {
+        "server.insecure": "false"
+      }
+    },
+    "server": {
+      "service": {
+        "type": "ClusterIP"
+      }
+    },
+    "redis-ha": {
+      "enabled": false
+    }
+  },
+  "monitoring": {
+    "grafana": {
+      "admin": {
+        "existingSecret": "dr-grafana-admin",
+        "userKey": "admin-user",
+        "passwordKey": "admin-password"
+      },
+      "persistence": {
+        "enabled": true,
+        "storageClassName": "gp3-retain",
+        "size": "10Gi"
+      },
+      "sidecar": {
+        "dashboards": {
+          "enabled": true,
+          "label": "grafana_dashboard",
+          "searchNamespace": "observability"
+        }
+      }
+    },
+    "prometheus": {
+      "prometheusSpec": {
+        "retention": "24h",
+        "resources": {
+          "requests": {
+            "memory": "256Mi",
+            "cpu": "100m"
+          }
+        }
+      }
+    },
+    "alertmanager": {
+      "alertmanagerSpec": {
+        "replicas": 1
+      }
+    }
+  },
+  "otel": {
+    "mode": "deployment",
+    "image": {
+      "repository": "otel/opentelemetry-collector-k8s"
+    },
+    "config": {
+      "exporters": {
+        "debug": {}
+      },
+      "service": {
+        "pipelines": {
+          "traces": {
+            "exporters": [
+              "debug"
+            ]
+          },
+          "metrics": {
+            "exporters": [
+              "debug"
+            ]
+          },
+          "logs": {
+            "exporters": [
+              "debug"
+            ]
+          }
+        }
+      }
+    },
+    "fullnameOverride": "otel-collector-opentelemetry-collector"
+  }
+}

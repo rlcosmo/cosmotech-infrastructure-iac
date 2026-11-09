@@ -1,0 +1,26 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: cosmotech-dr
+  namespace: observability
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: cosmotech-dr
+      rules:
+        - alert: DRRecoveryEvidenceMissing
+          expr: absent(cosmotech_dr_evidence_observed_timestamp_seconds{region="us-east-2"}) or (time() - cosmotech_dr_evidence_observed_timestamp_seconds{region="us-east-2"} > 900)
+          for: 5m
+          labels: {severity: warning, environment: dr}
+          annotations: {summary: "DR recovery evidence missing/stale; never interpret as RTO/RPO zero"}
+        - alert: DRRPOObjectiveExceeded
+          expr: cosmotech_dr_rpo_seconds{region="us-east-2"} > 3600
+          for: 1m
+          labels: {severity: critical, environment: dr}
+          annotations: {summary: "DR recovery point exceeds provisional objective"}
+        - alert: DREndToEndUnavailable
+          expr: probe_success{job="orders-dr-e2e",region="us-east-2"} == 0
+          for: 2m
+          labels: {severity: critical, environment: dr}
+          annotations: {summary: "DR synthetic end-to-end probe failed"}
