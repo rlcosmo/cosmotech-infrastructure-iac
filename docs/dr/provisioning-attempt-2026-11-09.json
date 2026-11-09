@@ -1,0 +1,21 @@
+{
+  "attempted_at": "2026-11-09T09:40:14.350870+00:00",
+  "source_commit": "57799bbc8dbac3a4370aea5bf5c4a9ba96f0c635",
+  "destination_region": "us-east-2",
+  "credential_profile": "serverless-lab",
+  "operation": "sts:GetCallerIdentity",
+  "error": "Your session has expired. Please reauthenticate using aws login.",
+  "identity_verified": false,
+  "terraform_init": "success, backend=false (local provider/module initialization only)",
+  "terraform_validate": "success with pre-existing SQS provider declaration warning",
+  "remote_state_verified": false,
+  "enabled_cloud_plan_generated": false,
+  "terraform_apply": "not executed: credential preflight failed",
+  "aws_writes": 0,
+  "resources_created": [],
+  "new_dr_provisioning_attempts_enabled": false,
+  "support_queried": false,
+  "issue_47_must_remain_open": true,
+  "next_activity": "V2-007 drift governance",
+  "account_restriction_status": "unknown; expired credentials do not prove account hold or release"
+}

@@ -273,7 +273,7 @@ def install_direct_observer() -> None:
     app = Path('/opt/cosmotech/iac-observer')
     app.mkdir(mode=0o755,exist_ok=True)
     app.chmod(0o755)
-    for name in ['direct_observer.py','direct_inventory.py','direct_comparison.py','direct_sdk.py']:
+    for name in ['direct_observer.py','direct_inventory.py','direct_comparison.py','direct_sdk.py', 'gitops_bindings.py']:
         shutil.copyfile(SOURCE / name,app / name)
         (app / name).chmod(0o644)
     sdk_umask = os.umask(0o022)
@@ -284,7 +284,7 @@ def install_direct_observer() -> None:
                 run(['apt-get','update'])
                 run(['apt-get','install','-y','--no-install-recommends','python3-venv'])
             run(['/usr/bin/python3','-m','venv',str(venv)])
-        run([str(venv / 'bin/python3'),'-m','pip','install','--disable-pip-version-check','--no-input','boto3==1.43.122','botocore==1.43.122'])
+        run([str(venv / 'bin/python3'),'-m','pip','install','--disable-pip-version-check','--no-input','boto3==1.43.122','botocore==1.43.122','PyYAML==6.0.3'])
     finally:
         os.umask(sdk_umask)
     identity = aws('sts','get-caller-identity')

@@ -13,6 +13,7 @@ import time
 from direct_comparison import compare, flatten
 from direct_inventory import inventory
 from direct_sdk import InventorySdk
+from gitops_bindings import declared_claims, bindings
 
 REPOSITORY = 'https://github.com/rlcosmo/cosmotech-infrastructure-iac.git'
 BRANCH = 'main'
@@ -154,6 +155,24 @@ def observe(role_arn):
             transport=InventorySdk(credentials)
             try:
                 discovered=inventory(transport,identity['Account'],identity['Arn'].split(':')[1])
+                discovered['gitops_bindings']=[]
+                # Optional enrichment never changes AWS/RBAC and never blocks Terraform drift.
+                try:
+                    gitops=Path(temporary)/'gitops'
+                    command(['git','-c','core.hooksPath=/dev/null','clone','--depth=1','--single-branch','--branch','main',
+                             'https://github.com/rlcosmo/cosmotech-gitops.git',str(gitops)],env,timeout=180)
+                    revision=command(['git','rev-parse','HEAD'],env,cwd=gitops).decode().strip()
+                    claims=declared_claims(gitops)
+                    source['gitops']={'repository':'https://github.com/rlcosmo/cosmotech-gitops','commit':revision}
+                    for cluster in [a for a in discovered['resources'] if a['kind']=='AWS::EKS::Cluster']:
+                        try:
+                            storage=transport.kubernetes_storage(cluster['region'],cluster['id'])
+                            discovered['gitops_bindings']+=bindings(storage,claims,region=cluster['region'],commit=revision,cluster=cluster['id'])
+                            status='observed'
+                        except Exception:status='unavailable'
+                        discovered['coverage'].append({'region':cluster['region'],'kind':'Kubernetes PV/PVC bindings','status':status,'source':'gitops+kubernetes'})
+                except Exception:
+                    discovered['coverage'].append({'region':'all','kind':'GitOps manifest ownership','status':'unavailable','source':'gitops'})
             finally:
                 transport.close()
             stage='comparison'

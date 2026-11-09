@@ -10,11 +10,11 @@ def inventory(call, account, partition='aws'):
 
     def regional(region):
         found, observed = [], []
-        def add(kind, identifier, name=None, arn=None, parents=(), platform=False, discovery='native'):
+        def add(kind, identifier, name=None, arn=None, parents=(), platform=False, discovery='native', metadata=None):
             if not identifier:
                 return
             found.append({'kind':kind,'id':str(identifier),'name':str(name or identifier),
-                          'arn':arn,'region':region,'parents':list(parents),'platform':platform,'discovery':discovery})
+                          'arn':arn,'region':region,'parents':list(parents),'platform':platform,'discovery':discovery,'metadata':metadata or {}})
         specs = [
             ('AWS::EC2::Instance','ec2','describe-instances','Reservations','InstanceId'),
             ('AWS::EC2::Volume','ec2','describe-volumes','Volumes','VolumeId'),
@@ -46,16 +46,28 @@ def inventory(call, account, partition='aws'):
                     tags = {t.get('Key'):t.get('Value') for t in row.get('Tags',[]) if isinstance(t,dict)}
                     parents = []
                     if kind == 'AWS::EC2::Instance':
-                        parents += [tags[k] for k in ('aws:autoscaling:groupName','eks:nodegroup-name') if tags.get(k)]
+                        parents += [tags[k] for k in ('aws:autoscaling:groupName',) if tags.get(k)]
                     if kind == 'AWS::EC2::Volume':
                         parents += [a['InstanceId'] for a in row.get('Attachments',[]) if a.get('InstanceId')]
+                    # Keep only governance metadata; never copy arbitrary tags/descriptions.
+                    allowed = {'aws:dlm:lifecycle-policy-id','aws:backup:source-resource',
+                               'ebs.csi.aws.com/cluster','ebs.csi.aws.com/cluster-name',
+                               'kubernetes.io/created-for/pvc/name','kubernetes.io/created-for/pvc/namespace',
+                               'kubernetes.io/created-for/pv/name','CSIVolumeName'}
+                    metadata = {'tags':{k:v for k,v in tags.items() if k in allowed},
+                                'state':row.get('State') if isinstance(row.get('State'),str) else None}
+                    if kind == 'AWS::EC2::Volume':
+                        metadata['attachments'] = [a['InstanceId'] for a in row.get('Attachments',[]) if a.get('InstanceId')]
+                    if kind == 'AWS::EC2::Snapshot':metadata['source_volume_id'] = row.get('VolumeId')
+                    if kind == 'AWS::AutoScaling::AutoScalingGroup':
+                        metadata['instance_ids'] = [i['InstanceId'] for i in row.get('Instances',[]) if i.get('InstanceId')]
                     identifier = row[idkey]
                     arn = next((row[k] for k in ('Arn','ARN','DBInstanceArn','LoadBalancerArn','repositoryArn','FunctionArn','ResourceARN','FileSystemArn','AutoScalingGroupARN') if row.get(k)), None)
                     if not arn and kind.startswith('AWS::EC2::'):
                         suffix={'Instance':'instance','Volume':'volume','Snapshot':'snapshot','VPC':'vpc','Subnet':'subnet','SecurityGroup':'security-group','NatGateway':'natgateway'}[kind.split('::')[-1]]
                         arn=f'arn:{partition}:ec2:{region}:{account}:{suffix}/{identifier}'
                     add(kind,identifier,tags.get('Name') or row.get('DBInstanceIdentifier') or row.get('FunctionName') or row.get('repositoryName'),arn,parents,
-                        kind == 'AWS::EC2::Instance' and bool(tags.get('aws:autoscaling:groupName') or tags.get('eks:nodegroup-name')))
+                        kind == 'AWS::EC2::Instance' and bool(tags.get('aws:autoscaling:groupName')), metadata=metadata)
                 observed.append({'region':region,'kind':kind,'status':'partial' if result.get('NextToken') else 'observed','source':service})
             except (RuntimeError,KeyError,ValueError,TypeError):
                 observed.append({'region':region,'kind':kind,'status':'unavailable','source':service})
@@ -129,6 +141,13 @@ def inventory(call, account, partition='aws'):
             coverage.append({'region':'global','kind':kind,'status':'observed','source':'iam'})
         except (RuntimeError,KeyError,ValueError):
             coverage.append({'region':'global','kind':kind,'status':'unavailable','source':'iam'})
+    memberships = {(a['region'],instance):a['id'] for a in assets
+                   if a['kind']=='AWS::AutoScaling::AutoScalingGroup'
+                   for instance in a.get('metadata',{}).get('instance_ids',[])}
+    for asset in assets:
+        parent=memberships.get((asset['region'],asset['id']))
+        if asset['kind']=='AWS::EC2::Instance' and parent:
+            asset.update(platform=True,parents=[parent],parent_evidence='autoscaling-membership')
     unique={}; by_arn={}
     for asset in assets:
         key=(asset['kind'],asset['region'],asset['id'])
@@ -139,7 +158,7 @@ def inventory(call, account, partition='aws'):
                 unique[existing]=asset
                 prior=asset
             if asset.get('platform'):
-                prior.update(platform=True,parents=asset.get('parents',[]))
+                prior.update(platform=True,parents=sorted(set(prior.get('parents',[]))|set(asset.get('parents',[]))))
             if not prior.get('arn') and asset.get('arn'):
                 prior['arn']=asset['arn']
         else:
