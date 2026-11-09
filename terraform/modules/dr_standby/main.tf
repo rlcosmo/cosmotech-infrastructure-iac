@@ -136,7 +136,7 @@ resource "aws_eks_node_group" "standby" {
 }
 # Separate CNI identity; applications cannot inherit node IAM via IMDS.
 resource "aws_iam_role" "pod" {
-  for_each = toset(["cni", "api", "worker", "ebs"])
+  for_each = toset(["cni", "api", "worker", "ebs", "publisher", "metrics", "reconciler"])
   name     = "${var.name}-${each.key}"
   assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{
     Effect = "Allow", Principal = { Service = "pods.eks.amazonaws.com" },
@@ -156,17 +156,20 @@ resource "aws_iam_role_policy_attachment" "ebs" {
 resource "aws_iam_role_policy" "orders" {
   for_each = toset(["api", "worker"])
   role     = aws_iam_role.pod[each.key].id
-  policy = jsonencode({ Version = "2012-10-17", Statement = [
-    { Effect = "Allow", Action = each.key == "api" ? ["sqs:SendMessage", "sqs:GetQueueAttributes"] : ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:ChangeMessageVisibility", "sqs:GetQueueAttributes"], Resource = var.queue_arn },
-    { Effect = "Allow", Action = each.key == "api" ? ["dynamodb:GetItem", "dynamodb:DescribeTable"] : ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem", "dynamodb:ConditionCheckItem", "dynamodb:DescribeTable"], Resource = "arn:aws:dynamodb:${var.region}:${var.account_id}:table/${var.restored_table_name}" }
-  ] })
+  policy = jsonencode({ Version = "2012-10-17", Statement = concat(
+    each.key == "worker" ? [{ Effect = "Allow", Action = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:ChangeMessageVisibility", "sqs:GetQueueAttributes"], Resource = var.queue_arn }] : [],
+    [{ Effect = "Allow", Action = each.key == "api" ? ["dynamodb:GetItem", "dynamodb:DescribeTable"] : ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem", "dynamodb:ConditionCheckItem", "dynamodb:DescribeTable"], Resource = "arn:aws:dynamodb:${var.region}:${var.account_id}:table/${var.restored_table_name}" }]
+  ) })
 }
 resource "aws_eks_pod_identity_association" "pod" {
   for_each = {
-    cni    = { namespace = "kube-system", service_account = "aws-node" }
-    ebs    = { namespace = "kube-system", service_account = "ebs-csi-controller-sa" }
-    api    = { namespace = "orders-api", service_account = "orders-api-sa" }
-    worker = { namespace = "orders-worker", service_account = "orders-worker-sa" }
+    cni        = { namespace = "kube-system", service_account = "aws-node" }
+    ebs        = { namespace = "kube-system", service_account = "ebs-csi-controller-sa" }
+    api        = { namespace = "orders-api", service_account = "orders-api-sa" }
+    worker     = { namespace = "orders-worker", service_account = "orders-worker-sa" }
+    publisher  = { namespace = "orders-api", service_account = "dr-outbox-publisher" }
+    metrics    = { namespace = "orders-api", service_account = "dr-outbox-metrics" }
+    reconciler = { namespace = "orders-api", service_account = "dr-outbox-reconciler" }
   }
   cluster_name    = aws_eks_cluster.standby.name
   namespace       = each.value.namespace
@@ -306,4 +309,117 @@ resource "aws_iam_role_policy" "recovery_read" {
     { Effect = "Allow", Action = ["s3:ListBucket"], Resource = aws_s3_bucket.recovery.arn, Condition = { StringLike = { "s3:prefix" = "itsm/*" } } },
     { Effect = "Allow", Action = ["secretsmanager:GetSecretValue"], Resource = "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:cosmotech/dr/itsm/*" }
   ] })
+}
+resource "aws_dynamodb_table" "outbox" {
+  name                        = "cosmotech-dr-outbox"
+  billing_mode                = "PAY_PER_REQUEST"
+  hash_key                    = "order_id"
+  deletion_protection_enabled = true
+  attribute {
+    name = "order_id"
+    type = "S"
+  }
+  attribute {
+    name = "dispatch_bucket"
+    type = "S"
+  }
+  attribute {
+    name = "due_at"
+    type = "N"
+  }
+  global_secondary_index {
+    name = "dispatch-due"
+    key_schema {
+      attribute_name = "dispatch_bucket"
+      key_type       = "HASH"
+    }
+    key_schema {
+      attribute_name = "due_at"
+      key_type       = "RANGE"
+    }
+    projection_type = "KEYS_ONLY"
+  }
+  point_in_time_recovery { enabled = true }
+  server_side_encryption { enabled = true }
+  lifecycle { prevent_destroy = true }
+  # Authoritative acceptance journal: no TTL or destructive lifecycle.
+}
+resource "aws_iam_role_policy" "outbox" {
+  for_each = {
+    api        = ["dynamodb:PutItem", "dynamodb:GetItem"]
+    publisher  = ["dynamodb:UpdateItem", "dynamodb:Query"]
+    metrics    = ["dynamodb:Scan"]
+    reconciler = ["dynamodb:Scan", "dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem"]
+  }
+  role = aws_iam_role.pod[each.key].id
+  policy = jsonencode({ Version = "2012-10-17", Statement = [
+    { Effect = "Allow", Action = each.value, Resource = [aws_dynamodb_table.outbox.arn, "${aws_dynamodb_table.outbox.arn}/index/dispatch-due"] }
+  ] })
+}
+resource "aws_iam_role_policy" "publisher_queue" {
+  for_each = toset(["publisher", "metrics"])
+  role     = aws_iam_role.pod[each.key].id
+  policy = jsonencode({ Version = "2012-10-17", Statement = [
+    { Effect = "Allow", Action = each.key == "publisher" ? ["sqs:SendMessage"] : ["sqs:GetQueueAttributes"], Resource = var.queue_arn }
+  ] })
+}
+resource "aws_iam_role" "outbox_backup" {
+  name = "${var.name}-outbox-backup"
+  assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{
+    Effect = "Allow", Principal = { Service = "backup.amazonaws.com" }, Action = "sts:AssumeRole",
+    Condition = { StringEquals = { "aws:SourceAccount" = var.account_id },
+    ArnLike = { "aws:SourceArn" = "arn:aws:backup:${var.region}:${var.account_id}:*" } }
+  }] })
+}
+resource "aws_iam_role_policy_attachment" "outbox_backup" {
+  role       = aws_iam_role.outbox_backup.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup"
+}
+resource "aws_iam_role_policy" "outbox_backup_scope" {
+  role = aws_iam_role.outbox_backup.id
+  policy = jsonencode({ Version = "2012-10-17", Statement = [
+    { Effect = "Deny", Action = "*", Resource = "*", Condition = { StringNotEquals = { "aws:RequestedRegion" = var.region } } },
+    { Effect = "Deny", Action = ["dynamodb:CreateBackup", "dynamodb:Scan", "dynamodb:DescribeTable"], NotResource = aws_dynamodb_table.outbox.arn }
+  ] })
+}
+resource "aws_backup_plan" "outbox" {
+  name = "${var.name}-outbox-hourly"
+  rule {
+    rule_name         = "journal-hourly"
+    target_vault_name = aws_backup_vault.standby.name
+    schedule          = "cron(15 * * * ? *)"
+    start_window      = 60
+    completion_window = 180
+    lifecycle { delete_after = 7 }
+  }
+}
+resource "aws_backup_selection" "outbox" {
+  name         = "explicit-outbox-only"
+  plan_id      = aws_backup_plan.outbox.id
+  iam_role_arn = aws_iam_role.outbox_backup.arn
+  resources    = [aws_dynamodb_table.outbox.arn]
+  depends_on   = [aws_iam_role_policy_attachment.outbox_backup, aws_iam_role_policy.outbox_backup_scope]
+}
+output "outbox_table" { value = aws_dynamodb_table.outbox.name }
+resource "aws_ecr_repository" "outbox" {
+  name                 = "cosmotech-dr-orders-outbox"
+  image_tag_mutability = "IMMUTABLE"
+  force_delete         = false
+  image_scanning_configuration { scan_on_push = true }
+  encryption_configuration { encryption_type = "AES256" }
+  lifecycle { prevent_destroy = true }
+}
+resource "aws_iam_role_policy" "reconciliation_read" {
+  role = aws_iam_role.pod["reconciler"].id
+  policy = jsonencode({ Version = "2012-10-17", Statement = [
+    { Effect = "Allow", Action = ["dynamodb:Scan", "dynamodb:GetItem"], Resource = ["arn:aws:dynamodb:${var.region}:${var.account_id}:table/cosmotech-dr-outbox-restored*", "arn:aws:dynamodb:${var.region}:${var.account_id}:table/${var.restored_table_name}"] }
+  ] })
+}
+
+output "outbox_protection" {
+  value = {
+    deletion_protection = aws_dynamodb_table.outbox.deletion_protection_enabled
+    pitr_enabled        = aws_dynamodb_table.outbox.point_in_time_recovery[0].enabled
+    index_projection    = one(aws_dynamodb_table.outbox.global_secondary_index).projection_type
+  }
 }

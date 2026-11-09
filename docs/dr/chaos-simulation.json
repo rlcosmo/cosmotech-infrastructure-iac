@@ -42,5 +42,100 @@
     "lost_ack_redeliveries": 1,
     "measured_aws_rto_seconds": null,
     "measured_aws_rpo_seconds": null
+  },
+  {
+    "scenario": "sqs-outage",
+    "execution": "simulation-only",
+    "recovery_blocked": false,
+    "accepted": 10,
+    "recovered": 10,
+    "duplicate_business_effects": 0,
+    "deliveries_observed": 10,
+    "measured_aws_rto_seconds": null,
+    "measured_aws_rpo_seconds": null
+  },
+  {
+    "scenario": "ambiguous-send",
+    "execution": "simulation-only",
+    "recovery_blocked": false,
+    "accepted": 10,
+    "recovered": 10,
+    "duplicate_business_effects": 0,
+    "deliveries_observed": 20,
+    "measured_aws_rto_seconds": null,
+    "measured_aws_rpo_seconds": null
+  },
+  {
+    "scenario": "queue-loss",
+    "execution": "simulation-only",
+    "recovery_blocked": false,
+    "accepted": 10,
+    "recovered": 10,
+    "duplicate_business_effects": 0,
+    "deliveries_observed": 10,
+    "measured_aws_rto_seconds": null,
+    "measured_aws_rpo_seconds": null
+  },
+  {
+    "scenario": "region-loss-completed-copy",
+    "execution": "simulation-only",
+    "recovery_blocked": false,
+    "accepted": 10,
+    "recovered": 10,
+    "duplicate_business_effects": 0,
+    "deliveries_observed": 20,
+    "measured_aws_rto_seconds": null,
+    "measured_aws_rpo_seconds": null
+  },
+  {
+    "scenario": "region-loss-lagged-copy",
+    "execution": "simulation-only",
+    "recovery_blocked": true,
+    "accepted": 10,
+    "known_unrecovered_acknowledgements": 2,
+    "measured_aws_rto_seconds": null,
+    "measured_aws_rpo_seconds": null
+  },
+  {
+    "scenario": "az-client-isolation",
+    "execution": "simulation-only",
+    "recovery_blocked": false,
+    "accepted": 10,
+    "recovered": 10,
+    "duplicate_business_effects": 0,
+    "deliveries_observed": 20,
+    "measured_aws_rto_seconds": null,
+    "measured_aws_rpo_seconds": null
+  },
+  {
+    "scenario": "node-loss-after-send",
+    "execution": "simulation-only",
+    "recovery_blocked": false,
+    "accepted": 10,
+    "recovered": 10,
+    "duplicate_business_effects": 0,
+    "deliveries_observed": 20,
+    "measured_aws_rto_seconds": null,
+    "measured_aws_rpo_seconds": null
+  },
+  {
+    "scenario": "dependency-outage",
+    "execution": "simulation-only",
+    "recovery_blocked": false,
+    "accepted": 10,
+    "recovered": 10,
+    "duplicate_business_effects": 0,
+    "deliveries_observed": 20,
+    "measured_aws_rto_seconds": null,
+    "measured_aws_rpo_seconds": null
+  },
+  {
+    "scenario": "corrupted-backup",
+    "execution": "simulation-only",
+    "recovery_blocked": true,
+    "accepted": 10,
+    "known_unrecovered_acknowledgements": null,
+    "measured_aws_rto_seconds": null,
+    "measured_aws_rpo_seconds": null
   }
 ]

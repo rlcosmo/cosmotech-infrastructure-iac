@@ -174,3 +174,14 @@ block only the synthetic client's destination in its own namespace/proxy, then
 restore in finally. Fault Injection Service or Chaos Mesh is NOT deployed now.
 Record timeline, completed IDs, queue age/DLQ, metrics, integrity and target IDs.
 No automatic destructive runner exists while the account remains restricted.
+
+## Durable outbox continuation
+
+Follow [outbox.md](outbox.md) for the separate durable API/publisher/worker image,
+private journal export, independently complete receipts, consistent business table
+restore and conditional new-epoch replay. The original primary API remains legacy
+until a distinct controlled rollout; no historical ACK is retroactively journaled.
+Use `backup_workflow.py --plan <private-plan>` for preparation; `--execute` stays
+blocked by the recorded account flag. Read the audit/resume warning before any
+future StartRestoreJob. Failback compares the fenced cumulative secondary journal,
+never silently replays stale source snapshots over newer orders/inventory.

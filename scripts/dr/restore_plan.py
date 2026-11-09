@@ -9,6 +9,7 @@ import re
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]))
 from src.disaster_recovery.control import canonical_hash
+from src.disaster_recovery.restore import validate_intent
 
 
 def compile_plan(manifest):
@@ -27,20 +28,14 @@ def compile_plan(manifest):
         metadata=point['restore_metadata']
         if not isinstance(metadata,dict) or any(not isinstance(v,str) or 'us-east-1' in v for v in metadata.values()):
             raise ValueError('Restore metadata must be destination-only string values')
-        if point['type']=='DynamoDB':
-            if metadata.get('targetTableName')!='cosmotech-dr-orders-restored':
-                raise ValueError('Restore into a NEW isolated table only')
-        elif point['type']=='EBS':
-            if (metadata.get('availabilityZone') not in {'us-east-2a','us-east-2b','us-east-2c'}
-                    or metadata.get('volumeType')!='gp3' or str(metadata.get('encrypted')).lower()!='true'):
-                raise ValueError('Encrypted gp3 destination volume in reviewed AZ required')
-        else:raise ValueError('Unsupported restore type')
+        validate_intent(dict(arn=arn,type=point['type'],metadata=metadata))
         commands.append(['aws','backup','start-restore-job','--region','us-east-2',
             '--recovery-point-arn',arn,'--iam-role-arn',role,'--resource-type',point['type'],
             '--metadata',json.dumps(metadata,sort_keys=True),
             '--idempotency-token',canonical_hash(point)[:50]])
     if not commands:raise ValueError('No verified backups; never create empty data as a substitute')
     return {'mode':'plan-only','manifest_hash':canonical_hash(manifest),'commands':commands,
+            'intents':[dict(arn=p['arn'],type=p['type'],metadata=p['restore_metadata']) for p in manifest['recovery_points']],
             'post_restore':['wait-for-completed','verify-counts-and-checksums','set-table-deletion-protection-and-PITR','retain-restored-volumes','bind-static-PV/PVC-by-new-volume-ID','do-not-activate-writers']}
 
 if __name__=='__main__':

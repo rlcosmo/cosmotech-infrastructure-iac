@@ -11,7 +11,7 @@ ALLOWED = {
     "aws_cloudwatch_log_group", "aws_s3_bucket", "aws_s3_bucket_versioning",
     "aws_s3_bucket_server_side_encryption_configuration", "aws_s3_bucket_public_access_block",
     "aws_s3_bucket_policy", "aws_kms_key", "aws_backup_vault", "aws_ecr_repository",
-    "aws_sqs_queue", "aws_sqs_queue_redrive_allow_policy",
+    "aws_dynamodb_table", "aws_backup_plan", "aws_backup_selection", "aws_sqs_queue", "aws_sqs_queue_redrive_allow_policy",
 }
 
 def check_plan(plan):

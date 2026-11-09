@@ -50,4 +50,7 @@ def simulate(kind):
 
 
 if __name__ == '__main__':
-    print(json.dumps([simulate(k) for k in ('pod-loss','node-loss','az-loss','dependency-outage')], indent=2))
+    from src.disaster_recovery.chaos import simulate_outbox
+    print(json.dumps([simulate(k) for k in ('pod-loss','node-loss','az-loss','dependency-outage')] +
+        [simulate_outbox(k) for k in ('sqs-outage','ambiguous-send','queue-loss','region-loss-completed-copy',
+         'region-loss-lagged-copy','az-client-isolation','node-loss-after-send','dependency-outage','corrupted-backup')], indent=2))

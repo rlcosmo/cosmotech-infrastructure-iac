@@ -15,3 +15,6 @@ financeiro zero, workers passivos e nenhuma alteração no primário/Power Manag
 A fila SQS não possui replicação nativa e o produtor atual não possui outbox:
 perda da fila sem journal tem RPO não limitado; promoção real deve permanecer
 bloqueada. Testes simulados não substituem restore e ensaio real na região secundária.
+
+Continuação: [outbox durável, reconciliação, replay e automação de restore](dr/outbox.md).
+Implementado/testado em código; ainda não implantado no primário ou no standby.

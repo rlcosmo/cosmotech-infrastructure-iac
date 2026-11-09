@@ -28,6 +28,19 @@ jobs:
         with: {version: v3.19.0}
       - uses: hashicorp/setup-terraform@v3
         with: {terraform_version: 1.17.1, terraform_wrapper: false}
+      - name: Install isolated SDK test dependencies
+        run: pip install -r ops/dr/outbox-test-requirements.txt
+      - uses: actions/checkout@v4
+        with:
+          repository: rlcosmo/cosmotech-orders-worker
+          ref: 3db4ff4db75394852ce4714d0796c6e36022e7ae
+          path: .dr-fixtures/orders-worker
+          persist-credentials: false
+      - name: Exercise SDK persistence and unchanged worker contract without AWS
+        env:
+          ORDERS_WORKER_SOURCE: ${{ github.workspace }}/.dr-fixtures/orders-worker
+          AWS_EC2_METADATA_DISABLED: 'true'
+        run: python -m unittest discover -s tests/dr_sdk -v
       - run: python -m unittest discover -s tests -p 'test_dr*.py' -v
       - run: python scripts/dr/simulate_chaos.py > chaos-simulation.json
       - run: python scripts/dr/render_platform.py --output "$RUNNER_TEMP/dr-platform"

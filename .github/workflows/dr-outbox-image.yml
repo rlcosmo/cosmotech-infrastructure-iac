@@ -1,0 +1,80 @@
+name: V2-003 outbox image validation only
+on:
+  pull_request:
+    paths: ['src/disaster_recovery/**', 'ops/dr/Dockerfile.outbox*', 'ops/dr/outbox-requirements.txt', '.github/workflows/dr-outbox-image.yml']
+  workflow_dispatch:
+    inputs:
+      publish:
+        type: boolean
+        default: false
+        description: Publish only the DR image after verified AWS release
+      aws_release_reference:
+        type: string
+        default: ''
+        description: Official AWS release reference
+permissions: {contents: read}
+jobs:
+  build-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: rlcosmo/cosmotech-orders-worker
+          ref: 3db4ff4db75394852ce4714d0796c6e36022e7ae
+          path: .dr-fixtures/orders-worker
+          persist-credentials: false
+      - run: test "$(git -C .dr-fixtures/orders-worker rev-parse HEAD)" = 3db4ff4db75394852ce4714d0796c6e36022e7ae
+      - run: docker build -f ops/dr/Dockerfile.outbox -t cosmotech-dr-outbox:${{ github.sha }} .
+      - run: docker run --rm --network=none cosmotech-dr-outbox:${{ github.sha }} python -m src.disaster_recovery.runtime --help
+      - uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8
+        with:
+          image-ref: cosmotech-dr-outbox:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+      - run: docker save cosmotech-dr-outbox:${{ github.sha }} -o /tmp/dr-outbox-image.tar
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dr-outbox-image-${{ github.sha }}
+          path: /tmp/dr-outbox-image.tar
+          retention-days: 2
+# Build/scan never uses AWS credentials or performs application promotion.
+  publish:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish && vars.DR_AWS_RELEASE_CONFIRMED == 'true'
+    needs: build-scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions: {contents: read, id-token: write}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require recorded clearance before requesting AWS credentials
+        env:
+          RELEASE_REFERENCE: ${{ inputs.aws_release_reference }}
+        run: |
+          python - <<'PYRELEASE'
+          import json,os
+          assert json.load(open('docs/dr/status.json'))['aws_release_confirmed'] is True
+          assert len(os.environ['RELEASE_REFERENCE'])>10
+          PYRELEASE
+      - uses: actions/download-artifact@v4
+        with:
+          name: dr-outbox-image-${{ github.sha }}
+          path: /tmp
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::414053644145:role/cosmotech-dr-image-publisher
+          aws-region: us-east-2
+          role-session-name: DRImage-${{ github.run_id }}
+      - uses: aws-actions/amazon-ecr-login@v2
+      - name: Publish immutable revision only to the pre-created DR repository
+        run: |
+          set -euo pipefail
+          aws ecr describe-images --repository-name cosmotech-dr-orders-outbox --max-items 1 >/dev/null
+          docker load -i /tmp/dr-outbox-image.tar
+          target="414053644145.dkr.ecr.us-east-2.amazonaws.com/cosmotech-dr-orders-outbox:sha-$GITHUB_SHA"
+          docker tag "cosmotech-dr-outbox:$GITHUB_SHA" "$target"
+          docker push "$target"
+          aws ecr describe-images --repository-name cosmotech-dr-orders-outbox --image-ids "imageTag=sha-$GITHUB_SHA" --query 'imageDetails[0].imageDigest' --output text >> "$GITHUB_STEP_SUMMARY"
+# Publication never syncs Argo, changes primary GitOps, starts pods or applies Terraform.

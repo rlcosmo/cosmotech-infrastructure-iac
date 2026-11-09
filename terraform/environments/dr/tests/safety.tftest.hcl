@@ -35,3 +35,21 @@ run "standby_zero_nodes" {
     error_message = "Isolated cluster name required."
   }
 }
+
+run "outbox_retains_durable_journal" {
+  command   = plan
+  providers = { aws.standby = aws }
+  variables {
+    enable_standby             = true
+    account_restricted         = false
+    release_evidence           = "MOCK-NOT-AWS-RELEASE"
+    monthly_budget_usd         = 500
+    estimated_monthly_cost_usd = 150
+    admin_cidrs                = ["192.0.2.10/32"]
+    admin_role_arn             = "arn:aws:iam::414053644145:role/cosmotech-dr-operator"
+  }
+  assert {
+    condition     = module.standby[0].outbox_protection.deletion_protection && module.standby[0].outbox_protection.pitr_enabled && module.standby[0].outbox_protection.index_projection == "KEYS_ONLY"
+    error_message = "Outbox must retain durable records, PITR and minimal index projection."
+  }
+}
