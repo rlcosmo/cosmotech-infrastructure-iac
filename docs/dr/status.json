@@ -19,8 +19,19 @@
     "reviewed spending limit and fresh estimate",
     "scoped deployment IAM and verified live state owners",
     "completed cross-region backup and isolated restore",
-    "source durable acceptance journal or proven queue reconciliation plus fencing",
+    "controlled primary journal rollout/replication, independently complete receipts and global fencing",
     "real application E2E and secondary chaos certification",
     "production routing/TLS and Zabbix recovery not implemented in this phase"
-  ]
+  ],
+  "outbox": {
+    "implemented_in_code": true,
+    "deployed": false,
+    "runtime": "isolated-dr-api-publisher-worker",
+    "primary_producer": "legacy-direct-sqs-unmodified",
+    "delivery": "at-least-once; consumer transactional checkpoints",
+    "regional_loss_certification": false,
+    "primary_integration_kit": "prepared and tested against approved API release; not applied",
+    "gitops_pr": "https://github.com/rlcosmo/cosmotech-gitops/pull/20",
+    "gitops_merge_commit": "daa15dd444c14e7b15a015c07f6b9c73c1b0d015"
+  }
 }

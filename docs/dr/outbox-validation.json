@@ -1,0 +1,14 @@
+{
+  "scope": "offline tests and SDK emulation only; not operational certification",
+  "infrastructure_unit_tests": 93,
+  "sdk_integration_tests": 15,
+  "terraform_mock_runs": 18,
+  "primary_integration_source": "8cf95ca042ee90a8c5697603029d0bb8be4eca62",
+  "worker_contract_source": "3db4ff4db75394852ce4714d0796c6e36022e7ae",
+  "aws_writes": 0,
+  "outbox_deployed": false,
+  "primary_modified": false,
+  "power_manager_modified": false,
+  "real_rto_seconds": null,
+  "real_rpo_seconds": null
+}

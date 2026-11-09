@@ -1,0 +1,128 @@
+diff --git a/src/orders/producer/durable.py b/src/orders/producer/durable.py
+new file mode 100644
+index 0000000..462b401
+--- /dev/null
++++ b/src/orders/producer/durable.py
+@@ -0,0 +1,21 @@
++"""Primary integration factory. Inactive unless explicitly enabled after rollout."""
++from functools import lru_cache
++import os
++
++
++@lru_cache(maxsize=1)
++def get_outbox():
++    import boto3
++    from botocore.config import Config
++    from orders.shared.dr_outbox.outbox import Outbox
++    from orders.shared.dr_outbox.dynamo_outbox import DynamoOutbox
++    region=os.getenv('AWS_REGION') or os.getenv('AWS_DEFAULT_REGION')
++    table=os.getenv('ORDERS_OUTBOX_TABLE')
++    if region!='us-east-1' or table!='cosmotech-orders-outbox':
++        raise ValueError('Explicit reviewed primary journal configuration required')
++    session=boto3.Session(region_name=region)
++    config=Config(connect_timeout=2,read_timeout=3,retries={'mode':'standard','total_max_attempts':2})
++    identity=session.client('sts',config=config).get_caller_identity()
++    if identity['Account']!='414053644145' or ':assumed-role/' not in identity['Arn']:
++        raise ValueError('Temporary authorized application role required')
++    return Outbox(DynamoOutbox(session.resource('dynamodb',config=config).Table(table)))
+diff --git a/src/orders/producer/handler.py b/src/orders/producer/handler.py
+index 0ac331d..85b7f26 100644
+--- a/src/orders/producer/handler.py
++++ b/src/orders/producer/handler.py
+@@ -31,7 +31,7 @@ def _response(status_code: int, body: dict[str, Any]) -> dict[str, Any]:
+ 
+ 
+ def handler(
+-    event: dict[str, Any], context: Any, *, sqs_client: Any | None = None
++    event: dict[str, Any], context: Any, *, sqs_client: Any | None = None, durable_outbox: Any | None = None
+ ) -> dict[str, Any]:
+     """Validate an API request and publish the complete order event to SQS."""
+     try:
+@@ -58,6 +58,21 @@ def handler(
+         logger.info("order_rejected", extra={"event": "order_rejected", "reason": "invalid_request"})
+         return _response(400, {"error": "Invalid request"})
+ 
++    if os.getenv("ORDERS_DURABLE_OUTBOX") == "true":
++        try:
++            from orders.producer.durable import get_outbox
++            from orders.shared.dr_outbox.outbox import Conflict
++        except ImportError:
++            return _response(503, {"error": "Durable acceptance not configured"})
++        try:
++            journal = durable_outbox if durable_outbox is not None else get_outbox()
++            stored = journal.accept(order)
++            return _response(202, {"order_id": stored["order_id"], "status": "PENDING", "acceptance": "durable-journal"})
++        except Conflict:
++            return _response(409, {"error": "Order ID conflicts with accepted content"})
++        except Exception:
++            return _response(503, {"error": "Durable acceptance unavailable"})
++
+     queue_url = os.environ.get("ORDERS_QUEUE_URL")
+     if not queue_url:
+         logger.error("queue_configuration_missing", extra={"event": "configuration_error"})
+diff --git a/src/orders/producer/outbox_dispatcher.py b/src/orders/producer/outbox_dispatcher.py
+new file mode 100644
+index 0000000..2b108db
+--- /dev/null
++++ b/src/orders/producer/outbox_dispatcher.py
+@@ -0,0 +1,33 @@
++"""Opt-in primary dispatcher; staged integration only, no default activation."""
++import json
++import os
++from pathlib import Path
++import time
++
++
++def live_epoch(path):
++    try:
++        v=json.loads(Path(path).read_text());now=time.time()
++        if v['mode']=='run' and v['region']=='us-east-1' and type(v['epoch']) is int and v['epoch']>0 and now+15<v['expires_at']<=now+300:return v['epoch']
++    except (OSError,ValueError,KeyError,TypeError):pass
++    return None
++
++
++def main():
++    if os.getenv('ORDERS_DURABLE_OUTBOX')!='true':raise ValueError('Explicit outbox opt-in required')
++    if os.getenv('ORDERS_QUEUE_URL')!='https://sqs.us-east-1.amazonaws.com/414053644145/aws-eks-istio-lab-dev-orders-eks':raise ValueError('Reviewed primary queue required')
++    from orders.producer.durable import get_outbox
++    import boto3
++    from botocore.config import Config
++    outbox=get_outbox();sqs=boto3.client('sqs',region_name='us-east-1',config=Config(connect_timeout=2,read_timeout=3,retries={'mode':'standard','total_max_attempts':2}))
++    class Queue:
++        def send_message(self,**args):return sqs.send_message(QueueUrl=os.environ['ORDERS_QUEUE_URL'],**args)
++    control=os.environ['ORDERS_OUTBOX_ACTIVATION_FILE']
++    while True:
++        epoch=live_epoch(control)
++        if epoch:
++            try:outbox.sweep(Queue(),epoch=epoch,lease_live=lambda:live_epoch(control)==epoch)
++            except Exception as error:print(json.dumps({'event':'outbox_retry','error_type':type(error).__name__}),flush=True)
++        time.sleep(2)
++
++if __name__=='__main__':main()
+diff --git a/src/orders/runtime/api.py b/src/orders/runtime/api.py
+index 6eaddc2..17fd5d9 100644
+--- a/src/orders/runtime/api.py
++++ b/src/orders/runtime/api.py
+@@ -21,7 +21,8 @@ from orders.shared.validation import MAX_REQUEST_BYTES
+ 
+ def normalize_request(payload: Any) -> Any:
+     """Support legacy product_id requests and explicit v2 idempotency IDs."""
+-    if isinstance(payload, dict) and "customer_id" in payload and "order_id" not in payload:
++    if (isinstance(payload, dict) and "customer_id" in payload and "order_id" not in payload
++            and os.getenv("ORDERS_DURABLE_OUTBOX") != "true"):
+         payload = {**payload, "order_id": str(uuid.uuid4())}
+     if isinstance(payload, dict) and isinstance(payload.get("items"), list):
+         payload = {**payload, "items": [
+@@ -63,6 +64,12 @@ def main() -> None:
+                 carrier = {k.lower():v for k,v in self.headers.items() if k.lower() in {"traceparent", "tracestate"}}
+                 return self.respond(200, receive_ping("orders-api", carrier))
+             if self.path in {"/health/live", "/health/ready"}:
++                if self.path == "/health/ready" and os.getenv("ORDERS_DURABLE_OUTBOX") == "true":
++                    try:
++                        from orders.producer.durable import get_outbox
++                        get_outbox().store.table.get_item(Key={"order_id":"__outbox_health__"},ConsistentRead=True)
++                    except Exception:
++                        return self.respond(503, {"error":"Durable journal unavailable"})
+                 return self.respond(200, {"status": "ready"})
+             if self.path == "/version":
+                 return self.respond(200, {"service": "orders-api", "version": VERSION, "deployment_strategy": "rolling"})

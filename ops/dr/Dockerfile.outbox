@@ -1,0 +1,16 @@
+FROM python:3.12-slim@sha256:b18b261e1b4974b4f321451ad5251ded85abb22c2b8b262da527dda1d031ab30
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends --only-upgrade apt libapt-pkg7.0 zlib1g \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PYTHONPATH=/app/worker:/app
+COPY ops/dr/outbox-requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+COPY scripts/dr /app/scripts/dr
+COPY docs/dr/status.json /app/docs/dr/status.json
+COPY src/disaster_recovery /app/src/disaster_recovery
+COPY .dr-fixtures/orders-worker/src/orders /app/worker/orders
+LABEL io.cosmotech.worker-source="3db4ff4db75394852ce4714d0796c6e36022e7ae"
+USER 10001:10001
+EXPOSE 8000 9090
+CMD ["python","-m","src.disaster_recovery.runtime","api"]

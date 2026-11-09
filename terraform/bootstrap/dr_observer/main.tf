@@ -93,3 +93,28 @@ resource "aws_iam_role_policy" "operator" {
   ] })
 }
 output "operator_role_arn" { value = try(aws_iam_role.operator[0].arn, null) }
+resource "aws_iam_role" "image_publisher" {
+  count                = var.enabled ? 1 : 0
+  name                 = "cosmotech-dr-image-publisher"
+  max_session_duration = 3600
+  assume_role_policy   = aws_iam_role.observer[0].assume_role_policy
+  tags                 = { Project = "CosmoTech", Environment = "dr", Purpose = "outbox-image-only" }
+}
+resource "aws_iam_role_policy" "image_publisher" {
+  count = var.enabled ? 1 : 0
+  role  = aws_iam_role.image_publisher[0].id
+  policy = jsonencode({ Version = "2012-10-17", Statement = [
+    { Effect = "Allow", Action = ["ecr:GetAuthorizationToken"], Resource = "*" },
+    { Effect = "Allow", Action = ["ecr:BatchCheckLayerAvailability", "ecr:InitiateLayerUpload", "ecr:UploadLayerPart", "ecr:CompleteLayerUpload", "ecr:PutImage", "ecr:DescribeImages", "ecr:BatchGetImage"], Resource = "arn:aws:ecr:us-east-2:414053644145:repository/cosmotech-dr-orders-outbox" },
+    { Effect = "Deny", Action = "*", Resource = "*", Condition = { StringNotEquals = { "aws:RequestedRegion" = "us-east-2" } } }
+  ] })
+}
+resource "aws_iam_role_policy" "observer_outbox_metadata" {
+  count = var.enabled ? 1 : 0
+  role  = aws_iam_role.observer[0].id
+  policy = jsonencode({ Version = "2012-10-17", Statement = [
+    { Effect = "Allow", Action = ["dynamodb:DescribeTable", "dynamodb:DescribeContinuousBackups", "dynamodb:DescribeTimeToLive", "dynamodb:DescribeContributorInsights", "dynamodb:DescribeKinesisStreamingDestination", "dynamodb:ListTagsOfResource"], Resource = "arn:aws:dynamodb:us-east-2:414053644145:table/cosmotech-dr-outbox" },
+    { Effect = "Allow", Action = ["ecr:DescribeRepositories", "ecr:ListTagsForResource"], Resource = "arn:aws:ecr:us-east-2:414053644145:repository/cosmotech-dr-orders-outbox" },
+    { Effect = "Allow", Action = ["backup:GetBackupPlan", "backup:GetBackupSelection", "backup:ListTags"], Resource = "arn:aws:backup:us-east-2:414053644145:backup-plan:*" }
+  ] })
+}

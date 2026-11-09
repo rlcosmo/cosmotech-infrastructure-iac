@@ -25,7 +25,8 @@ variable "enabled" {
     condition = !var.enabled || (
       var.account_release_confirmed && var.advanced_ddb_backup_confirmed &&
       length(var.destination_vault_arn) > 0 && var.budget_usd > 0 &&
-      var.estimate_usd > 0 && var.estimate_usd <= var.budget_usd
+      var.estimate_usd > 0 && var.estimate_usd <= var.budget_usd &&
+      (!var.include_primary_outbox || var.primary_outbox_ready)
     )
     error_message = "Require AWS release, verified advanced DynamoDB backup, destination vault and reviewed budget."
   }
@@ -134,6 +135,16 @@ resource "aws_backup_selection" "orders" {
   name         = "explicit-lab-data-only"
   plan_id      = aws_backup_plan.hourly[0].id
   iam_role_arn = aws_iam_role.backup[0].arn
-  resources    = concat(["arn:aws:dynamodb:us-east-1:414053644145:table/aws-eks-istio-lab-dev-orders-data"], var.volume_arns)
+  resources    = concat(["arn:aws:dynamodb:us-east-1:414053644145:table/aws-eks-istio-lab-dev-orders-data"], var.volume_arns, var.include_primary_outbox ? ["arn:aws:dynamodb:us-east-1:414053644145:table/cosmotech-orders-outbox"] : [])
   depends_on   = [aws_iam_role_policy_attachment.backup, aws_iam_role_policy.safety]
+}
+
+variable "include_primary_outbox" {
+  type    = bool
+  default = false
+}
+variable "primary_outbox_ready" {
+  description = "Verified new source journal ownership/readiness; no implicit creation or role change."
+  type        = bool
+  default     = false
 }

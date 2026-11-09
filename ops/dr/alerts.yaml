@@ -24,3 +24,18 @@ spec:
           for: 2m
           labels: {severity: critical, environment: dr}
           annotations: {summary: "DR synthetic end-to-end probe failed"}
+        - alert: DROutboxPublicationStalled
+          expr: cosmotech_dr_outbox_pending{region="us-east-2"} > 0 and cosmotech_dr_outbox_oldest_pending_age_seconds{region="us-east-2"} > 120
+          for: 2m
+          labels: {severity: critical, environment: dr}
+          annotations: {summary: "Durable accepts remain unpublished; retain journal and recover SQS/publisher"}
+        - alert: DROutboxObservationStale
+          expr: time() - cosmotech_dr_outbox_observed_timestamp_seconds{region="us-east-2"} > 180
+          for: 2m
+          labels: {severity: warning, environment: dr}
+          annotations: {summary: "Outbox observations stale; absent data must not be treated as zero backlog/loss"}
+        - alert: DRUnrecoveredAcknowledgements
+          expr: cosmotech_dr_reconciliation_unrecovered_acknowledgements{region="us-east-2"} > 0
+          for: 1m
+          labels: {severity: critical, environment: dr}
+          annotations: {summary: "Independent receipts identify acknowledgements missing from destination journal"}

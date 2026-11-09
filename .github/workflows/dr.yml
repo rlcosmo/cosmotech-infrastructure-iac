@@ -1,7 +1,7 @@
 name: V2-003 isolated DR validation
 on:
   pull_request:
-    paths: ['terraform/environments/dr/**', 'terraform/environments/dr-backup-source/**', 'terraform/modules/dr_standby/**', 'terraform/bootstrap/dr_observer/**', 'src/disaster_recovery/**', 'scripts/dr/**', 'tests/test_dr*', 'docs/dr/**', 'ops/dr/**', '.github/workflows/dr.yml']
+    paths: ['terraform/environments/dr/**', 'terraform/environments/orders-outbox-source/**', 'terraform/environments/dr-backup-source/**', 'terraform/modules/dr_standby/**', 'terraform/bootstrap/dr_observer/**', 'src/disaster_recovery/**', 'scripts/dr/**', 'tests/test_dr*', 'tests/dr_sdk/**', 'docs/dr/**', 'ops/dr/**', '.github/workflows/dr.yml']
   workflow_dispatch:
     inputs:
       live_plan:
@@ -28,6 +28,27 @@ jobs:
         with: {version: v3.19.0}
       - uses: hashicorp/setup-terraform@v3
         with: {terraform_version: 1.17.1, terraform_wrapper: false}
+      - name: Install isolated SDK test dependencies
+        run: pip install -r ops/dr/outbox-test-requirements.txt
+      - uses: actions/checkout@v4
+        with:
+          repository: rlcosmo/cosmotech-orders-worker
+          ref: 3db4ff4db75394852ce4714d0796c6e36022e7ae
+          path: .dr-fixtures/orders-worker
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: rlcosmo/cosmotech-orders-api
+          ref: 8cf95ca042ee90a8c5697603029d0bb8be4eca62
+          path: .dr-fixtures/orders-api
+          persist-credentials: false
+      - run: python scripts/dr/prepare_primary_integration.py --checkout .dr-fixtures/orders-api
+      - name: Exercise SDK persistence and unchanged worker contract without AWS
+        env:
+          ORDERS_WORKER_SOURCE: ${{ github.workspace }}/.dr-fixtures/orders-worker
+          ORDERS_API_INTEGRATION_SOURCE: ${{ github.workspace }}/.dr-fixtures/orders-api
+          AWS_EC2_METADATA_DISABLED: 'true'
+        run: python -m unittest discover -s tests/dr_sdk -v
       - run: python -m unittest discover -s tests -p 'test_dr*.py' -v
       - run: python scripts/dr/simulate_chaos.py > chaos-simulation.json
       - run: python scripts/dr/render_platform.py --output "$RUNNER_TEMP/dr-platform"
@@ -45,6 +66,10 @@ jobs:
       - run: terraform -chdir=terraform/bootstrap/dr_observer init -backend=false -input=false
       - run: terraform -chdir=terraform/bootstrap/dr_observer validate
       - run: terraform -chdir=terraform/bootstrap/dr_observer test -no-color
+      - run: terraform -chdir=terraform/environments/orders-outbox-source fmt -check -recursive
+      - run: terraform -chdir=terraform/environments/orders-outbox-source init -backend=false -input=false
+      - run: terraform -chdir=terraform/environments/orders-outbox-source validate
+      - run: terraform -chdir=terraform/environments/orders-outbox-source test -no-color
       - uses: actions/upload-artifact@v4
         with:
           name: dr-simulation-only-${{ github.run_id }}

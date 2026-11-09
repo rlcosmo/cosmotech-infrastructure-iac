@@ -103,6 +103,150 @@
         },
         "overrides": []
       }
+    },
+    {
+      "id": 5,
+      "title": "Durable journal pending",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "cosmotech_dr_outbox_pending{region=\"us-east-2\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "UNKNOWN / NOT RECONCILED"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "title": "Oldest unpublished acceptance",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "cosmotech_dr_outbox_oldest_pending_age_seconds{region=\"us-east-2\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "UNKNOWN / NOT RECONCILED"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "title": "SQS visible/inflight",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "cosmotech_dr_sqs_visible{region=\"us-east-2\"} + cosmotech_dr_sqs_inflight{region=\"us-east-2\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "UNKNOWN / NOT RECONCILED"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 8,
+      "title": "Unrecovered acknowledgements",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 18,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "cosmotech_dr_reconciliation_unrecovered_acknowledgements{region=\"us-east-2\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "UNKNOWN / NOT RECONCILED"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 9,
+      "title": "Verified journal loss (unknown until reconciled)",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "cosmotech_dr_journal_loss_count_verified{region=\"us-east-2\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "UNKNOWN / NOT RECONCILED"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 10,
+      "title": "Recovery replay backlog",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 24,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "cosmotech_dr_reconciliation_pending{region=\"us-east-2\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "UNKNOWN / NOT RECONCILED"
+        },
+        "overrides": []
+      }
     }
   ],
   "time": {
