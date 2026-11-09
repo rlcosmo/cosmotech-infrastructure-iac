@@ -36,6 +36,8 @@ def command(args, env, *, cwd=None, timeout=180, codes=(0,)):
         message=result.stderr.decode(errors='replace')+result.stdout.decode(errors='replace')
         diagnostics['denied_actions']=sorted(set(re.findall(r'not authorized to perform:?\s+([a-z0-9-]+:[A-Za-z0-9]+)',message)))
         diagnostics['aws_error_codes']=sorted(set(re.findall(r'(?:api error |An error occurred \()([A-Za-z0-9]+)',message)))
+        diagnostics['aws_operations']=sorted(set(service.replace(' ', '')+':'+operation for service,operation
+            in re.findall(r'operation error ([A-Za-z0-9 ]+): ([A-Za-z0-9]+)',message)))[:20]
         raise ObservationError('command_failed',diagnostics)
     return result.stdout
 

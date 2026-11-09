@@ -129,8 +129,29 @@ jobs:
           test -n "$ITSM_INSTANCE" || { echo 'LAB_V2_ITSM_INSTANCE_ID is required'; exit 1; }
           python3 scripts/run_lab_v2_ssm.py --instance-id "$ITSM_INSTANCE" --document-version "$PUBLICATION_DOCUMENT_VERSION" --document-sha256 "$PUBLICATION_DOCUMENT_SHA256" --mode install
       - name: Validate authenticated services and real metrics
+        id: live-validation
         if: inputs.phase == 'deploy' || inputs.phase == 'bootstrap-apply' || inputs.phase == 'validate'
-        run: python3 scripts/run_lab_v2_ssm.py --instance-id "$ITSM_INSTANCE" --document-version "$PUBLICATION_DOCUMENT_VERSION" --document-sha256 "$PUBLICATION_DOCUMENT_SHA256" --mode validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/run_lab_v2_ssm.py --instance-id "$ITSM_INSTANCE" --document-version "$PUBLICATION_DOCUMENT_VERSION" --document-sha256 "$PUBLICATION_DOCUMENT_SHA256" --mode validate | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Report public service status after publication or validation failure
+        if: failure() && (inputs.phase == 'deploy' || inputs.phase == 'validate' || inputs.phase == 'bootstrap-apply')
+        shell: bash
+        run: |
+          python3 - <<'HEALTH' | tee -a "$GITHUB_STEP_SUMMARY"
+          import json, urllib.request, urllib.error
+          for name, url in [('portal', 'https://kestra.cosmotechsolutions.com.br/iac/'),
+                            ('grafana', 'https://grafana.cosmotechsolutions.com.br/api/health')]:
+              try:
+                  with urllib.request.urlopen(url, timeout=10) as response:
+                      status = response.status
+              except urllib.error.HTTPError as error:
+                  status = error.code
+              except (urllib.error.URLError, TimeoutError, OSError):
+                  status = 'unreachable'
+              print(json.dumps({'public_service': name, 'http_status': status}))
+          HEALTH
       - name: Remove raw state/plan workspace
         if: always()
         shell: bash
