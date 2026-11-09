@@ -12,6 +12,18 @@ ROOT=Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location('v2010_bootstrap',ROOT/'ops/zabbix/v2010/bootstrap.py');bootstrap=importlib.util.module_from_spec(spec);spec.loader.exec_module(bootstrap)
 
 class UpgradeTests(unittest.TestCase):
+    def test_deleted_snapshot_and_aws_denial_cannot_pass_historical_backup_gate(self):
+        spec=importlib.util.spec_from_file_location('upgrade',ROOT/'ops/zabbix/upgrade_v2010.py')
+        upgrade=importlib.util.module_from_spec(spec);spec.loader.exec_module(upgrade)
+        snapshot={'SnapshotId':'snap-0a4278c92060be577','VolumeId':'vol-0cf8b3eaf7cc6ea10','State':'completed','Encrypted':True}
+        with patch.object(upgrade,'run',side_effect=RuntimeError('AWS lookup failed')):
+            with self.assertRaises(RuntimeError):upgrade.verify_live_snapshot(snapshot)
+        for live in [[],[{**snapshot,'State':'pending'}],[{**snapshot,'VolumeId':'vol-other'}],[{**snapshot,'Encrypted':False}]]:
+            with self.subTest(live=live),patch.object(upgrade,'run',return_value=json.dumps({'Snapshots':live}).encode()):
+                with self.assertRaises(ValueError):upgrade.verify_live_snapshot(snapshot)
+        with patch.object(upgrade,'run',return_value=json.dumps({'Snapshots':[snapshot]}).encode()):
+            upgrade.verify_live_snapshot(snapshot)
+
     def test_original_named_data_volumes_and_private_ingestion_are_preserved(self):
         compose=yaml.safe_load((ROOT/'ops/zabbix/docker-compose.yml').read_text())
         self.assertEqual({k:v['name'] for k,v in compose['volumes'].items()},

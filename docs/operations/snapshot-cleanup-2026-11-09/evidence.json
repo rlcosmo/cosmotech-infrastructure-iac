@@ -1,0 +1,505 @@
+{
+  "regions": [
+    {
+      "region": "ap-south-1",
+      "snapshots_before": 0,
+      "images": 0,
+      "vaults": 0,
+      "dlm_policies": 0
+    },
+    {
+      "region": "eu-north-1",
+      "snapshots_before": 0,
+      "images": 0,
+      "vaults": 0,
+      "dlm_policies": 0
+    },
+    {
+      "region": "eu-west-3",
+      "snapshots_before": 0,
+      "images": 0,
+      "vaults": 0,
+      "dlm_policies": 0
+    },
+    {
+      "region": "eu-west-2",
+      "snapshots_before": 0,
+      "images": 0,
+      "vaults": 0,
+      "dlm_policies": 0
+    },
+    {
+      "region": "eu-west-1",
+      "snapshots_before": 0,
+      "images": 0,
+      "vaults": 0,
+      "dlm_policies": 0
+    },
+    {
+      "region": "ap-northeast-3",
+      "snapshots_before": 0,
+      "images": 0,
+      "vaults": 0,
+      "dlm_policies": 0
+    },
+    {
+      "region": "ap-northeast-2",
+      "snapshots_before": 0,
+      "images": 0,
+      "vaults": 0,
+      "dlm_policies": 0
+    },
+    {
+      "region": "ap-northeast-1",
+      "snapshots_before": 0,
+      "images": 0,
+      "vaults": 0,
+      "dlm_policies": 0
+    },
+    {
+      "region": "ca-central-1",
+      "snapshots_before": 0,
+      "images": 0,
+      "vaults": 0,
+      "dlm_policies": 0
+    },
+    {
+      "region": "sa-east-1",
+      "snapshots_before": 0,
+      "images": 0,
+      "vaults": 0,
+      "dlm_policies": 0
+    },
+    {
+      "region": "ap-southeast-1",
+      "snapshots_before": 0,
+      "images": 0,
+      "vaults": 0,
+      "dlm_policies": 0
+    },
+    {
+      "region": "ap-southeast-2",
+      "snapshots_before": 0,
+      "images": 0,
+      "vaults": 0,
+      "dlm_policies": 0
+    },
+    {
+      "region": "eu-central-1",
+      "snapshots_before": 0,
+      "images": 0,
+      "vaults": 0,
+      "dlm_policies": 0
+    },
+    {
+      "region": "us-east-1",
+      "snapshots_before": 59,
+      "images": 19,
+      "vaults": 1,
+      "dlm_policies": 0
+    },
+    {
+      "region": "us-east-2",
+      "snapshots_before": 0,
+      "images": 0,
+      "vaults": 0,
+      "dlm_policies": 0
+    },
+    {
+      "region": "us-west-1",
+      "snapshots_before": 0,
+      "images": 0,
+      "vaults": 0,
+      "dlm_policies": 0
+    },
+    {
+      "region": "us-west-2",
+      "snapshots_before": 0,
+      "images": 0,
+      "vaults": 0,
+      "dlm_policies": 0
+    }
+  ],
+  "snapshot_count_before": 59,
+  "deleted": 33,
+  "preserved": 26,
+  "failed_deletions": [],
+  "preserved_amis": 19,
+  "preserved_ebs_recovery_points": 7,
+  "aws_backup_ebs_recovery_points_deleted": 32,
+  "manual_deleted": "snap-0a4278c92060be577",
+  "rds_native_snapshots": 0,
+  "rds_automated_backups": 0,
+  "dynamodb_native_backups": 0,
+  "dlm_policies": 0,
+  "aws_backup_plans": 1,
+  "preservation": {
+    "all_ebs_volumes_unchanged": true,
+    "volume_count": 19,
+    "all_owned_amis_preserved": true,
+    "ami_count": 19,
+    "ec2_instance_states_unchanged": true,
+    "rds_instances_unchanged": true,
+    "s3_bucket_inventory_unchanged": true,
+    "dynamodb_table_inventories_unchanged": true,
+    "eks_active": true,
+    "terraform_state_object_unchanged": true
+  },
+  "kubernetes_pv_count_preserved": 11,
+  "kubernetes_pvc_count_preserved": 11,
+  "terraform_managed_ebs_snapshot_resources": 0,
+  "policies_changed": false,
+  "retention_proposal_only": true,
+  "cost": {
+    "inventory_snapshots": 59,
+    "eligible": 33,
+    "preserved": 26,
+    "logical_gib_before": 1692,
+    "logical_gib_deleted": 395,
+    "full_copy_gib_before": 532.81591796875,
+    "full_copy_gib_deleted_upper_bound": 116.3134765625,
+    "full_copy_gib_preserved": 416.50244140625,
+    "standard_usd_per_gib_month": 0.05,
+    "monthly_saving_usd_upper_bound": 5.815673828125,
+    "cost_explorer_latest_day": {
+      "TimePeriod": {
+        "Start": "2026-11-08",
+        "End": "2026-11-09"
+      },
+      "Total": {
+        "UnblendedCost": {
+          "Amount": "0.2179145978",
+          "Unit": "USD"
+        },
+        "UsageQuantity": {
+          "Amount": "4.3582919654",
+          "Unit": "GB-Month"
+        }
+      },
+      "Groups": [],
+      "Estimated": true
+    },
+    "monthly_equivalent_prior_day_usd": 6.537437934
+  },
+  "deletion_requests": [
+    {
+      "snapshot_id": "snap-0a4278c92060be577",
+      "at": "2026-11-09T15:33:55.934482+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-02790b038f85c7618",
+      "at": "2026-11-09T15:33:58.573276+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-0ff56d6e38f9fd5b1",
+      "at": "2026-11-09T15:34:01.046914+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-01e3876346b3781d3",
+      "at": "2026-11-09T15:34:03.473095+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-0754d195f9b04d332",
+      "at": "2026-11-09T15:34:05.973431+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-05973eb0aca6e4729",
+      "at": "2026-11-09T15:34:08.540399+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-0aab9f11ee0bb5f1f",
+      "at": "2026-11-09T15:34:10.971614+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-0eb2a341b70df32cf",
+      "at": "2026-11-09T15:34:13.498168+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-0ee6d5ba6ee1ef151",
+      "at": "2026-11-09T15:34:15.974209+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-01977231ad06a039f",
+      "at": "2026-11-09T15:34:18.431872+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-05b3a1b2979453a6e",
+      "at": "2026-11-09T15:34:21.924031+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-023abf98975828904",
+      "at": "2026-11-09T15:34:24.454998+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-0ff3c7ad25c334f53",
+      "at": "2026-11-09T15:34:26.960659+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-0e901bc3ccbedfe3e",
+      "at": "2026-11-09T15:34:29.379450+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-02a087ce8c316d8c5",
+      "at": "2026-11-09T15:34:31.787911+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-0973853469f7f58c1",
+      "at": "2026-11-09T15:34:34.341193+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-0ef0286ec8a183417",
+      "at": "2026-11-09T15:34:36.808316+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-0b6a0766888e57fa5",
+      "at": "2026-11-09T15:34:39.280374+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-04d50f97b28f0ce5e",
+      "at": "2026-11-09T15:34:41.711176+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-0f1e942f10d61e0ed",
+      "at": "2026-11-09T15:34:44.075299+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-07297db788d12f39c",
+      "at": "2026-11-09T15:34:46.485566+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-0a8c1f227f3571e16",
+      "at": "2026-11-09T15:34:48.823240+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-0816d2bd90f9030b6",
+      "at": "2026-11-09T15:34:51.193528+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-0ff6060ea0e6b6ada",
+      "at": "2026-11-09T15:34:53.544674+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-0ae61c4b01034cad8",
+      "at": "2026-11-09T15:34:55.959594+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-0ff3d75bd062141c0",
+      "at": "2026-11-09T15:34:58.624254+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-08f36bfc0f2b583ad",
+      "at": "2026-11-09T15:35:01.074542+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-08e5fc70725f13765",
+      "at": "2026-11-09T15:35:03.557930+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-079ed40c86a51111a",
+      "at": "2026-11-09T15:35:05.985484+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-03177ba8e39ed51eb",
+      "at": "2026-11-09T15:35:08.408774+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-07a2f79c740c88f94",
+      "at": "2026-11-09T15:35:10.923132+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-07075b3bd2265391b",
+      "at": "2026-11-09T15:35:13.364640+00:00",
+      "status": "request_submitted",
+      "response": {}
+    },
+    {
+      "snapshot_id": "snap-075fa4985855185b3",
+      "at": "2026-11-09T15:35:15.809803+00:00",
+      "status": "request_submitted",
+      "response": {}
+    }
+  ],
+  "other_native_backup_inventory": [
+    {
+      "region": "ap-south-1",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "eu-north-1",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "eu-west-3",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "eu-west-2",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "eu-west-1",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "ap-northeast-3",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "ap-northeast-2",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "ap-northeast-1",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "ca-central-1",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "sa-east-1",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "ap-southeast-1",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "ap-southeast-2",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "eu-central-1",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "us-east-1",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "us-east-2",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "us-west-1",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    },
+    {
+      "region": "us-west-2",
+      "elasticache": 0,
+      "fsx": 0,
+      "redshift": 0,
+      "errors": []
+    }
+  ]
+}
