@@ -1,0 +1,77 @@
+{
+  "mode": "render-only",
+  "charts": [
+    {
+      "release": "istio-base",
+      "repository": "https://istio-release.storage.googleapis.com/charts",
+      "chart": "base",
+      "version": "1.30.8",
+      "namespace": "istio-system",
+      "upstream_chart_digest": "1bcfc72b952b59b99dbd3d2fe6388be4ed4fa4e505238164438a0c95a7dd4ff7",
+      "archive_url": "https://istio-release.storage.googleapis.com/charts/base-1.30.8.tgz"
+    },
+    {
+      "release": "istiod",
+      "repository": "https://istio-release.storage.googleapis.com/charts",
+      "chart": "istiod",
+      "version": "1.30.8",
+      "namespace": "istio-system",
+      "upstream_chart_digest": "f14f7c5c41de2d2ec0dde99723f52335e3661b0daca1e400eaa046664f937f36",
+      "archive_url": "https://istio-release.storage.googleapis.com/charts/istiod-1.30.8.tgz"
+    },
+    {
+      "release": "istio-ingress",
+      "repository": "https://istio-release.storage.googleapis.com/charts",
+      "chart": "gateway",
+      "version": "1.30.8",
+      "namespace": "istio-system",
+      "upstream_chart_digest": "2e244b937fe343cb4b3a0632fce0066359de108d7ba784581763b8cdeb6d9178",
+      "archive_url": "https://istio-release.storage.googleapis.com/charts/gateway-1.30.8.tgz"
+    },
+    {
+      "release": "argocd",
+      "repository": "https://argoproj.github.io/argo-helm",
+      "chart": "argo-cd",
+      "version": "10.17.0",
+      "namespace": "argocd",
+      "upstream_chart_digest": "32c2514fb7a66428921b44a204af4e387885f55dc1163d766811186dfaf663b3",
+      "archive_url": "https://github.com/argoproj/argo-helm/releases/download/argo-cd-10.17.0/argo-cd-10.17.0.tgz"
+    },
+    {
+      "release": "monitoring",
+      "repository": "https://prometheus-community.github.io/helm-charts",
+      "chart": "kube-prometheus-stack",
+      "version": "93.1.0",
+      "namespace": "observability",
+      "upstream_chart_digest": "9d727ffda3995720dd66a46c94ee6f18eecf1c8fe560ec47824f9335b05145d2",
+      "archive_url": "https://github.com/prometheus-community/helm-charts/releases/download/kube-prometheus-stack-93.1.0/kube-prometheus-stack-93.1.0.tgz"
+    },
+    {
+      "release": "otel",
+      "repository": "https://open-telemetry.github.io/opentelemetry-helm-charts",
+      "chart": "opentelemetry-collector",
+      "version": "0.178.2",
+      "namespace": "observability",
+      "upstream_chart_digest": "4c9732611ab301e1d5532f62fa0c715c2c89765ee74f88ec1825601b3f172324",
+      "archive_url": "https://github.com/open-telemetry/opentelemetry-helm-charts/releases/download/opentelemetry-collector-0.178.2/opentelemetry-collector-0.178.2.tgz"
+    },
+    {
+      "release": "loki",
+      "repository": "https://grafana.github.io/helm-charts",
+      "chart": "loki",
+      "version": "7.5.0",
+      "namespace": "observability",
+      "upstream_chart_digest": "bb8b254a57afc6b31ab23a6061216760c91c8ad3499d340442398b88ec603ca8",
+      "archive_url": "https://github.com/grafana/helm-charts/releases/download/helm-loki-7.5.0/loki-7.5.0.tgz"
+    },
+    {
+      "release": "tempo",
+      "repository": "https://grafana-community.github.io/helm-charts",
+      "chart": "tempo",
+      "version": "3.2.1",
+      "namespace": "observability",
+      "upstream_chart_digest": "3389c896bd3c8f2a54f054ac00eb1881c34eff2b8e53053e3ad42c9f394925c3",
+      "archive_url": "https://github.com/grafana-community/helm-charts/releases/download/tempo-3.2.1/tempo-3.2.1.tgz"
+    }
+  ]
+}

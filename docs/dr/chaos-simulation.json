@@ -1,0 +1,46 @@
+[
+  {
+    "scenario": "pod-loss",
+    "execution": "simulation-only",
+    "duplicate_effects": 0,
+    "orders_recovered": 10,
+    "fault_blocked_model_ticks": 1,
+    "recovery_model_ticks": 8,
+    "lost_ack_redeliveries": 1,
+    "measured_aws_rto_seconds": null,
+    "measured_aws_rpo_seconds": null
+  },
+  {
+    "scenario": "node-loss",
+    "execution": "simulation-only",
+    "duplicate_effects": 0,
+    "orders_recovered": 10,
+    "fault_blocked_model_ticks": 2,
+    "recovery_model_ticks": 9,
+    "lost_ack_redeliveries": 1,
+    "measured_aws_rto_seconds": null,
+    "measured_aws_rpo_seconds": null
+  },
+  {
+    "scenario": "az-loss",
+    "execution": "simulation-only",
+    "duplicate_effects": 0,
+    "orders_recovered": 10,
+    "fault_blocked_model_ticks": 3,
+    "recovery_model_ticks": 10,
+    "lost_ack_redeliveries": 1,
+    "measured_aws_rto_seconds": null,
+    "measured_aws_rpo_seconds": null
+  },
+  {
+    "scenario": "dependency-outage",
+    "execution": "simulation-only",
+    "duplicate_effects": 0,
+    "orders_recovered": 10,
+    "fault_blocked_model_ticks": 4,
+    "recovery_model_ticks": 11,
+    "lost_ack_redeliveries": 1,
+    "measured_aws_rto_seconds": null,
+    "measured_aws_rpo_seconds": null
+  }
+]

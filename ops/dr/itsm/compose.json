@@ -1,0 +1,102 @@
+{
+  "name": "cosmotech-dr-itsm",
+  "services": {
+    "glpi-db": {
+      "image": "mariadb@sha256:d1891ede5a559f1086f55053bb8cc1569b0298338c4d72d71725a7f74f6ba620",
+      "restart": "no",
+      "environment": {
+        "MARIADB_DATABASE": "glpi",
+        "MARIADB_USER": "glpi",
+        "MARIADB_PASSWORD": "${GLPI_DB_PASSWORD:?required}",
+        "MARIADB_ROOT_PASSWORD": "${GLPI_DB_ROOT_PASSWORD:?required}"
+      },
+      "volumes": [
+        "glpi_db:/var/lib/mysql"
+      ],
+      "networks": [
+        "recovery"
+      ],
+      "mem_limit": "1g"
+    },
+    "kestra-db": {
+      "image": "postgres@sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b",
+      "restart": "no",
+      "environment": {
+        "POSTGRES_DB": "kestra",
+        "POSTGRES_USER": "kestra",
+        "POSTGRES_PASSWORD": "${KESTRA_DB_PASSWORD:?required}"
+      },
+      "volumes": [
+        "kestra_db:/var/lib/postgresql/data"
+      ],
+      "networks": [
+        "recovery"
+      ],
+      "mem_limit": "1g"
+    },
+    "glpi": {
+      "profiles": [
+        "recovery-apps"
+      ],
+      "image": "glpi/glpi@sha256:f1a08a72afa579393e8bda76edbe9adad00591b5a2228d7953cadc7f04e221be",
+      "restart": "no",
+      "environment": {
+        "GLPI_DB_HOST": "glpi-db",
+        "GLPI_DB_PORT": "3306",
+        "GLPI_DB_NAME": "glpi",
+        "GLPI_DB_USER": "glpi",
+        "GLPI_DB_PASSWORD": "${GLPI_DB_PASSWORD:?required}",
+        "GLPI_SKIP_AUTOUPDATE": "true"
+      },
+      "volumes": [
+        "glpi_data:/var/glpi"
+      ],
+      "ports": [
+        "127.0.0.1:8080:80"
+      ],
+      "networks": [
+        "recovery"
+      ],
+      "mem_limit": "1g"
+    },
+    "kestra": {
+      "profiles": [
+        "recovery-apps"
+      ],
+      "image": "kestra/kestra@sha256:ad7602269219ab969e8194a6000e139ad5d5e153556435afb8d2a35a19993ccd",
+      "command": [
+        "server",
+        "standalone",
+        "--worker-thread=2",
+        "--config",
+        "/etc/kestra/application.yaml"
+      ],
+      "restart": "no",
+      "environment": {
+        "JAVA_OPTS": "-Xms256m -Xmx1g"
+      },
+      "volumes": [
+        "kestra_data:/app/storage",
+        "${KESTRA_DR_CONFIG:?sanitized secondary-only config required}:/etc/kestra/application.yaml:ro"
+      ],
+      "ports": [
+        "127.0.0.1:8081:8080"
+      ],
+      "networks": [
+        "recovery"
+      ],
+      "mem_limit": "2g"
+    }
+  },
+  "networks": {
+    "recovery": {
+      "internal": true
+    }
+  },
+  "volumes": {
+    "glpi_db": {},
+    "kestra_db": {},
+    "glpi_data": {},
+    "kestra_data": {}
+  }
+}

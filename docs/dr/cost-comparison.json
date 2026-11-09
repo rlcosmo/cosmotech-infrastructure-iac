@@ -1,0 +1,338 @@
+{
+  "quoted_at": "2026-11-08T23:39:10.897988+00:00",
+  "hours_per_month": 730,
+  "selected_region": "us-east-2",
+  "assumptions": [
+    "3 t3.large On-Demand nodes only when activated; zero nodes standby",
+    "354 GB retained EBS snapshots at each side, 414 GB restored/root EBS when activated",
+    "100 GB recovery S3, 1 GB DynamoDB backup each side; 1 GB restored table active",
+    "5 GB ECR at published $0.10/GB-month; 2 secrets; 2 customer KMS keys at $1/month",
+    "5 GB logs ingested + 5 GB stored; 10 GB/month source transfer at $0.02/GB",
+    "No NAT or load balancer in implemented scope; internal ClusterIP gateway and isolated E2E",
+    "No global table: replicated write capacity cost zero by design, not a free-service claim"
+  ],
+  "optional_clean_itsm_host_ohio_monthly_usd": "65.99",
+  "additional_variable_costs": [
+    "S3/SQS/KMS/Secrets requests",
+    "incremental backup retention/churn beyond assumed 354 GB per side",
+    "restore/read/write and data transfer bursts",
+    "T3 surplus CPU credits",
+    "extra retained node boot volumes after repeated exercises",
+    "external ingress/TLS/DNS/LCU and EC2 ITSM recovery hosts if later added",
+    "taxes; no Free Tier deductions used"
+  ],
+  "public_rate_sources": {
+    "ecr": "https://aws.amazon.com/ecr/pricing/",
+    "kms": "https://aws.amazon.com/kms/pricing/",
+    "eks": "https://aws.amazon.com/eks/pricing/",
+    "transfer": "https://aws.amazon.com/ec2/pricing/on-demand/#Data_Transfer"
+  },
+  "candidates": [
+    {
+      "region": "us-east-2",
+      "compatible": true,
+      "quoted_at": "2026-11-08T23:39:10.897988+00:00",
+      "source": "AWS Price List GetProducts and linked public pricing pages",
+      "monthly_usd": {
+        "eks": "73",
+        "compute": "0",
+        "network_fixed": "0",
+        "storage": "37.9000000000",
+        "dynamodb_replication": "0",
+        "image_replication": "0.50",
+        "secrets_replication": "0.8000000000",
+        "inter_region_transfer": "0.20",
+        "observability": "4.6500000000"
+      },
+      "activated_monthly_usd": {
+        "eks": "73",
+        "compute": "182.2080000000",
+        "network_fixed": "10.95",
+        "storage": "71.2700000000",
+        "dynamodb_replication": "0",
+        "image_replication": "0.50",
+        "secrets_replication": "0.8000000000",
+        "inter_region_transfer": "0.20",
+        "observability": "4.6500000000"
+      },
+      "standby_total_usd": "117.05",
+      "activated_total_usd": "343.58",
+      "rates": {
+        "compute": {
+          "sku": "GY4EP95U8PKCRZ58",
+          "unit": "Hrs",
+          "usd": "0.0832000000",
+          "description": "$0.0832 per On Demand Linux t3.large Instance Hour"
+        },
+        "ebs_gp3": {
+          "sku": "M6UGCCQ3CDJQAA37",
+          "unit": "GB-Mo",
+          "usd": "0.0800000000",
+          "begin": "0",
+          "end": "Inf",
+          "description": "$0.08 per GB-month of General Purpose (gp3) provisioned storage - US East (Ohio)"
+        },
+        "snapshots": {
+          "sku": "EZ8T7N34G3H5Y4ER",
+          "unit": "GB-Mo",
+          "usd": "0.0500000000",
+          "begin": "0",
+          "end": "Inf",
+          "description": "$0.05 per GB-Month of snapshot data stored - US East (Ohio)"
+        },
+        "s3": {
+          "sku": "YPGKVRB2EKTVDJDT",
+          "unit": "GB-Mo",
+          "usd": "0.0230000000",
+          "begin": "0",
+          "end": "51200",
+          "description": "$0.023 per GB - first 50 TB / month of storage used"
+        },
+        "secrets": {
+          "sku": "HHK3AZN6HN5CFDJM",
+          "unit": "Secrets",
+          "usd": "0.4000000000",
+          "begin": "0",
+          "end": "Inf",
+          "description": "$0.40 per Secret"
+        },
+        "log_storage": {
+          "sku": "X7X4WD4A95NDR9U5",
+          "unit": "GB-Mo",
+          "usd": "0.0300000000",
+          "begin": "0",
+          "end": "Inf",
+          "description": "$0.03 per GB-mo of log storage - US East (Ohio)"
+        },
+        "log_ingestion": {
+          "sku": "5T6Z6V26DSR7SZ49",
+          "unit": "GB",
+          "usd": "0.5000000000",
+          "begin": "0",
+          "end": "Inf",
+          "description": "$0.50 per GB custom log data ingested in Standard log class - US East (Ohio)"
+        },
+        "ddb_storage": {
+          "sku": "GAHPNMT39TQ47AGG",
+          "unit": "GB-Mo",
+          "usd": "0.2500000000",
+          "begin": "25",
+          "end": "Inf",
+          "description": "$0.25 per GB-Month of storage used beyond first 25 free GB-Months"
+        },
+        "backup_ddb": {
+          "sku": "3ZJ44CK7N6STNWD6",
+          "unit": "GB-month",
+          "usd": "0.1000000000",
+          "begin": "0",
+          "end": "Inf",
+          "description": "$0.1 per GB-month for warm backup storage for DynamoDB"
+        }
+      }
+    },
+    {
+      "region": "us-west-2",
+      "compatible": true,
+      "quoted_at": "2026-11-08T23:39:10.897988+00:00",
+      "source": "AWS Price List GetProducts and linked public pricing pages",
+      "monthly_usd": {
+        "eks": "73",
+        "compute": "0",
+        "network_fixed": "0",
+        "storage": "37.9000000000",
+        "dynamodb_replication": "0",
+        "image_replication": "0.50",
+        "secrets_replication": "0.8000000000",
+        "inter_region_transfer": "0.20",
+        "observability": "4.6500000000"
+      },
+      "activated_monthly_usd": {
+        "eks": "73",
+        "compute": "182.2080000000",
+        "network_fixed": "10.95",
+        "storage": "71.2700000000",
+        "dynamodb_replication": "0",
+        "image_replication": "0.50",
+        "secrets_replication": "0.8000000000",
+        "inter_region_transfer": "0.20",
+        "observability": "4.6500000000"
+      },
+      "standby_total_usd": "117.05",
+      "activated_total_usd": "343.58",
+      "rates": {
+        "compute": {
+          "sku": "JZMQ5VQSSPBWHNHH",
+          "unit": "Hrs",
+          "usd": "0.0832000000",
+          "description": "$0.0832 per On Demand Linux t3.large Instance Hour"
+        },
+        "ebs_gp3": {
+          "sku": "BB8UJWJ4XPFJB95G",
+          "unit": "GB-Mo",
+          "usd": "0.0800000000",
+          "begin": "0",
+          "end": "Inf",
+          "description": "$0.08 per GB-month of General Purpose (gp3) provisioned storage - US West (Oregon)"
+        },
+        "snapshots": {
+          "sku": "CNYETXBBP73CTYPG",
+          "unit": "GB-Mo",
+          "usd": "0.0500000000",
+          "begin": "0",
+          "end": "Inf",
+          "description": "$0.05 per GB-Month of snapshot data stored - US West (Oregon)"
+        },
+        "s3": {
+          "sku": "Z3FQZG73HYSPVABR",
+          "unit": "GB-Mo",
+          "usd": "0.0230000000",
+          "begin": "0",
+          "end": "51200",
+          "description": "$0.023 per GB - first 50 TB / month of storage used"
+        },
+        "secrets": {
+          "sku": "DWJP9S4V3HP98UNC",
+          "unit": "Secrets",
+          "usd": "0.4000000000",
+          "begin": "0",
+          "end": "Inf",
+          "description": "$0.40 per Secret"
+        },
+        "log_storage": {
+          "sku": "MN45SJANDTCPR9QA",
+          "unit": "GB-Mo",
+          "usd": "0.0300000000",
+          "begin": "0",
+          "end": "Inf",
+          "description": "$0.03 per GB-mo of log storage - US West (Oregon)"
+        },
+        "log_ingestion": {
+          "sku": "CWY7X4MZ4F3MP5SD",
+          "unit": "GB",
+          "usd": "0.5000000000",
+          "begin": "0",
+          "end": "Inf",
+          "description": "$0.50 per GB custom log data ingested in Standard log class - US West (Oregon)"
+        },
+        "ddb_storage": {
+          "sku": "UNCJFSHZ2ZQGDPJV",
+          "unit": "GB-Mo",
+          "usd": "0.2500000000",
+          "begin": "25",
+          "end": "Inf",
+          "description": "$0.25 per GB-Month of storage used beyond first 25 free GB-Months"
+        },
+        "backup_ddb": {
+          "sku": "VFSX7PYMCPRZPBBN",
+          "unit": "GB-month",
+          "usd": "0.1000000000",
+          "begin": "0",
+          "end": "Inf",
+          "description": "$0.1 per GB-month for warm backup storage for DynamoDB"
+        }
+      }
+    },
+    {
+      "region": "sa-east-1",
+      "compatible": true,
+      "quoted_at": "2026-11-08T23:39:10.897988+00:00",
+      "source": "AWS Price List GetProducts and linked public pricing pages",
+      "monthly_usd": {
+        "eks": "73",
+        "compute": "0",
+        "network_fixed": "0",
+        "storage": "46.0720000000",
+        "dynamodb_replication": "0",
+        "image_replication": "0.50",
+        "secrets_replication": "0.8000000000",
+        "inter_region_transfer": "0.20",
+        "observability": "6.7040000000"
+      },
+      "activated_monthly_usd": {
+        "eks": "73",
+        "compute": "294.3360000000",
+        "network_fixed": "10.95",
+        "storage": "109.3750000000",
+        "dynamodb_replication": "0",
+        "image_replication": "0.50",
+        "secrets_replication": "0.8000000000",
+        "inter_region_transfer": "0.20",
+        "observability": "6.7040000000"
+      },
+      "standby_total_usd": "127.28",
+      "activated_total_usd": "495.86",
+      "rates": {
+        "compute": {
+          "sku": "E87H92C56AN7QPDZ",
+          "unit": "Hrs",
+          "usd": "0.1344000000",
+          "description": "$0.1344 per On Demand Linux t3.large Instance Hour"
+        },
+        "ebs_gp3": {
+          "sku": "FJRJF7DYJ65UXC5J",
+          "unit": "GB-Mo",
+          "usd": "0.1520000000",
+          "begin": "0",
+          "end": "Inf",
+          "description": "$0.152 per GB-month of General Purpose (gp3) provisioned storage - South America (Sao Paulo)"
+        },
+        "snapshots": {
+          "sku": "TCBN9ZYU44F47739",
+          "unit": "GB-Mo",
+          "usd": "0.0680000000",
+          "begin": "0",
+          "end": "Inf",
+          "description": "$0.068 per GB-Month of snapshot data stored - South America (Sao Paulo)"
+        },
+        "s3": {
+          "sku": "ZNX83R5ZU4NXKACG",
+          "unit": "GB-Mo",
+          "usd": "0.0405000000",
+          "begin": "0",
+          "end": "51200",
+          "description": "$0.0405 per GB - first 50 TB / month of storage used"
+        },
+        "secrets": {
+          "sku": "ZXGGBMZPUVET5XER",
+          "unit": "Secrets",
+          "usd": "0.4000000000",
+          "begin": "0",
+          "end": "Inf",
+          "description": "$0.40 per Secret"
+        },
+        "log_storage": {
+          "sku": "A2U5G2V8PAN8BBGE",
+          "unit": "GB-Mo",
+          "usd": "0.0408000000",
+          "begin": "0",
+          "end": "Inf",
+          "description": "$0.0408 per GB-mo of log storage - South America (Sao Paulo)"
+        },
+        "log_ingestion": {
+          "sku": "AW4EB5RGNN8S75Q8",
+          "unit": "GB",
+          "usd": "0.9000000000",
+          "begin": "0",
+          "end": "Inf",
+          "description": "$0.90 per GB custom log data ingested in Standard log class - South America (Sao Paulo)"
+        },
+        "ddb_storage": {
+          "sku": "XFGEC4CX3KPPC6Z8",
+          "unit": "GB-Mo",
+          "usd": "0.3750000000",
+          "begin": "25",
+          "end": "Inf",
+          "description": "$0.375 per GB-Month of storage used beyond first 25 free GB-Months"
+        },
+        "backup_ddb": {
+          "sku": "DK5MVDFH9XFEHJX8",
+          "unit": "GB-month",
+          "usd": "0.1500000000",
+          "begin": "0",
+          "end": "Inf",
+          "description": "$0.15 per GB-month for warm backup storage for DynamoDB"
+        }
+      }
+    }
+  ]
+}

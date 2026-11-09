@@ -1,0 +1,122 @@
+{
+  "quoted_at": "2026-11-08T23:39:10.897988+00:00",
+  "source": "AWS Price List GetProducts + EC2/EKS read-only APIs",
+  "candidates": [
+    {
+      "region": "us-east-2",
+      "compute": [
+        {
+          "sku": "GY4EP95U8PKCRZ58",
+          "unit": "Hrs",
+          "usd": "0.0832000000",
+          "description": "$0.0832 per On Demand Linux t3.large Instance Hour"
+        }
+      ],
+      "pricing_error": null,
+      "offerings": {
+        "InstanceTypeOfferings": [
+          {
+            "InstanceType": "t3.large",
+            "LocationType": "availability-zone",
+            "Location": "us-east-2b"
+          },
+          {
+            "InstanceType": "t3.large",
+            "LocationType": "availability-zone",
+            "Location": "us-east-2a"
+          },
+          {
+            "InstanceType": "t3.large",
+            "LocationType": "availability-zone",
+            "Location": "us-east-2c"
+          }
+        ]
+      },
+      "eks": [
+        "1.37",
+        "1.36",
+        "1.35",
+        "1.34"
+      ]
+    },
+    {
+      "region": "us-west-2",
+      "compute": [
+        {
+          "sku": "JZMQ5VQSSPBWHNHH",
+          "unit": "Hrs",
+          "usd": "0.0832000000",
+          "description": "$0.0832 per On Demand Linux t3.large Instance Hour"
+        }
+      ],
+      "pricing_error": null,
+      "offerings": {
+        "InstanceTypeOfferings": [
+          {
+            "InstanceType": "t3.large",
+            "LocationType": "availability-zone",
+            "Location": "us-west-2b"
+          },
+          {
+            "InstanceType": "t3.large",
+            "LocationType": "availability-zone",
+            "Location": "us-west-2d"
+          },
+          {
+            "InstanceType": "t3.large",
+            "LocationType": "availability-zone",
+            "Location": "us-west-2c"
+          },
+          {
+            "InstanceType": "t3.large",
+            "LocationType": "availability-zone",
+            "Location": "us-west-2a"
+          }
+        ]
+      },
+      "eks": [
+        "1.37",
+        "1.36",
+        "1.35",
+        "1.34"
+      ]
+    },
+    {
+      "region": "sa-east-1",
+      "compute": [
+        {
+          "sku": "E87H92C56AN7QPDZ",
+          "unit": "Hrs",
+          "usd": "0.1344000000",
+          "description": "$0.1344 per On Demand Linux t3.large Instance Hour"
+        }
+      ],
+      "pricing_error": null,
+      "offerings": {
+        "InstanceTypeOfferings": [
+          {
+            "InstanceType": "t3.large",
+            "LocationType": "availability-zone",
+            "Location": "sa-east-1c"
+          },
+          {
+            "InstanceType": "t3.large",
+            "LocationType": "availability-zone",
+            "Location": "sa-east-1b"
+          },
+          {
+            "InstanceType": "t3.large",
+            "LocationType": "availability-zone",
+            "Location": "sa-east-1a"
+          }
+        ]
+      },
+      "eks": [
+        "1.37",
+        "1.36",
+        "1.35",
+        "1.34"
+      ]
+    }
+  ]
+}
