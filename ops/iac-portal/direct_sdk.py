@@ -8,7 +8,7 @@ READ_OPERATIONS = {
  ('efs','describe-file-systems'),('fsx','describe-file-systems'),
  ('autoscaling','describe-auto-scaling-groups'),('rds','describe-db-instances'),
  ('elbv2','describe-load-balancers'),('ecr','describe-repositories'),('lambda','list-functions'),
- ('dynamodb','list-tables'),('eks','list-clusters'),('eks','list-nodegroups'),('eks','describe-nodegroup'),
+ ('dynamodb','list-tables'),('eks','list-clusters'),('eks','list-nodegroups'),('eks','describe-nodegroup'),('eks','describe-cluster'),
  ('sqs','list-queues'),('configservice','describe-configuration-recorder-status'),
  ('configservice','select-resource-config'),('resource-explorer-2','search'),
  ('s3api','list-buckets'),('s3api','get-bucket-location'),
@@ -89,6 +89,42 @@ class InventorySdk:
         except self._errors:
             # Boundary fallback: caller records unavailable coverage, never an empty result.
             raise RuntimeError('AWS metadata operation unavailable') from None
+
+    def kubernetes_storage(self,region,cluster):
+        """IAM-authenticated GETs only; uses the CA from EKS, never local kubeconfig."""
+        import base64
+        import json
+        import ssl
+        import urllib.parse
+        import urllib.request
+        from botocore.awsrequest import AWSRequest
+        from botocore.auth import SigV4QueryAuth
+        details=self(region,'eks','describe-cluster','--name',cluster)['cluster']
+        endpoint=details['endpoint'];parsed=urllib.parse.urlsplit(endpoint)
+        if parsed.scheme!='https' or parsed.username or parsed.query or parsed.path not in {'','/'}:
+            raise ValueError('Invalid EKS endpoint')
+        # self(region,...) initializes this thread's session with temporary observer credentials.
+        credentials=self._local.session.get_credentials().get_frozen_credentials()
+        request=AWSRequest(method='GET',url=f'https://sts.{region}.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15',headers={'x-k8s-aws-id':cluster})
+        SigV4QueryAuth(credentials,'sts',region,expires=60).add_auth(request)
+        token='k8s-aws-v1.'+base64.urlsafe_b64encode(request.url.encode()).decode().rstrip('=')
+        context=ssl.create_default_context(cadata=base64.b64decode(details['certificateAuthority']['data']).decode())
+        result={'endpoint':endpoint}
+        # Kubernetes list pagination is bounded; an incomplete list is never accepted.
+        for key,path in [('pvs','/api/v1/persistentvolumes'),('pvcs','/api/v1/persistentvolumeclaims')]:
+            rows=[];continuation=''
+            for _ in range(50):
+                query=urllib.parse.urlencode({'limit':500,'continue':continuation})
+                req=urllib.request.Request(endpoint.rstrip('/')+path+'?'+query,headers={'Authorization':'Bearer '+token})
+                with urllib.request.urlopen(req,context=context,timeout=10) as response:
+                    raw=response.read(8388609)
+                if len(raw)>8388608:raise ValueError('Kubernetes response exceeds budget')
+                payload=json.loads(raw);rows.extend(payload['items'])
+                continuation=payload.get('metadata',{}).get('continue','')
+                if not continuation:break
+            else:raise ValueError('Incomplete Kubernetes inventory')
+            result[key]=rows
+        return result
 
     def close(self):
         for client in self._clients:client.close()

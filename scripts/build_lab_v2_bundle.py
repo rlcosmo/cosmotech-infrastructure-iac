@@ -7,7 +7,7 @@ import tarfile
 root = Path(__file__).resolve().parents[1]
 source = root / 'ops/iac-portal'
 files = ('publication_runtime.py', 'portal_server.py', 'index.html', 'v2-sqs-workers.json',
-         'lab_monitoring.py', 'sqs_canary_metrics.py', 'direct_observer.py', 'direct_inventory.py', 'direct_comparison.py', 'direct_sdk.py')
+         'lab_monitoring.py', 'sqs_canary_metrics.py', 'direct_observer.py', 'direct_inventory.py', 'direct_comparison.py', 'direct_sdk.py', 'gitops_bindings.py')
 buffer = io.BytesIO()
 with tarfile.open(fileobj=buffer, mode='w') as archive:
     for name in files:

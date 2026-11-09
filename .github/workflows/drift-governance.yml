@@ -1,0 +1,27 @@
+name: V2-007 read-only drift governance
+on:
+  pull_request:
+    paths: ['ops/iac-portal/**', 'scripts/build_lab_v2_bundle.py', 'tests/test_drift_governance.py', 'tests/test_governance_kubernetes.py', '.github/workflows/drift-governance.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  governance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install boto3==1.43.122 botocore==1.43.122 PyYAML==6.0.3
+      - run: python -m unittest discover -s tests -v
+        env:
+          AWS_EC2_METADATA_DISABLED: 'true'
+      - run: python scripts/build_lab_v2_bundle.py
+      - name: Validate portal JavaScript syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html=Path('ops/iac-portal/index.html').read_text()
+          Path('/tmp/portal.js').write_text(html.split('<script>')[1].split('</script>')[0])
+          PY
+          node --check /tmp/portal.js

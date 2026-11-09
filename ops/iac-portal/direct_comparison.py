@@ -75,11 +75,11 @@ def compare(plan, discovered, source, region='us-east-1'):
             if identifier.startswith('arn:'):owned.add(identifier)
             typed.add((kind,resource_region,identifier))
         if status!='extra':
-            inherited_ids |= identifiers
+            inherited_ids |= {(resource_region,i) for i in identifiers}
             if before and resource['type']=='aws_autoscaling_group':
-                inherited_ids.add(before.get('name',''))
+                inherited_ids.add((resource_region,before.get('name','')))
             if resource['type']=='aws_eks_node_group':
-                inherited_ids |= {after.get('node_group_name'),before.get('node_group_name')}-{None}
+                inherited_ids |= {(resource_region,i) for i in {after.get('node_group_name'),before.get('node_group_name')}-{None}}
         for block in ('root_block_device','ebs_block_device'):
             for entry in before.get(block,[]) or []:
                 if isinstance(entry,dict) and entry.get('volume_id'):
@@ -87,7 +87,7 @@ def compare(plan, discovered, source, region='us-east-1'):
         row={'address':address,'kind':kind,'region':resource_region,'id':str(identity),
              'name':str(values.get('name') or values.get('bucket') or values.get('node_group_name') or
                         (values.get('tags') or {}).get('Name') or identity),
-             'status':status,'origin':'git_terraform','changed_fields':changed_paths(before,after,detail.get('before_sensitive'),detail.get('after_sensitive')) if status=='different' else []}
+             'status':status,'origin':'git_terraform','management':'terraform','reason':'Evaluated canonical Terraform configuration and refreshed state','changed_fields':changed_paths(before,after,detail.get('before_sensitive'),detail.get('after_sensitive')) if status=='different' else []}
         if status=='missing' and not before:
             natural=next((after[k] for k in ['bucket','name','function_name','node_group_name'] if isinstance(after.get(k),str)),None)
             if natural:
@@ -117,12 +117,13 @@ def compare(plan, discovered, source, region='us-east-1'):
         pending.append(asset)
     # EKS-managed ASG -> EC2 instances are derived resources only when the actual parent is in Git.
     while True:
-        derived=[a for a in pending if a.get('platform') and inherited_ids.intersection(a.get('parents',[]))]
+        derived=[a for a in pending if a.get('platform') and inherited_ids.intersection((a['region'],p) for p in a.get('parents',[]))]
         if not derived:break
         for asset in derived:
             rows.append({**{k:asset.get(k) for k in ['kind','id','name','region']},'address':None,
-                         'status':'service_managed','origin':'aws_inventory','changed_fields':[]})
-            inherited_ids |= {asset['id'],asset.get('arn'),asset.get('name')}-{None}
+                         'status':'service_managed','origin':'aws_inventory','management':'aws_managed',
+                         'reason':'Derived from a Terraform-owned parent in the same region','parents':asset.get('parents',[]),'changed_fields':[]})
+            inherited_ids |= {(asset['region'],i) for i in {asset['id'],asset.get('arn'),asset.get('name')}-{None}}
             seen.add((asset['kind'],asset['region'],asset['id']))
             pending.remove(asset)
     for asset in pending:
@@ -130,10 +131,46 @@ def compare(plan, discovered, source, region='us-east-1'):
         if key in seen:continue
         seen.add(key)
         rows.append({**{k:asset.get(k) for k in ['kind','id','name','region']},'address':None,
-                     'status':'extra','origin':'aws_inventory','changed_fields':[]})
+                     'origin':'aws_inventory','changed_fields':[],**govern(asset,discovered)})
     counts=Counter(row['status'] for row in rows)
+    regional={r:dict(Counter(row['status'] for row in rows if row['region']==r)) for r in sorted({row['region'] for row in rows})}
     return {'schema_version':2,'source':source,'observed_at':datetime.now(timezone.utc).isoformat(),
-            'state':'ready','resources':rows,'summary':dict(counts),
+            'state':'ready','resources':rows,'summary':dict(counts),'regional_summary':regional,
+            'management_summary':dict(Counter(row['management'] for row in rows)),
+            'orphan_candidate_count':sum(row.get('orphan_candidate',False) for row in rows),
             'drift_count':sum(counts[k] for k in ['extra','missing','different']),
             'coverage':discovered.get('coverage',[]),'regions':discovered.get('regions',[]),
             'inventory_complete':False,'coverage_note':'Recursos gerenciados: avaliação Terraform. Descoberta AWS: tipos cobertos pelas APIs, Config e Resource Explorer; cobertura global não presumida.'}
+
+
+def govern(asset, discovered):
+    """Explain ownership, without equating a tag or missing parent with deletion safety."""
+    kind=asset['kind'];region=asset['region'];identifier=asset['id']
+    meta=asset.get('metadata') or {};tags=meta.get('tags') or {}
+    base={'status':'extra','management':'unmanaged','orphan_candidate':False,
+          'reason':'No matching evaluated Terraform owner; external ownership remains unverified'}
+    if kind=='AWS::EC2::Snapshot':
+        if tags.get('aws:dlm:lifecycle-policy-id') or tags.get('aws:backup:source-resource'):
+            return {**base,'status':'service_managed','management':'aws_managed',
+                    'reason':'AWS system tag identifies an automated recovery artifact; retained in inventory, not Terraform drift'}
+        # Manual snapshots are not orphaned just because their source volume no longer exists.
+        return {**base,'reason':'Snapshot has no verified automation owner; source volume absence does not prove an orphan'}
+    if kind=='AWS::EC2::Volume':
+        csi=tags.get('ebs.csi.aws.com/cluster')=='true' or tags.get('CSIVolumeName') or tags.get('kubernetes.io/created-for/pvc/name')
+        # A binding is supplied only by a verified read-only Kubernetes/GitOps collector.
+        # Match physical volume ID + region, not Name/PVC-name alone.
+        bindings=[b for b in discovered.get('gitops_bindings',[]) if b.get('volume_id')==identifier and b.get('region')==region
+                  and b.get('verified') is True and b.get('repository')=='https://github.com/rlcosmo/cosmotech-gitops'
+                  and isinstance(b.get('commit'),str) and len(b['commit'])==40 and all(c in '0123456789abcdef' for c in b['commit'])
+                  and b.get('pv') and b.get('pvc') and b.get('namespace')]
+        if len(bindings)==1:
+            return {**base,'status':'service_managed','management':'gitops',
+                    'reason':'Physical volume matched to verified PV/PVC and canonical GitOps revision'}
+        if csi:
+            return {**base,'status':'needs_review','management':'unknown',
+                    'reason':'CSI/PVC ownership marker found; Kubernetes and GitOps binding not verified. Retained/detached PVC is not an orphan'}
+        complete=any(c.get('region')==region and c.get('kind')==kind and c.get('status')=='observed' for c in discovered.get('coverage',[]))
+        if meta.get('state')=='available' and meta.get('attachments')==[] and complete:
+            return {**base,'orphan_candidate':True,
+                    'reason':'Unattached unmanaged volume candidate; retention, backups and Kubernetes must be reviewed before any action'}
+    return base
