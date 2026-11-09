@@ -109,7 +109,7 @@ def reconcile(api,secret,allowed_hosts='127.0.0.1,::1'):
     macro='{$COSMOTECH.V2010.WEBHOOK.TOKEN}'
     for h in [host]+[r['hostid'] for r in api.call('host.get',{'filter':{'host':['cosmotech-apm-orders-api','cosmotech-apm-orders-worker']},'output':['hostid']})]:
         api.upsert('usermacro','hostmacroid',{'macro':macro},{'hostid':h,'macro':macro,'value':secret['ingest_token'],'type':1},hostids=[h])
-    media=api.upsert('mediatype','mediatypeid',{'name':PREFIX+' notification webhook'},{'name':PREFIX+' notification webhook','type':4,'script':js,'parameters':[{'name':k,'value':v} for k,v in {'url':'http://notifications:8094/events','token':macro,'event_id':'{EVENT.ID}','event_value':'{EVENT.VALUE}','tags':'{EVENT.TAGSJSON}','severity':'{EVENT.NSEVERITY}'}.items()]})
+    media=api.upsert('mediatype','mediatypeid',{'name':PREFIX+' notification webhook'},{'name':PREFIX+' notification webhook','type':4,'status':0,'script':js,'parameters':[{'name':k,'value':v} for k,v in {'url':'http://notifications:8094/events','token':macro,'event_id':'{EVENT.ID}','event_value':'{EVENT.VALUE}','tags':'{EVENT.TAGSJSON}','severity':'{EVENT.NSEVERITY}'}.items()]})
     users=api.call('user.get',{'filter':{'username':'cosmotech-v2010-notifier'},'output':['userid']})
     usergroup=api.upsert('usergroup','usrgrpid',{'name':PREFIX+' notification service'},{'name':PREFIX+' notification service','gui_access':3,'hostgroup_rights':[{'id':group,'permission':2}]})
     media_entry={'mediatypeid':media,'sendto':['lab'],'active':0,'severity':63,'period':'1-7,00:00-24:00'}

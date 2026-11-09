@@ -60,7 +60,8 @@ def scenario(name,duration,live=False):
             compose('--profile','v2010-lab','up','-d','--no-deps','lab-agent');agent_created=True
             for _ in range(15):
                 try:
-                    if '[u|1]' in compose('exec','-T','lab-agent','zabbix_agent2','-t','agent.ping'):break
+                    result=compose('exec','-T','lab-agent','zabbix_agent2','-t','agent.ping')
+                    if any(value in result for value in ('[u|1]','[s|1]')):break
                 except RuntimeError:pass
                 time.sleep(1)
             else:raise RuntimeError('Isolated Agent 2 did not become ready')
