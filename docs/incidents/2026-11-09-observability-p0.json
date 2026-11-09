@@ -1,0 +1,477 @@
+{
+  "incident": "P0 observability",
+  "recovery_completed": false,
+  "nodes_by_az": {
+    "us-east-1b": {
+      "Ready": 2,
+      "NotReady": 0
+    },
+    "us-east-1a": {
+      "Ready": 0,
+      "NotReady": 0
+    }
+  },
+  "nodegroup": {
+    "status": "DEGRADED",
+    "scaling": {
+      "minSize": 1,
+      "maxSize": 3,
+      "desiredSize": 3
+    },
+    "types": [
+      "c7i-flex.large"
+    ],
+    "capacity": "SPOT",
+    "health": {
+      "issues": [
+        {
+          "code": "AsgInstanceLaunchFailures",
+          "message": "You've reached your quota for maximum Fleet Requests for this account. Launching EC2 instance failed.",
+          "resourceIds": [
+            "eks-aws-eks-istio-lab-dev-spot-named-bad0cf4b-28ee-4bc2-4ca2-dc5b8a1e9e33"
+          ]
+        }
+      ]
+    },
+    "resources": {
+      "autoScalingGroups": [
+        {
+          "name": "eks-aws-eks-istio-lab-dev-spot-named-bad0cf4b-28ee-4bc2-4ca2-dc5b8a1e9e33"
+        }
+      ]
+    }
+  },
+  "asg_failures": [
+    {
+      "Time": "2026-11-09T15:10:42.424000+00:00",
+      "Status": "Failed",
+      "Description": "Launching a new EC2 instance.  Status Reason: You've reached your quota for maximum Fleet Requests for this account. Launching EC2 instance failed.",
+      "Message": "You've reached your quota for maximum Fleet Requests for this account. Launching EC2 instance failed."
+    },
+    {
+      "Time": "2026-11-09T14:38:42.246000+00:00",
+      "Status": "Failed",
+      "Description": "Launching a new EC2 instance.  Status Reason: You've reached your quota for maximum Fleet Requests for this account. Launching EC2 instance failed.",
+      "Message": "You've reached your quota for maximum Fleet Requests for this account. Launching EC2 instance failed."
+    },
+    {
+      "Time": "2026-11-09T14:06:41.831000+00:00",
+      "Status": "Failed",
+      "Description": "Launching a new EC2 instance.  Status Reason: You've reached your quota for maximum Fleet Requests for this account. Launching EC2 instance failed.",
+      "Message": "You've reached your quota for maximum Fleet Requests for this account. Launching EC2 instance failed."
+    },
+    {
+      "Time": "2026-11-09T13:34:41.610000+00:00",
+      "Status": "Failed",
+      "Description": "Launching a new EC2 instance.  Status Reason: You've reached your quota for maximum Fleet Requests for this account. Launching EC2 instance failed.",
+      "Message": "You've reached your quota for maximum Fleet Requests for this account. Launching EC2 instance failed."
+    },
+    {
+      "Time": "2026-11-09T13:02:41.443000+00:00",
+      "Status": "Failed",
+      "Description": "Launching a new EC2 instance.  Status Reason: You've reached your quota for maximum Fleet Requests for this account. Launching EC2 instance failed.",
+      "Message": "You've reached your quota for maximum Fleet Requests for this account. Launching EC2 instance failed."
+    }
+  ],
+  "quotas": {
+    "L-34B43A08": 0,
+    "L-1216C47A": 0
+  },
+  "volumes": [
+    {
+      "claim": "storage-tempo-0",
+      "pv": "pvc-418ecba8-550c-46cc-9180-d204ca98106e",
+      "ebs": "vol-091bf80370bf3410f",
+      "az": "us-east-1a",
+      "pvc_status": "Bound",
+      "reclaim_policy": "Retain",
+      "ec2_volume_state": "available",
+      "attachments": 0,
+      "encrypted": true
+    },
+    {
+      "claim": "prometheus-prometheus-kube-prometheus-prometheus-db-prometheus-prometheus-kube-prometheus-prometheus-0",
+      "pv": "pvc-4455891c-7f38-45bd-a63e-d81cad53af23",
+      "ebs": "vol-02c4cccd0b6088ca3",
+      "az": "us-east-1a",
+      "pvc_status": "Bound",
+      "reclaim_policy": "Retain",
+      "ec2_volume_state": "available",
+      "attachments": 0,
+      "encrypted": true
+    },
+    {
+      "claim": "grafana-data",
+      "pv": "pvc-bd4cc904-d502-43e2-a264-8c782c162e25",
+      "ebs": "vol-0d46fc5d30780ca02",
+      "az": "us-east-1a",
+      "pvc_status": "Bound",
+      "reclaim_policy": "Retain",
+      "ec2_volume_state": "available",
+      "attachments": 0,
+      "encrypted": true
+    }
+  ],
+  "https": [
+    {
+      "host": "grafana.cosmotechsolutions.com.br",
+      "path": "/login",
+      "at": 1794237632,
+      "tls_verified": true,
+      "tls_expires": "May 19 23:54:24 2027 GMT",
+      "http": 503,
+      "body": "no healthy upstream"
+    },
+    {
+      "host": "prometheus-aws-eks-istio-lab-dev.cosmotechsolutions.com.br",
+      "path": "/api/v1/rules",
+      "at": 1794237633,
+      "tls_verified": true,
+      "tls_expires": "May 19 23:54:24 2027 GMT",
+      "http": 503,
+      "body": "no healthy upstream"
+    },
+    {
+      "host": "tempo.cosmotechsolutions.com.br",
+      "path": "/ready",
+      "at": 1794237635,
+      "tls_verified": true,
+      "tls_expires": "May 19 23:54:24 2027 GMT",
+      "http": 503,
+      "body": "no healthy upstream"
+    }
+  ],
+  "collector": {
+    "ready": true,
+    "health_http": 200,
+    "eks_tcp_4317": true,
+    "eks_tcp_4318": true,
+    "accepted_metric_points_delta": 56,
+    "sent_zabbix_metric_points_delta": 56,
+    "sent_tempo_spans_delta": 0,
+    "tempo_connection_error": "connect: connection refused",
+    "tempo_dropped_spans_in_sample": 4
+  },
+  "rules": {
+    "installed": [
+      "CosmoTechSQSEvidenceUnavailable",
+      "CosmoTechSQSBacklog",
+      "CosmoTechSQSOldMessages",
+      "CosmoTechSQSDLQ",
+      "CosmoTechWorkerFailures",
+      "CosmoTechWorkerRetries",
+      "CosmoTechWorkerSlow",
+      "CosmoTechWorkerScrapeUnavailable"
+    ],
+    "loaded_and_evaluating": "not validated: Prometheus unavailable"
+  },
+  "argocd": [
+    {
+      "name": "observability-v2-sqs-workers",
+      "sync": "Synced",
+      "health": "Healthy",
+      "revision": "8fd239b73354e9c186c0a4a6c713590cd0abcc91"
+    },
+    {
+      "name": "orders-api-dev",
+      "sync": "Synced",
+      "health": "Healthy",
+      "revision": "8fd239b73354e9c186c0a4a6c713590cd0abcc91"
+    },
+    {
+      "name": "orders-worker-dev",
+      "sync": "Synced",
+      "health": "Healthy",
+      "revision": "8fd239b73354e9c186c0a4a6c713590cd0abcc91"
+    }
+  ],
+  "sqs": {
+    "cosmotech_sqs_visible": [
+      0.0
+    ],
+    "cosmotech_sqs_inflight": [
+      0.0
+    ],
+    "cosmotech_sqs_oldest_age_seconds": [
+      0.0
+    ],
+    "cosmotech_sqs_dlq_visible": [
+      0.0
+    ],
+    "cosmotech_sqs_data_timestamp_seconds": [
+      1794237360.0
+    ],
+    "cosmotech_sqs_collection_success": [
+      1.0
+    ],
+    "freshness_age_seconds": 146,
+    "freshness_pass": true
+  },
+  "worker": {
+    "processing_count_exposed": true,
+    "processing_count": 0,
+    "processing_seconds_sum": 0,
+    "messages_created_or_consumed_by_incident_tests": false
+  },
+  "portal": {
+    "at": 1794237585,
+    "unauth_http": 401,
+    "auth_http": 200,
+    "comparison_http": 200,
+    "observer_state": "unavailable",
+    "resources": 0,
+    "coverage": 0,
+    "observed_at": null,
+    "diagnostic_keys": [
+      "binary",
+      "returncode",
+      "denied_actions",
+      "aws_error_codes",
+      "aws_operations"
+    ],
+    "diagnostics": {
+      "denied_actions": [],
+      "aws_operations": [
+        "Lambda:GetFunction"
+      ],
+      "aws_error_codes": [
+        "AccessDeniedException"
+      ]
+    }
+  },
+  "lambda": {
+    "principal_kind": "root",
+    "operation": "Lambda:GetFunction",
+    "function": "aws-serverless-lab-dev-orders-producer",
+    "error": "AccessDeniedException",
+    "message": "None",
+    "organizations_error": "AWSOrganizationsNotInUseException",
+    "iam_policies_changed": false
+  },
+  "zabbix": {
+    "initial": [
+      {
+        "at": 1794237434,
+        "events": [
+          {
+            "eventid": "120",
+            "name": "CosmoTech Tempo: HTTPS unavailable",
+            "clock": "1794193209",
+            "value": "1",
+            "objectid": "33283",
+            "r_eventid": "0"
+          },
+          {
+            "eventid": "119",
+            "name": "CosmoTech Prometheus: HTTPS unavailable",
+            "clock": "1794193208",
+            "value": "1",
+            "objectid": "33282",
+            "r_eventid": "0"
+          },
+          {
+            "eventid": "121",
+            "name": "EKS: telemetry endpoint missing",
+            "clock": "1794193796",
+            "value": "1",
+            "objectid": "33266",
+            "r_eventid": "0"
+          },
+          {
+            "eventid": "118",
+            "name": "CosmoTech Grafana: HTTPS unavailable",
+            "clock": "1794193203",
+            "value": "1",
+            "objectid": "33277",
+            "r_eventid": "0"
+          }
+        ]
+      },
+      {
+        "triggers": [
+          {
+            "triggerid": "33277",
+            "description": "CosmoTech Grafana: HTTPS unavailable",
+            "value": "1",
+            "state": "0",
+            "error": "",
+            "functions": [
+              {
+                "itemid": "72324"
+              }
+            ]
+          },
+          {
+            "triggerid": "33282",
+            "description": "CosmoTech Prometheus: HTTPS unavailable",
+            "value": "1",
+            "state": "0",
+            "error": "",
+            "functions": [
+              {
+                "itemid": "72354"
+              }
+            ]
+          },
+          {
+            "triggerid": "33283",
+            "description": "CosmoTech Tempo: HTTPS unavailable",
+            "value": "1",
+            "state": "0",
+            "error": "",
+            "functions": [
+              {
+                "itemid": "72360"
+              }
+            ]
+          },
+          {
+            "triggerid": "33266",
+            "description": "EKS: telemetry endpoint missing",
+            "value": "1",
+            "state": "1",
+            "error": "Cannot evaluate function nodata(/cosmotech-eks-cluster/cosmotech.eks.metrics,15m): item does not have enough data after server start or item creation.",
+            "functions": [
+              {
+                "itemid": "72287"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "items": [
+          {
+            "itemid": "72287",
+            "name": "EKS readiness, workload and node metrics",
+            "key_": "cosmotech.eks.metrics",
+            "state": "1",
+            "error": "Response code \"503\" did not match any of the required status codes \"200\"\nno healthy upstream",
+            "lastclock": "1794192887",
+            "lastvalue": "[structured payload omitted]"
+          }
+        ]
+      }
+    ],
+    "final": [
+      {
+        "at": 1794237709,
+        "events": [
+          {
+            "eventid": "120",
+            "name": "CosmoTech Tempo: HTTPS unavailable",
+            "clock": "1794193209",
+            "value": "1",
+            "objectid": "33283",
+            "r_eventid": "0"
+          },
+          {
+            "eventid": "119",
+            "name": "CosmoTech Prometheus: HTTPS unavailable",
+            "clock": "1794193208",
+            "value": "1",
+            "objectid": "33282",
+            "r_eventid": "0"
+          },
+          {
+            "eventid": "121",
+            "name": "EKS: telemetry endpoint missing",
+            "clock": "1794193796",
+            "value": "1",
+            "objectid": "33266",
+            "r_eventid": "0"
+          },
+          {
+            "eventid": "118",
+            "name": "CosmoTech Grafana: HTTPS unavailable",
+            "clock": "1794193203",
+            "value": "1",
+            "objectid": "33277",
+            "r_eventid": "0"
+          }
+        ]
+      },
+      {
+        "triggers": [
+          {
+            "triggerid": "33266",
+            "description": "EKS: telemetry endpoint missing",
+            "value": "1",
+            "state": "0",
+            "error": "",
+            "functions": [
+              {
+                "itemid": "72287"
+              }
+            ]
+          },
+          {
+            "triggerid": "33277",
+            "description": "CosmoTech Grafana: HTTPS unavailable",
+            "value": "1",
+            "state": "0",
+            "error": "",
+            "functions": [
+              {
+                "itemid": "72324"
+              }
+            ]
+          },
+          {
+            "triggerid": "33282",
+            "description": "CosmoTech Prometheus: HTTPS unavailable",
+            "value": "1",
+            "state": "0",
+            "error": "",
+            "functions": [
+              {
+                "itemid": "72354"
+              }
+            ]
+          },
+          {
+            "triggerid": "33283",
+            "description": "CosmoTech Tempo: HTTPS unavailable",
+            "value": "1",
+            "state": "0",
+            "error": "",
+            "functions": [
+              {
+                "itemid": "72360"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "items": [
+          {
+            "itemid": "72287",
+            "name": "EKS readiness, workload and node metrics",
+            "key_": "cosmotech.eks.metrics",
+            "state": "1",
+            "error": "Response code \"503\" did not match any of the required status codes \"200\"\nno healthy upstream",
+            "lastclock": "1794192887",
+            "lastvalue": "[structured payload omitted]"
+          }
+        ]
+      }
+    ],
+    "installation_changed": false,
+    "triggers_changed": false,
+    "events_acknowledged_or_closed": false
+  },
+  "financial_review": {
+    "extra_resources_created": 0,
+    "spot_sample_usd_per_hour": "0.031400",
+    "sample_az": "us-east-1a",
+    "sample_time": "2026-11-09T10:00:00Z",
+    "third_node_compute_usd_730h_equivalent": 22.922,
+    "additional_ebs_if_launched_gib": 20,
+    "launch_attempted_by_this_execution": false,
+    "note": "Spot price variable; EBS/network additional; existing ASG desires three instances and is failing independently."
+  },
+  "v2_002": "pending operational certification",
+  "v2_007": "pending live inventory/classification",
+  "changes": "read-only collection and incident documentation only"
+}
