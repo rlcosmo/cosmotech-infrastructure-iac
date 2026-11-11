@@ -1,0 +1,22 @@
+[
+  {
+    "check": "volumes-confirmed",
+    "result": "success"
+  },
+  {
+    "check": "snapshots-confirmed",
+    "result": "success"
+  },
+  {
+    "check": "instances-confirmed",
+    "result": "success"
+  },
+  {
+    "check": "dryrun-approved",
+    "result": "DryRunOperation"
+  },
+  {
+    "check": "dryrun-unapproved",
+    "result": "UnauthorizedOperation"
+  }
+]

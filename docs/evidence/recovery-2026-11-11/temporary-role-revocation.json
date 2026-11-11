@@ -1,0 +1,8 @@
+{
+  "role": "cosmotech-lab-recovery-20261111",
+  "observed_at": "2026-11-11T22:11:38.917976+00:00",
+  "policy_removed": true,
+  "probe": "CreateVolume --dry-run on formerly approved snapshot",
+  "result": "UnauthorizedOperation",
+  "session_was_unexpired": true
+}

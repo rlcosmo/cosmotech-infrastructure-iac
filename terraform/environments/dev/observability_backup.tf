@@ -1,15 +1,16 @@
 locals {
   observability_claims = {
-    prometheus   = "prometheus-prometheus-kube-prometheus-prometheus-db-prometheus-prometheus-kube-prometheus-prometheus-0"
-    grafana      = "grafana-data"
-    alertmanager = "alertmanager-prometheus-kube-prometheus-alertmanager-db-alertmanager-prometheus-kube-prometheus-alertmanager-0"
-    tempo        = "storage-tempo-0"
-    loki         = "storage-loki-0"
+    prometheus   = "cosmotech-recovery-prometheus-20261111"
+    grafana      = "cosmotech-recovery-grafana-20261111"
+    alertmanager = "cosmotech-recovery-alertmanager-20261111"
+    tempo        = "cosmotech-recovery-tempo-20261111"
+    loki         = "cosmotech-recovery-loki-20261111"
   }
 }
 
-# Kubernetes owns volume lifecycle. Terraform discovers volumes; it never creates
-# or deletes these application disks. Re-plan after any PVC replacement.
+# The isolated recovery root owns the restored EBS volumes; this root only
+# discovers serving claim tags and owns its backup selection. Reconcile the
+# supplemental recovery selection after the canonical backend is available.
 data "aws_ebs_volume" "observability" {
   for_each = local.observability_claims
   filter {

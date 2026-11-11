@@ -1,0 +1,15 @@
+pv,pvc,old_volume,snapshot,snapshot_time,size,proposed_restore_az,monthly_usd,initial_recovery_candidate
+cosmotech-p0-grafana-1b,observability/grafana-p0-1b,vol-0426070ae45055fce,snap-0878acb54971e60c9,2026-11-09T18:42:06.443000+00:00,5,us-east-1b,0.4,True
+cosmotech-p0-prometheus-1b,observability/prometheus-p0-1b,vol-0d761779801b75422,snap-0c7403c6a7dcbce14,2026-11-09T18:42:07.650000+00:00,10,us-east-1b,0.8,True
+cosmotech-p0-tempo-1b,observability/tempo-p0-1b,vol-0490f87ab26f9139a,snap-0c530f7f528d6869a,2026-11-09T18:42:08.881000+00:00,10,us-east-1b,0.8,True
+cosmotech-recovered-alertmanager,cosmotech-recovery/recovered-alertmanager,vol-01207f7fc38232494,snap-05d24cc4845f2f6f4,2026-11-09T18:39:11.602000+00:00,2,us-east-1b,0.16,False
+cosmotech-recovered-grafana,cosmotech-recovery/recovered-grafana,vol-0b4cf34ff357f3ac9,snap-0739e76111a6e6078,2026-11-09T18:39:09.129000+00:00,5,us-east-1b,0.4,False
+cosmotech-recovered-loki,cosmotech-recovery/recovered-loki,vol-05f8c7f1042ef61b5,snap-067e30a0fc3751d76,2026-11-09T18:39:06.704000+00:00,10,us-east-1b,0.8,False
+cosmotech-recovered-prometheus,cosmotech-recovery/recovered-prometheus,vol-028cab9754b684eab,snap-03648b89842f00e1e,2026-11-09T18:39:07.919000+00:00,10,us-east-1b,0.8,False
+cosmotech-recovered-tempo,cosmotech-recovery/recovered-tempo,vol-0fe1c28a1558412a4,snap-06fcb6d602af9fe45,2026-11-09T18:39:10.383000+00:00,10,us-east-1b,0.8,False
+cosmotech-tempo-consistent-restore,cosmotech-recovery/recovered-tempo-consistent,vol-048aa25041c575363,snap-0cbc47bc3ace48320,2026-11-09T18:39:12.834000+00:00,10,us-east-1b,0.8,False
+pvc-04ab09a4-1904-49e0-9534-2a5096946455,loki/storage-loki-0,vol-0bd7dff7f7b802bc8,snap-08631b45f37025308,2026-11-09T18:42:05.232000+00:00,10,us-east-1b,0.8,True
+pvc-18505c39-d15f-4102-a4a3-856cf5bd264a,observability/alertmanager-prometheus-kube-prometheus-alertmanager-db-alertmanager-prometheus-kube-prometheus-alertmanager-0,vol-0a95a484ba0ce9518,snap-004a2affa2fdefe27,2026-11-09T18:42:04.033000+00:00,2,us-east-1b,0.16,True
+pvc-418ecba8-550c-46cc-9180-d204ca98106e,observability/storage-tempo-0,vol-091bf80370bf3410f,snap-0a28bbd5d748b8b35,2026-11-09T18:39:03.182000+00:00,10,us-east-1b,0.8,False
+pvc-4455891c-7f38-45bd-a63e-d81cad53af23,observability/prometheus-prometheus-kube-prometheus-prometheus-db-prometheus-prometheus-kube-prometheus-prometheus-0,vol-02c4cccd0b6088ca3,snap-03ea753f855f09836,2026-11-09T18:39:04.343000+00:00,10,us-east-1b,0.8,False
+pvc-bd4cc904-d502-43e2-a264-8c782c162e25,observability/grafana-data,vol-0d46fc5d30780ca02,snap-0dc1eb6f11188110c,2026-11-09T18:39:05.544000+00:00,5,us-east-1b,0.4,False

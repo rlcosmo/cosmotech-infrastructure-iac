@@ -1,0 +1,27 @@
+{
+  "grafana": {
+    "BackupJobId": "1d2bcb17-3708-4bdd-b2bb-4c916863fe5c",
+    "CreationDate": "2026-11-11T19:26:36.198000-03:00",
+    "IsParent": false
+  },
+  "prometheus": {
+    "BackupJobId": "e298bdf8-8f38-4a3a-92f5-2496016e1211",
+    "CreationDate": "2026-11-11T19:26:37.476000-03:00",
+    "IsParent": false
+  },
+  "tempo": {
+    "BackupJobId": "924b1ce1-4234-4b60-98aa-ea71372c611a",
+    "CreationDate": "2026-11-11T19:26:38.640000-03:00",
+    "IsParent": false
+  },
+  "loki": {
+    "BackupJobId": "7cc4d501-5ae5-4c7d-997b-0a3643d64ef4",
+    "CreationDate": "2026-11-11T19:26:39.837000-03:00",
+    "IsParent": false
+  },
+  "alertmanager": {
+    "BackupJobId": "80875adb-264d-4e64-bc4b-0a8aab56686f",
+    "CreationDate": "2026-11-11T19:26:41.036000-03:00",
+    "IsParent": false
+  }
+}

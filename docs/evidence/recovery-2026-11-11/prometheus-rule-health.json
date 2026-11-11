@@ -1,0 +1,47 @@
+[
+  {
+    "name": "CosmoTechNotificationCanary",
+    "health": "ok",
+    "state": "inactive"
+  },
+  {
+    "name": "CosmoTechSQSEvidenceUnavailable",
+    "health": "ok",
+    "state": "pending"
+  },
+  {
+    "name": "CosmoTechSQSBacklog",
+    "health": "ok",
+    "state": "inactive"
+  },
+  {
+    "name": "CosmoTechSQSOldMessages",
+    "health": "ok",
+    "state": "inactive"
+  },
+  {
+    "name": "CosmoTechSQSDLQ",
+    "health": "ok",
+    "state": "inactive"
+  },
+  {
+    "name": "CosmoTechWorkerFailures",
+    "health": "ok",
+    "state": "inactive"
+  },
+  {
+    "name": "CosmoTechWorkerRetries",
+    "health": "ok",
+    "state": "inactive"
+  },
+  {
+    "name": "CosmoTechWorkerSlow",
+    "health": "ok",
+    "state": "inactive"
+  },
+  {
+    "name": "CosmoTechWorkerScrapeUnavailable",
+    "health": "ok",
+    "state": "inactive"
+  }
+]

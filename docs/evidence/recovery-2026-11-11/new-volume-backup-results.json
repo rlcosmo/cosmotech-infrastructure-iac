@@ -1,0 +1,32 @@
+{
+  "grafana": {
+    "State": "COMPLETED",
+    "Percent": "100.0",
+    "RecoveryPointArn": "arn:aws:ec2:us-east-1::snapshot/snap-091fac056878437be",
+    "CompletionDate": "2026-11-11T19:27:37.333000-03:00"
+  },
+  "prometheus": {
+    "State": "COMPLETED",
+    "Percent": "100.0",
+    "RecoveryPointArn": "arn:aws:ec2:us-east-1::snapshot/snap-06fb8570865a717be",
+    "CompletionDate": "2026-11-11T19:27:38.847000-03:00"
+  },
+  "tempo": {
+    "State": "COMPLETED",
+    "Percent": "100.0",
+    "RecoveryPointArn": "arn:aws:ec2:us-east-1::snapshot/snap-0651e69b1519d80ff",
+    "CompletionDate": "2026-11-11T19:27:40.082000-03:00"
+  },
+  "loki": {
+    "State": "COMPLETED",
+    "Percent": "100.0",
+    "RecoveryPointArn": "arn:aws:ec2:us-east-1::snapshot/snap-0d200e3b77507f73e",
+    "CompletionDate": "2026-11-11T19:27:41.332000-03:00"
+  },
+  "alertmanager": {
+    "State": "COMPLETED",
+    "Percent": "100.0",
+    "RecoveryPointArn": "arn:aws:ec2:us-east-1::snapshot/snap-0183ac67ad25b2018",
+    "CompletionDate": "2026-11-11T19:27:42.079000-03:00"
+  }
+}

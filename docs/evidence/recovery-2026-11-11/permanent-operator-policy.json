@@ -1,0 +1,236 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadInventory",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstances",
+        "ec2:DescribeVolumes",
+        "ec2:DescribeSnapshots",
+        "ec2:DescribeVolumeStatus",
+        "ec2:DescribeInstanceStatus",
+        "ec2:DescribeImages",
+        "ec2:DescribeTags"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ApprovedSnapshots",
+      "Effect": "Allow",
+      "Action": "ec2:CreateVolume",
+      "Resource": [
+        "arn:aws:ec2:us-east-1::snapshot/snap-0878acb54971e60c9",
+        "arn:aws:ec2:us-east-1::snapshot/snap-0c7403c6a7dcbce14",
+        "arn:aws:ec2:us-east-1::snapshot/snap-0c530f7f528d6869a",
+        "arn:aws:ec2:us-east-1::snapshot/snap-05d24cc4845f2f6f4",
+        "arn:aws:ec2:us-east-1::snapshot/snap-0739e76111a6e6078",
+        "arn:aws:ec2:us-east-1::snapshot/snap-067e30a0fc3751d76",
+        "arn:aws:ec2:us-east-1::snapshot/snap-03648b89842f00e1e",
+        "arn:aws:ec2:us-east-1::snapshot/snap-06fcb6d602af9fe45",
+        "arn:aws:ec2:us-east-1::snapshot/snap-0cbc47bc3ace48320",
+        "arn:aws:ec2:us-east-1::snapshot/snap-08631b45f37025308",
+        "arn:aws:ec2:us-east-1::snapshot/snap-004a2affa2fdefe27",
+        "arn:aws:ec2:us-east-1::snapshot/snap-0a28bbd5d748b8b35",
+        "arn:aws:ec2:us-east-1::snapshot/snap-03ea753f855f09836",
+        "arn:aws:ec2:us-east-1::snapshot/snap-0dc1eb6f11188110c",
+        "arn:aws:ec2:us-east-1::snapshot/snap-054a7d888f46d8b98",
+        "arn:aws:ec2:us-east-1::snapshot/snap-02ae53097d504c7f4"
+      ]
+    },
+    {
+      "Sid": "TaggedRecoveryVolumes",
+      "Effect": "Allow",
+      "Action": "ec2:CreateVolume",
+      "Resource": "arn:aws:ec2:us-east-1:414053644145:volume/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/RecoveryOperation": "cosmotech-20261111",
+          "ec2:AvailabilityZone": [
+            "us-east-1a",
+            "us-east-1b"
+          ],
+          "ec2:VolumeType": "gp3"
+        },
+        "NumericLessThanEquals": {
+          "ec2:VolumeSize": 120
+        }
+      }
+    },
+    {
+      "Sid": "CreateTagsOnly",
+      "Effect": "Allow",
+      "Action": "ec2:CreateTags",
+      "Resource": "arn:aws:ec2:us-east-1:414053644145:volume/*",
+      "Condition": {
+        "StringEquals": {
+          "ec2:CreateAction": "CreateVolume",
+          "aws:RequestTag/RecoveryOperation": "cosmotech-20261111"
+        }
+      }
+    },
+    {
+      "Sid": "AttachRecoveredVolume",
+      "Effect": "Allow",
+      "Action": "ec2:AttachVolume",
+      "Resource": "arn:aws:ec2:us-east-1:414053644145:volume/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceTag/RecoveryOperation": "cosmotech-20261111"
+        }
+      }
+    },
+    {
+      "Sid": "ExistingLabHosts",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:AttachVolume",
+        "ec2:StartInstances"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-1:414053644145:instance/i-0b33fdd51332e04e5",
+        "arn:aws:ec2:us-east-1:414053644145:instance/i-02878f35eed1572d0",
+        "arn:aws:ec2:us-east-1:414053644145:instance/i-0def4e806c49cf60e"
+      ]
+    },
+    {
+      "Sid": "DescribePrimaryCluster",
+      "Effect": "Allow",
+      "Action": "eks:DescribeCluster",
+      "Resource": "arn:aws:eks:us-east-1:414053644145:cluster/aws-eks-istio-lab-dev"
+    },
+    {
+      "Sid": "RecoveryEncryption",
+      "Effect": "Allow",
+      "Action": [
+        "kms:Decrypt",
+        "kms:DescribeKey",
+        "kms:GenerateDataKeyWithoutPlaintext"
+      ],
+      "Resource": [
+        "arn:aws:kms:us-east-1:414053644145:key/2ed3c894-2801-4c94-9084-132115794b87"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": "ec2.us-east-1.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "AWSResourceGrants",
+      "Effect": "Allow",
+      "Action": "kms:CreateGrant",
+      "Resource": [
+        "arn:aws:kms:us-east-1:414053644145:key/2ed3c894-2801-4c94-9084-132115794b87"
+      ],
+      "Condition": {
+        "Bool": {
+          "kms:GrantIsForAWSResource": "true"
+        }
+      }
+    },
+    {
+      "Sid": "ReadLabDiagnostics",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:DescribeInstanceInformation",
+        "ssm:GetCommandInvocation",
+        "ssm:ListCommandInvocations",
+        "cloudtrail:LookupEvents",
+        "backup:ListBackupVaults",
+        "backup:ListBackupPlans",
+        "backup:ListRecoveryPointsByBackupVault",
+        "backup:GetRecoveryPointRestoreMetadata",
+        "servicequotas:GetServiceQuota",
+        "eks:ListAddons",
+        "eks:DescribeAddon",
+        "eks:ListNodegroups",
+        "eks:DescribeNodegroup",
+        "backup:DescribeBackupJob"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": [
+            "us-east-1",
+            "us-east-2"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "LabHostCommands",
+      "Effect": "Allow",
+      "Action": "ssm:SendCommand",
+      "Resource": [
+        "arn:aws:ssm:us-east-1::document/AWS-RunShellScript",
+        "arn:aws:ec2:us-east-1:414053644145:instance/i-0b33fdd51332e04e5",
+        "arn:aws:ec2:us-east-1:414053644145:instance/i-02878f35eed1572d0",
+        "arn:aws:ec2:us-east-1:414053644145:instance/i-0def4e806c49cf60e"
+      ]
+    },
+    {
+      "Sid": "AssignRecoveryCSIMetadata",
+      "Effect": "Allow",
+      "Action": "ec2:CreateTags",
+      "Resource": "arn:aws:ec2:us-east-1:414053644145:volume/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceTag/RecoveryOperation": "cosmotech-20261111",
+          "aws:RequestTag/ebs.csi.aws.com/cluster": "true",
+          "aws:RequestTag/ebs.csi.aws.com/cluster-name": "aws-eks-istio-lab-dev"
+        },
+        "ForAllValues:StringEquals": {
+          "aws:TagKeys": [
+            "ebs.csi.aws.com/cluster",
+            "ebs.csi.aws.com/cluster-name",
+            "kubernetes.io/created-for/pvc/name",
+            "kubernetes.io/created-for/pvc/namespace",
+            "kubernetes.io/cluster/aws-eks-istio-lab-dev"
+          ]
+        },
+        "Null": {
+          "aws:TagKeys": "false"
+        }
+      }
+    },
+    {
+      "Sid": "ReadCanonicalBackendMetadata",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket",
+        "s3:GetBucketLocation"
+      ],
+      "Resource": "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1"
+    },
+    {
+      "Sid": "RecoveredVolumeBackupSelection",
+      "Effect": "Allow",
+      "Action": [
+        "backup:CreateBackupSelection",
+        "backup:GetBackupSelection",
+        "backup:ListBackupSelections"
+      ],
+      "Resource": "arn:aws:backup:us-east-1:414053644145:backup-plan:26e6a57c-13e7-485d-94d7-9ccd19c0af58"
+    },
+    {
+      "Sid": "BackupRecoveredDisks",
+      "Effect": "Allow",
+      "Action": [
+        "backup:StartBackupJob"
+      ],
+      "Resource": "arn:aws:backup:us-east-1:414053644145:backup-vault:cosmotech-itsm-dev-vault"
+    },
+    {
+      "Sid": "PassOnlyExistingBackupRole",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::414053644145:role/cosmotech-itsm-dev-backup-role",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "backup.amazonaws.com"
+        }
+      }
+    }
+  ]
+}

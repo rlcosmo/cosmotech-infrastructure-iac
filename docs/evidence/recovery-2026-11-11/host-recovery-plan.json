@@ -1,0 +1,28 @@
+[
+  {
+    "name": "argocd",
+    "instance": "i-0b33fdd51332e04e5",
+    "ami": "ami-02834eebf587a1f78",
+    "ami_date": "2026-11-09T05:14:09.000Z",
+    "old_volume": "vol-029c1e89d8d4a50dd",
+    "snapshot": "snap-054a7d888f46d8b98",
+    "date": "2026-11-09T18:39:14.160000+00:00",
+    "size": 40,
+    "kms": "arn:aws:kms:us-east-1:414053644145:key/2ed3c894-2801-4c94-9084-132115794b87",
+    "az": "us-east-1a",
+    "device": "/dev/sda1"
+  },
+  {
+    "name": "zabbix",
+    "instance": "i-02878f35eed1572d0",
+    "ami": "ami-0d33b1ea8e772673f",
+    "ami_date": "2026-11-09T05:19:57.000Z",
+    "old_volume": "vol-0cf8b3eaf7cc6ea10",
+    "snapshot": "snap-02ae53097d504c7f4",
+    "date": "2026-11-09T18:39:15.340000+00:00",
+    "size": 120,
+    "kms": "arn:aws:kms:us-east-1:414053644145:key/2ed3c894-2801-4c94-9084-132115794b87",
+    "az": "us-east-1a",
+    "device": "/dev/sda1"
+  }
+]

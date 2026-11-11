@@ -1,0 +1,5 @@
+{
+    "Status": "Success",
+    "Output": "NAME                           SYNC     HEALTH    REVISION\nobservability-v2-sqs-workers   Synced   Healthy   8fd239b73354e9c186c0a4a6c713590cd0abcc91\norders-api-dev                 Synced   Healthy   8fd239b73354e9c186c0a4a6c713590cd0abcc91\norders-worker-dev              Synced   Healthy   8fd239b73354e9c186c0a4a6c713590cd0abcc91\n",
+    "Error": "No resources found\n"
+}

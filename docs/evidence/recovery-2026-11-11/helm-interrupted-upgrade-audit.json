@@ -1,0 +1,9 @@
+{
+  "revision": 10,
+  "release": "prometheus",
+  "from": "pending-upgrade",
+  "to": "failed",
+  "reason": "Upgrade interrupted by client timeout before completion; live storage recovery preserved. See recovery-20261111 audit.",
+  "timestamp": "2026-11-11T22:24:09.709047+00:00",
+  "original_secret_preserved_privately": true
+}

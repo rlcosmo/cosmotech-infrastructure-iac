@@ -1,0 +1,102 @@
+{
+  "grafana": {
+    "name": "grafana",
+    "snapshot": "snap-0878acb54971e60c9",
+    "size": 5,
+    "az": "us-east-1b",
+    "old_pv": "cosmotech-p0-grafana-1b",
+    "intent_at": "2026-11-11T22:09:08.981009+00:00",
+    "client_token": "cosmotech-20261111-grafana",
+    "status": "creating",
+    "volume_id": "vol-01a5598e02e7ffa77",
+    "created_at": "2026-11-11T22:09:10+00:00"
+  },
+  "prometheus": {
+    "name": "prometheus",
+    "snapshot": "snap-0c7403c6a7dcbce14",
+    "size": 10,
+    "az": "us-east-1b",
+    "old_pv": "cosmotech-p0-prometheus-1b",
+    "intent_at": "2026-11-11T22:09:10.645577+00:00",
+    "client_token": "cosmotech-20261111-prometheus",
+    "status": "creating",
+    "volume_id": "vol-099efa3ce5b06c0a9",
+    "created_at": "2026-11-11T22:09:12+00:00"
+  },
+  "tempo": {
+    "name": "tempo",
+    "snapshot": "snap-0c530f7f528d6869a",
+    "size": 10,
+    "az": "us-east-1b",
+    "old_pv": "cosmotech-p0-tempo-1b",
+    "intent_at": "2026-11-11T22:09:12.216708+00:00",
+    "client_token": "cosmotech-20261111-tempo",
+    "status": "creating",
+    "volume_id": "vol-083afcbd83df50607",
+    "created_at": "2026-11-11T22:09:13+00:00"
+  },
+  "loki": {
+    "name": "loki",
+    "snapshot": "snap-08631b45f37025308",
+    "size": 10,
+    "az": "us-east-1b",
+    "old_pv": "pvc-04ab09a4-1904-49e0-9534-2a5096946455",
+    "intent_at": "2026-11-11T22:09:13.840603+00:00",
+    "client_token": "cosmotech-20261111-loki",
+    "status": "creating",
+    "volume_id": "vol-08faf2b2dd32e18dd",
+    "created_at": "2026-11-11T22:09:15+00:00"
+  },
+  "alertmanager": {
+    "name": "alertmanager",
+    "snapshot": "snap-004a2affa2fdefe27",
+    "size": 2,
+    "az": "us-east-1b",
+    "old_pv": "pvc-18505c39-d15f-4102-a4a3-856cf5bd264a",
+    "intent_at": "2026-11-11T22:09:15.464190+00:00",
+    "client_token": "cosmotech-20261111-alertmanager",
+    "status": "creating",
+    "volume_id": "vol-08248fc11ad49dbef",
+    "created_at": "2026-11-11T22:09:16+00:00"
+  },
+  "argocd-root": {
+    "name": "argocd-root",
+    "snapshot": "snap-054a7d888f46d8b98",
+    "size": 40,
+    "az": "us-east-1a",
+    "instance": "i-0b33fdd51332e04e5",
+    "device": "/dev/sda1",
+    "intent_at": "2026-11-11T22:09:17.085653+00:00",
+    "client_token": "cosmotech-20261111-argocd-root",
+    "status": "creating",
+    "volume_id": "vol-00b73044d14b85491",
+    "created_at": "2026-11-11T22:09:18+00:00",
+    "attachment": {
+      "VolumeId": "vol-00b73044d14b85491",
+      "InstanceId": "i-0b33fdd51332e04e5",
+      "Device": "/dev/sda1",
+      "State": "attaching",
+      "AttachTime": "2026-11-11T22:09:54.383000+00:00"
+    }
+  },
+  "zabbix-root": {
+    "name": "zabbix-root",
+    "snapshot": "snap-02ae53097d504c7f4",
+    "size": 120,
+    "az": "us-east-1a",
+    "instance": "i-02878f35eed1572d0",
+    "device": "/dev/sda1",
+    "intent_at": "2026-11-11T22:09:18.686143+00:00",
+    "client_token": "cosmotech-20261111-zabbix-root",
+    "status": "creating",
+    "volume_id": "vol-030290eae0dc50960",
+    "created_at": "2026-11-11T22:09:20+00:00",
+    "attachment": {
+      "VolumeId": "vol-030290eae0dc50960",
+      "InstanceId": "i-02878f35eed1572d0",
+      "Device": "/dev/sda1",
+      "State": "attaching",
+      "AttachTime": "2026-11-11T22:09:57.463000+00:00"
+    }
+  }
+}

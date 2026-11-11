@@ -1,0 +1,9 @@
+{
+  "trace_id": "434788b390061001067183c92a47da0a",
+  "otlp_http_status": 200,
+  "sent_at_ns": 1794435570408150804,
+  "tempo_get_success": true,
+  "returned_batches": 1,
+  "returned_spans": 1,
+  "synthetic_span_found": true
+}
