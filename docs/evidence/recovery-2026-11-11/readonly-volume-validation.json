@@ -1,0 +1,22 @@
+{
+  "grafana": {
+    "exit": 0,
+    "output": "{\"mount_readable\": true, \"entries\": 7}\n{\"sqlite_integrity\": \"ok\", \"users\": 3, \"dashboards\": 0}\n"
+  },
+  "prometheus": {
+    "exit": 0,
+    "output": "{\"mount_readable\": true, \"entries\": 10}\n"
+  },
+  "tempo": {
+    "exit": 0,
+    "output": "{\"mount_readable\": true, \"entries\": 262}\n"
+  },
+  "loki": {
+    "exit": 0,
+    "output": "{\"mount_readable\": true, \"entries\": 8}\n"
+  },
+  "alertmanager": {
+    "exit": 0,
+    "output": "{\"mount_readable\": true, \"entries\": 4}\n"
+  }
+}

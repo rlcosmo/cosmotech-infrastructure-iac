@@ -1,0 +1,187 @@
+{
+  "terraform": {
+    "required_version": "= 1.17.1",
+    "required_providers": {
+      "aws": {
+        "source": "hashicorp/aws",
+        "version": "= 6.62.0"
+      }
+    },
+    "backend": {
+      "local": {}
+    }
+  },
+  "provider": {
+    "aws": {
+      "region": "us-east-1",
+      "allowed_account_ids": [
+        "414053644145"
+      ]
+    }
+  },
+  "resource": {
+    "aws_ebs_volume": {
+      "grafana": {
+        "availability_zone": "us-east-1b",
+        "snapshot_id": "snap-0878acb54971e60c9",
+        "size": 5,
+        "type": "gp3",
+        "encrypted": true,
+        "iops": 3000,
+        "throughput": 125,
+        "tags": {
+          "RecoveryOperation": "cosmotech-20261111",
+          "Project": "CosmoTech",
+          "Name": "cosmotech-recovered-grafana-20261111",
+          "ebs.csi.aws.com/cluster": "true",
+          "ebs.csi.aws.com/cluster-name": "aws-eks-istio-lab-dev",
+          "kubernetes.io/created-for/pvc/name": "cosmotech-recovery-grafana-20261111",
+          "kubernetes.io/created-for/pvc/namespace": "observability",
+          "kubernetes.io/cluster/aws-eks-istio-lab-dev": "owned"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      },
+      "prometheus": {
+        "availability_zone": "us-east-1b",
+        "snapshot_id": "snap-0c7403c6a7dcbce14",
+        "size": 10,
+        "type": "gp3",
+        "encrypted": true,
+        "iops": 3000,
+        "throughput": 125,
+        "tags": {
+          "RecoveryOperation": "cosmotech-20261111",
+          "Project": "CosmoTech",
+          "Name": "cosmotech-recovered-prometheus-20261111",
+          "ebs.csi.aws.com/cluster": "true",
+          "ebs.csi.aws.com/cluster-name": "aws-eks-istio-lab-dev",
+          "kubernetes.io/created-for/pvc/name": "cosmotech-recovery-prometheus-20261111",
+          "kubernetes.io/created-for/pvc/namespace": "observability",
+          "kubernetes.io/cluster/aws-eks-istio-lab-dev": "owned"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      },
+      "tempo": {
+        "availability_zone": "us-east-1b",
+        "snapshot_id": "snap-0c530f7f528d6869a",
+        "size": 10,
+        "type": "gp3",
+        "encrypted": true,
+        "iops": 3000,
+        "throughput": 125,
+        "tags": {
+          "RecoveryOperation": "cosmotech-20261111",
+          "Project": "CosmoTech",
+          "Name": "cosmotech-recovered-tempo-20261111",
+          "ebs.csi.aws.com/cluster": "true",
+          "ebs.csi.aws.com/cluster-name": "aws-eks-istio-lab-dev",
+          "kubernetes.io/created-for/pvc/name": "cosmotech-recovery-tempo-20261111",
+          "kubernetes.io/created-for/pvc/namespace": "observability",
+          "kubernetes.io/cluster/aws-eks-istio-lab-dev": "owned"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      },
+      "loki": {
+        "availability_zone": "us-east-1b",
+        "snapshot_id": "snap-08631b45f37025308",
+        "size": 10,
+        "type": "gp3",
+        "encrypted": true,
+        "iops": 3000,
+        "throughput": 125,
+        "tags": {
+          "RecoveryOperation": "cosmotech-20261111",
+          "Project": "CosmoTech",
+          "Name": "cosmotech-recovered-loki-20261111",
+          "ebs.csi.aws.com/cluster": "true",
+          "ebs.csi.aws.com/cluster-name": "aws-eks-istio-lab-dev",
+          "kubernetes.io/created-for/pvc/name": "cosmotech-recovery-loki-20261111",
+          "kubernetes.io/created-for/pvc/namespace": "loki",
+          "kubernetes.io/cluster/aws-eks-istio-lab-dev": "owned"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      },
+      "alertmanager": {
+        "availability_zone": "us-east-1b",
+        "snapshot_id": "snap-004a2affa2fdefe27",
+        "size": 2,
+        "type": "gp3",
+        "encrypted": true,
+        "iops": 3000,
+        "throughput": 125,
+        "tags": {
+          "RecoveryOperation": "cosmotech-20261111",
+          "Project": "CosmoTech",
+          "Name": "cosmotech-recovered-alertmanager-20261111",
+          "ebs.csi.aws.com/cluster": "true",
+          "ebs.csi.aws.com/cluster-name": "aws-eks-istio-lab-dev",
+          "kubernetes.io/created-for/pvc/name": "cosmotech-recovery-alertmanager-20261111",
+          "kubernetes.io/created-for/pvc/namespace": "observability",
+          "kubernetes.io/cluster/aws-eks-istio-lab-dev": "owned"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      },
+      "argocd_root": {
+        "availability_zone": "us-east-1a",
+        "snapshot_id": "snap-054a7d888f46d8b98",
+        "size": 40,
+        "type": "gp3",
+        "encrypted": true,
+        "iops": 3000,
+        "throughput": 125,
+        "tags": {
+          "RecoveryOperation": "cosmotech-20261111",
+          "Project": "CosmoTech",
+          "Name": "cosmotech-recovered-argocd-root-20261111"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      },
+      "zabbix_root": {
+        "availability_zone": "us-east-1a",
+        "snapshot_id": "snap-02ae53097d504c7f4",
+        "size": 120,
+        "type": "gp3",
+        "encrypted": true,
+        "iops": 3000,
+        "throughput": 125,
+        "tags": {
+          "RecoveryOperation": "cosmotech-20261111",
+          "Project": "CosmoTech",
+          "Name": "cosmotech-recovered-zabbix-root-20261111"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    },
+    "aws_backup_selection": {
+      "recovered_observability": {
+        "name": "cosmotech-recovered-observability-20261111",
+        "plan_id": "26e6a57c-13e7-485d-94d7-9ccd19c0af58",
+        "iam_role_arn": "arn:aws:iam::414053644145:role/cosmotech-itsm-dev-backup-role",
+        "resources": [
+          "${aws_ebs_volume.grafana.arn}",
+          "${aws_ebs_volume.prometheus.arn}",
+          "${aws_ebs_volume.tempo.arn}",
+          "${aws_ebs_volume.loki.arn}",
+          "${aws_ebs_volume.alertmanager.arn}"
+        ],
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    }
+  }
+}

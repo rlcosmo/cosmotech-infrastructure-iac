@@ -1,0 +1,19 @@
+{
+  "started_at": "2026-11-11T21:56:14.642433+00:00",
+  "role_name": "cosmotech-lab-recovery-20261111",
+  "expiry": "2026-11-12T02:41:39Z",
+  "policy_sha256": "8d8cdc21a7f1b3de24fb51c9bc85e7b3e48177b5666301613defd37783cb5c28",
+  "root_operations": [
+    {
+      "operation": "create-role",
+      "completed_at": "2026-11-11T21:56:17.045784+00:00",
+      "exit_code": 0
+    },
+    {
+      "operation": "put-role-policy",
+      "completed_at": "2026-11-11T21:56:18.156449+00:00",
+      "exit_code": 0
+    }
+  ],
+  "role_arn": "arn:aws:iam::414053644145:role/cosmotech-lab-recovery-20261111"
+}

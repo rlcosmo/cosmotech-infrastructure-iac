@@ -1,0 +1,164 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadInventory",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstances",
+        "ec2:DescribeVolumes",
+        "ec2:DescribeSnapshots",
+        "ec2:DescribeVolumeStatus",
+        "ec2:DescribeInstanceStatus",
+        "ec2:DescribeImages",
+        "ec2:DescribeTags"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "DateLessThan": {
+          "aws:CurrentTime": "2026-11-12T02:41:39Z"
+        }
+      }
+    },
+    {
+      "Sid": "ApprovedSnapshots",
+      "Effect": "Allow",
+      "Action": "ec2:CreateVolume",
+      "Resource": [
+        "arn:aws:ec2:us-east-1::snapshot/snap-0878acb54971e60c9",
+        "arn:aws:ec2:us-east-1::snapshot/snap-0c7403c6a7dcbce14",
+        "arn:aws:ec2:us-east-1::snapshot/snap-0c530f7f528d6869a",
+        "arn:aws:ec2:us-east-1::snapshot/snap-05d24cc4845f2f6f4",
+        "arn:aws:ec2:us-east-1::snapshot/snap-0739e76111a6e6078",
+        "arn:aws:ec2:us-east-1::snapshot/snap-067e30a0fc3751d76",
+        "arn:aws:ec2:us-east-1::snapshot/snap-03648b89842f00e1e",
+        "arn:aws:ec2:us-east-1::snapshot/snap-06fcb6d602af9fe45",
+        "arn:aws:ec2:us-east-1::snapshot/snap-0cbc47bc3ace48320",
+        "arn:aws:ec2:us-east-1::snapshot/snap-08631b45f37025308",
+        "arn:aws:ec2:us-east-1::snapshot/snap-004a2affa2fdefe27",
+        "arn:aws:ec2:us-east-1::snapshot/snap-0a28bbd5d748b8b35",
+        "arn:aws:ec2:us-east-1::snapshot/snap-03ea753f855f09836",
+        "arn:aws:ec2:us-east-1::snapshot/snap-0dc1eb6f11188110c",
+        "arn:aws:ec2:us-east-1::snapshot/snap-054a7d888f46d8b98",
+        "arn:aws:ec2:us-east-1::snapshot/snap-02ae53097d504c7f4"
+      ],
+      "Condition": {
+        "DateLessThan": {
+          "aws:CurrentTime": "2026-11-12T02:41:39Z"
+        }
+      }
+    },
+    {
+      "Sid": "TaggedRecoveryVolumes",
+      "Effect": "Allow",
+      "Action": "ec2:CreateVolume",
+      "Resource": "arn:aws:ec2:us-east-1:414053644145:volume/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/RecoveryOperation": "cosmotech-20261111",
+          "ec2:AvailabilityZone": [
+            "us-east-1a",
+            "us-east-1b"
+          ]
+        },
+        "DateLessThan": {
+          "aws:CurrentTime": "2026-11-12T02:41:39Z"
+        }
+      }
+    },
+    {
+      "Sid": "CreateTagsOnly",
+      "Effect": "Allow",
+      "Action": "ec2:CreateTags",
+      "Resource": "arn:aws:ec2:us-east-1:414053644145:volume/*",
+      "Condition": {
+        "StringEquals": {
+          "ec2:CreateAction": "CreateVolume",
+          "aws:RequestTag/RecoveryOperation": "cosmotech-20261111"
+        },
+        "DateLessThan": {
+          "aws:CurrentTime": "2026-11-12T02:41:39Z"
+        }
+      }
+    },
+    {
+      "Sid": "AttachRecoveredVolume",
+      "Effect": "Allow",
+      "Action": "ec2:AttachVolume",
+      "Resource": "arn:aws:ec2:us-east-1:414053644145:volume/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceTag/RecoveryOperation": "cosmotech-20261111"
+        },
+        "DateLessThan": {
+          "aws:CurrentTime": "2026-11-12T02:41:39Z"
+        }
+      }
+    },
+    {
+      "Sid": "ExistingLabHosts",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:AttachVolume",
+        "ec2:StartInstances"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-1:414053644145:instance/i-0b33fdd51332e04e5",
+        "arn:aws:ec2:us-east-1:414053644145:instance/i-02878f35eed1572d0",
+        "arn:aws:ec2:us-east-1:414053644145:instance/i-0def4e806c49cf60e"
+      ],
+      "Condition": {
+        "DateLessThan": {
+          "aws:CurrentTime": "2026-11-12T02:41:39Z"
+        }
+      }
+    },
+    {
+      "Sid": "DescribePrimaryCluster",
+      "Effect": "Allow",
+      "Action": "eks:DescribeCluster",
+      "Resource": "arn:aws:eks:us-east-1:414053644145:cluster/aws-eks-istio-lab-dev",
+      "Condition": {
+        "DateLessThan": {
+          "aws:CurrentTime": "2026-11-12T02:41:39Z"
+        }
+      }
+    },
+    {
+      "Sid": "RecoveryEncryption",
+      "Effect": "Allow",
+      "Action": [
+        "kms:Decrypt",
+        "kms:DescribeKey",
+        "kms:GenerateDataKeyWithoutPlaintext"
+      ],
+      "Resource": [
+        "arn:aws:kms:us-east-1:414053644145:key/2ed3c894-2801-4c94-9084-132115794b87"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": "ec2.us-east-1.amazonaws.com"
+        },
+        "DateLessThan": {
+          "aws:CurrentTime": "2026-11-12T02:41:39Z"
+        }
+      }
+    },
+    {
+      "Sid": "AWSResourceGrants",
+      "Effect": "Allow",
+      "Action": "kms:CreateGrant",
+      "Resource": [
+        "arn:aws:kms:us-east-1:414053644145:key/2ed3c894-2801-4c94-9084-132115794b87"
+      ],
+      "Condition": {
+        "Bool": {
+          "kms:GrantIsForAWSResource": "true"
+        },
+        "DateLessThan": {
+          "aws:CurrentTime": "2026-11-12T02:41:39Z"
+        }
+      }
+    }
+  ]
+}

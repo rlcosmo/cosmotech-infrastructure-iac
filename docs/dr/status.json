@@ -9,13 +9,13 @@
   "real_chaos_executed": false,
   "measured_rto_seconds": null,
   "measured_rpo_seconds": null,
-  "primary_modified": false,
+  "primary_modified": true,
   "power_manager_modified": false,
   "gitops_pr": "https://github.com/rlcosmo/cosmotech-gitops/pull/19",
   "gitops_merge_commit": "65cce79928071d81979ae97bdf76d4810bb037e3",
   "infrastructure_pr": "https://github.com/rlcosmo/cosmotech-infrastructure-iac/pull/48",
   "remaining_gates": [
-    "official AWS account release",
+    "S3 service still returns NotSignedUp to an authorized role; canonical backend and DR copy dependencies unavailable",
     "reviewed spending limit and fresh estimate",
     "scoped deployment IAM and verified live state owners",
     "completed cross-region backup and isolated restore",
@@ -33,5 +33,19 @@
     "primary_integration_kit": "prepared and tested against approved API release; not applied",
     "gitops_pr": "https://github.com/rlcosmo/cosmotech-gitops/pull/20",
     "gitops_merge_commit": "daa15dd444c14e7b15a015c07f6b9c73c1b0d015"
+  },
+  "recovery_2026_11_11": {
+    "owner_reports_official_hold_removed": true,
+    "full_service_clearance_verified": false,
+    "s3_error": "NotSignedUp",
+    "primary_active_data_volumes_restored": 5,
+    "management_root_volumes_restored": 2,
+    "new_backup_jobs_completed": 5,
+    "temporary_recovery_policy_removed_and_denied_with_unexpired_session": true,
+    "permanent_operator_role": "cosmotech-lab-operator",
+    "ohio_provisioned": false,
+    "production_failover_executed": false,
+    "production_failback_executed": false,
+    "rto_rpo_certified": false
   }
 }

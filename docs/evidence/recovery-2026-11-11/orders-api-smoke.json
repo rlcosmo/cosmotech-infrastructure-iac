@@ -1,0 +1,37 @@
+[
+  {
+    "check": "/health/live",
+    "method": "GET",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "check": "/health/ready",
+    "method": "GET",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "check": "/version",
+    "method": "GET",
+    "status": 200,
+    "passed": true,
+    "body": {
+      "service": "orders-api",
+      "version": "2.0.5-lab",
+      "deployment_strategy": "rolling"
+    }
+  },
+  {
+    "check": "/orders/<nonexistent>",
+    "method": "GET",
+    "status": 404,
+    "passed": true
+  },
+  {
+    "check": "/orders",
+    "method": "POST",
+    "status": 400,
+    "passed": true
+  }
+]
