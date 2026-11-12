@@ -146,22 +146,23 @@ variable "desired_nodes" {
   }
 }
 module "standby" {
-  count                    = var.enable_standby ? 1 : 0
-  source                   = "../../modules/dr_standby"
-  providers                = { aws = aws.standby }
-  account_id               = "414053644145"
-  region                   = var.standby_region
-  name                     = "cosmotech-dr"
-  cluster_version          = var.cluster_version
-  admin_cidrs              = var.admin_cidrs
-  admin_role_arn           = var.admin_role_arn
-  desired_nodes            = var.desired_nodes
-  max_nodes                = var.max_nodes
-  permissions_boundary_arn = var.permissions_boundary_arn
-  queue_arn                = module.standby_sqs[0].orders_queue_arn
-  restored_table_name      = "cosmotech-dr-orders-restored"
-  enable_recovery_host     = var.enable_recovery_host
-  recovery_host_ami        = var.recovery_host_ami
+  count                        = var.enable_standby ? 1 : 0
+  source                       = "../../modules/dr_standby"
+  providers                    = { aws = aws.standby }
+  account_id                   = "414053644145"
+  region                       = var.standby_region
+  name                         = "cosmotech-dr"
+  cluster_version              = var.cluster_version
+  admin_cidrs                  = var.admin_cidrs
+  admin_role_arn               = var.admin_role_arn
+  desired_nodes                = var.desired_nodes
+  max_nodes                    = var.max_nodes
+  permissions_boundary_arn     = var.permissions_boundary_arn
+  manage_restored_orders_table = var.manage_restored_orders_table
+  queue_arn                    = module.standby_sqs[0].orders_queue_arn
+  restored_table_name          = "cosmotech-dr-orders-restored"
+  enable_recovery_host         = var.enable_recovery_host
+  recovery_host_ami            = var.recovery_host_ami
 }
 output "standby" {
   value = module.standby
@@ -217,4 +218,10 @@ variable "permissions_boundary_arn" {
     condition     = !var.enable_standby || var.permissions_boundary_arn == "arn:aws:iam::414053644145:policy/cosmotech-dr-runtime-boundary"
     error_message = "Use the reviewed bootstrap-owned DR runtime boundary."
   }
+}
+
+variable "manage_restored_orders_table" {
+  description = "Requires a completed isolated restore and import; never create an empty substitute."
+  type        = bool
+  default     = false
 }

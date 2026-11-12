@@ -1,0 +1,37 @@
+{
+  "account": "414053644145",
+  "primary": "us-east-1",
+  "secondary": "us-east-2",
+  "quota_vcpus": 16,
+  "nodegroup": "ACTIVE",
+  "nodes_ready": 2,
+  "azs": [
+    "us-east-2a",
+    "us-east-2b"
+  ],
+  "orders_restore_job": "851943e7-8bc7-4b8f-8ce8-42272dc477fc",
+  "orders_restore_status": "COMPLETED",
+  "orders_integrity": {
+    "equal": true,
+    "source_count": 3418,
+    "destination_count": 3418,
+    "missing": 0,
+    "extra": 0,
+    "changed": 0,
+    "source_sha256": "7060fd7c04203bffc868ce68e6074854de4c1c401f8fc1141e17356d9c62d6c2",
+    "destination_sha256": "7060fd7c04203bffc868ce68e6074854de4c1c401f8fc1141e17356d9c62d6c2",
+    "limitation": "Consistent reads are not a table-wide snapshot or a writer fence; not platform RPO proof"
+  },
+  "ebs_restore_jobs_started": 7,
+  "ebs_restore_jobs_completed": 7,
+  "ebs_restored_allocated_gib": 197,
+  "ebs_restored_gp3_monthly_usd": 15.76,
+  "gp3_rate_verified_utc": "2026-11-12",
+  "orders_image_copy_run": "https://github.com/rlcosmo/cosmotech-infrastructure-iac/actions/runs/43159423531",
+  "outbox_image_publish_run": "https://github.com/rlcosmo/cosmotech-infrastructure-iac/actions/runs/43159426986",
+  "outbox_image_digest": "sha256:aa3ebe7e2bfa3dc81969a35acb84faad221ac259d3295f57e4c493a9d5df6d60",
+  "failover_executed": false,
+  "failback_executed": false,
+  "platform_rto_seconds": null,
+  "platform_rpo_seconds": null
+}

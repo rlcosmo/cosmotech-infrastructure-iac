@@ -182,15 +182,17 @@ resource "aws_eks_pod_identity_association" "pod" {
   service_account = each.value.service_account
   role_arn        = aws_iam_role.pod[each.key].arn
 }
-# AWS selects compatible default add-ons; record versions during preflight and pin before real deployment.
+# Versions are pinned to live Ohio observations; upgrades require a new review.
 resource "aws_eks_addon" "agent" {
-  cluster_name = aws_eks_cluster.standby.name
-  addon_name   = "eks-pod-identity-agent"
+  cluster_name  = aws_eks_cluster.standby.name
+  addon_name    = "eks-pod-identity-agent"
+  addon_version = var.addon_versions["eks-pod-identity-agent"]
 }
 resource "aws_eks_addon" "network" {
   for_each             = toset(["vpc-cni", "kube-proxy", "coredns", "aws-ebs-csi-driver"])
   cluster_name         = aws_eks_cluster.standby.name
   addon_name           = each.key
+  addon_version        = var.addon_versions[each.key]
   configuration_values = each.key == "vpc-cni" ? jsonencode({ enableNetworkPolicy = "true" }) : null
   depends_on           = [aws_eks_addon.agent, aws_eks_pod_identity_association.pod, aws_iam_role_policy_attachment.cni, aws_iam_role_policy_attachment.ebs]
 }
@@ -462,3 +464,26 @@ resource "aws_iam_role_policy" "restore" {
   ] })
 }
 output "restore_role_arn" { value = aws_iam_role.restore.arn }
+
+# Fail closed if the separately restored table does not exist. Terraform never
+# substitutes an empty table for a missing backup restore.
+data "aws_dynamodb_table" "restored_orders" {
+  count = var.manage_restored_orders_table ? 1 : 0
+  name  = var.restored_table_name
+}
+resource "aws_dynamodb_table" "restored_orders" {
+  count                       = var.manage_restored_orders_table ? 1 : 0
+  name                        = data.aws_dynamodb_table.restored_orders[0].name
+  billing_mode                = "PAY_PER_REQUEST"
+  hash_key                    = "order_id"
+  deletion_protection_enabled = true
+  attribute {
+    name = "order_id"
+    type = "S"
+  }
+  point_in_time_recovery {
+    enabled                 = true
+    recovery_period_in_days = 7
+  }
+  lifecycle { prevent_destroy = true }
+}

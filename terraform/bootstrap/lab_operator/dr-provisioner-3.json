@@ -159,6 +159,36 @@
           "aws:RequestedRegion": "us-east-2"
         }
       }
+    },
+    {
+      "Sid": "ReadExistingEKSNodegroupServiceRole",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetRole"
+      ],
+      "Resource": "arn:aws:iam::414053644145:role/aws-service-role/eks-nodegroup.amazonaws.com/AWSServiceRoleForAmazonEKSNodegroup"
+    },
+    {
+      "Sid": "VerifyAndProtectOnlyRestoredDRTables",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:DescribeTable",
+        "dynamodb:DescribeContinuousBackups",
+        "dynamodb:DescribeTimeToLive",
+        "dynamodb:ListTagsOfResource",
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:Query",
+        "dynamodb:UpdateTable",
+        "dynamodb:UpdateContinuousBackups",
+        "dynamodb:TagResource"
+      ],
+      "Resource": "arn:aws:dynamodb:us-east-2:414053644145:table/cosmotech-dr-*-restored*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
     }
   ]
 }
