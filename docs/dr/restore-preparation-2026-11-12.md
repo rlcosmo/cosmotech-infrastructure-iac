@@ -66,3 +66,34 @@ with skopeo --all --preserve-digests. Source permissions are pull-only for the t
 Lab repositories; writes target only the three Ohio DR repositories. Auth files
 and 15-minute execution evidence live privately on the runner and are removed
 on exit. DR_AWS_RELEASE_CONFIRMED was set true only after live service checks.
+
+
+## Subsequent live evidence
+
+Both workers reached Ready in us-east-2a/us-east-2b; node group ACTIVE. Its failed
+creation also needed GetRole on the exact existing EKS nodegroup service-linked
+role. The shared runtime boundary needed read-only pulls from the observed
+AWS-owned EKS system image repositories. Pods confirmed the earlier ECR boundary
+denial; no external repository writes were added. System pods then became Running.
+
+The interrupted create marked two existing add-ons tainted. DescribeAddon proved
+both existed with only missing-node replicas; they were untainted in the isolated
+DR state and preserved. Versions are now pinned to actual Ohio observations.
+The next reviewed plan created only the missing node group, with no deletion.
+
+Orders restore completed and consistent scans compared all 3,418 records in each
+region: identical aggregate SHA256, zero missing/extra/modified records. Private
+per-record evidence stores hashes, never payloads. This is not a writer fence or
+platform RPO proof. The existing restored table was imported into its DR owner;
+Terraform enabled deletion protection and seven-day PITR, with prevent_destroy.
+The data lookup fails closed if the separately restored table is absent.
+
+Seven copied EBS points passed ownership/completion/encryption/regional-KMS
+checks. Their correspondence was documented before the real seven-volume restore;
+all seven jobs completed in us-east-2b. Application-level filesystem validation
+and PV/PVC binding remain pending. A fresh consistent ITSM logical backup also
+completed and its separate 50-GiB volume backup was initiated.
+
+Both real GitHub Actions image publication workflows succeeded through OIDC,
+including digest-preserving Orders copy and build/scan/push of the outbox image.
+See live-data-validation-2026-11-12.json for run IDs and sanitized data evidence.

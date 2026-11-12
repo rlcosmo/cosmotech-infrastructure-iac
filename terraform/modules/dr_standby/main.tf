@@ -182,15 +182,17 @@ resource "aws_eks_pod_identity_association" "pod" {
   service_account = each.value.service_account
   role_arn        = aws_iam_role.pod[each.key].arn
 }
-# AWS selects compatible default add-ons; record versions during preflight and pin before real deployment.
+# Versions are pinned to live Ohio observations; upgrades require a new review.
 resource "aws_eks_addon" "agent" {
-  cluster_name = aws_eks_cluster.standby.name
-  addon_name   = "eks-pod-identity-agent"
+  cluster_name  = aws_eks_cluster.standby.name
+  addon_name    = "eks-pod-identity-agent"
+  addon_version = var.addon_versions["eks-pod-identity-agent"]
 }
 resource "aws_eks_addon" "network" {
   for_each             = toset(["vpc-cni", "kube-proxy", "coredns", "aws-ebs-csi-driver"])
   cluster_name         = aws_eks_cluster.standby.name
   addon_name           = each.key
+  addon_version        = var.addon_versions[each.key]
   configuration_values = each.key == "vpc-cni" ? jsonencode({ enableNetworkPolicy = "true" }) : null
   depends_on           = [aws_eks_addon.agent, aws_eks_pod_identity_association.pod, aws_iam_role_policy_attachment.cni, aws_iam_role_policy_attachment.ebs]
 }
@@ -462,3 +464,110 @@ resource "aws_iam_role_policy" "restore" {
   ] })
 }
 output "restore_role_arn" { value = aws_iam_role.restore.arn }
+
+# Fail closed if the separately restored table does not exist. Terraform never
+# substitutes an empty table for a missing backup restore.
+data "aws_dynamodb_table" "restored_orders" {
+  count = var.manage_restored_orders_table ? 1 : 0
+  name  = var.restored_table_name
+}
+resource "aws_dynamodb_table" "restored_orders" {
+  count                       = var.manage_restored_orders_table ? 1 : 0
+  name                        = data.aws_dynamodb_table.restored_orders[0].name
+  billing_mode                = "PAY_PER_REQUEST"
+  hash_key                    = "order_id"
+  deletion_protection_enabled = true
+  attribute {
+    name = "order_id"
+    type = "S"
+  }
+  point_in_time_recovery {
+    enabled                 = true
+    recovery_period_in_days = 7
+  }
+  lifecycle { prevent_destroy = true }
+}
+
+# The AWS-managed CSI policy does not grant use of this customer-managed key.
+resource "aws_iam_role_policy" "ebs_recovery_kms" {
+  role = aws_iam_role.pod["ebs"].id
+  policy = jsonencode({ Version = "2012-10-17", Statement = [
+    { Effect = "Allow", Action = ["kms:Encrypt", "kms:Decrypt", "kms:ReEncryptFrom", "kms:ReEncryptTo", "kms:GenerateDataKey", "kms:GenerateDataKeyWithoutPlaintext", "kms:DescribeKey"],
+    Resource = aws_kms_key.backup.arn },
+    { Effect = "Allow", Action = ["kms:CreateGrant", "kms:ListGrants"], Resource = aws_kms_key.backup.arn,
+    Condition = { Bool = { "kms:GrantIsForAWSResource" = "true" } } }
+  ] })
+}
+
+# The data lookup fails if a restore is missing; no empty replacement volume.
+data "aws_ebs_volume" "restored" {
+  for_each = var.restored_volumes
+  filter {
+    name   = "volume-id"
+    values = [each.value.volume_id]
+  }
+}
+resource "aws_ebs_volume" "restored" {
+  for_each          = var.restored_volumes
+  availability_zone = each.value.availability_zone
+  snapshot_id       = each.value.snapshot_id
+  size              = each.value.size_gib
+  type              = "gp3"
+  encrypted         = true
+  kms_key_id        = aws_kms_key.backup.arn
+  iops              = 3000
+  throughput        = 125
+  tags = merge({
+    Name              = "cosmotech-dr-restored-${replace(each.key, "_", "-")}-20261112"
+    RecoveryOperation = "cosmotech-dr-20261112"
+    DRComponent       = each.key
+    }, each.value.csi_managed ? {
+    "ebs.csi.aws.com/cluster"           = "true"
+    "ebs.csi.aws.com/cluster-name"      = var.name
+    "kubernetes.io/cluster/${var.name}" = "owned"
+  } : {})
+  lifecycle {
+    prevent_destroy = true
+    # The imported local-only default is absent from AWS. Provider 6.62.0
+    # otherwise calls ModifyVolume for this flag alone. Keep imported metadata;
+    # real recovery protection is prevent_destroy plus verified Backup points.
+    ignore_changes = [final_snapshot]
+    precondition {
+      condition = data.aws_ebs_volume.restored[each.key].availability_zone == each.value.availability_zone && (
+        data.aws_ebs_volume.restored[each.key].snapshot_id == each.value.snapshot_id &&
+        data.aws_ebs_volume.restored[each.key].encrypted &&
+        data.aws_ebs_volume.restored[each.key].kms_key_id == aws_kms_key.backup.arn
+      )
+      error_message = "Live restored volume does not match the verified snapshot, AZ or DR encryption key."
+    }
+  }
+}
+
+
+# Keep an AZ-specific activation path for retained EBS volumes. A mixed-AZ
+# group cannot guarantee a node in the volume's zone when scaling from zero.
+resource "aws_eks_node_group" "stateful" {
+  count           = var.enable_stateful_pool ? 1 : 0
+  cluster_name    = aws_eks_cluster.standby.name
+  node_group_name = "dr-stateful-2b"
+  node_role_arn   = aws_iam_role.nodes.arn
+  subnet_ids      = [aws_subnet.standby[1].id]
+  instance_types  = ["t3.large"]
+  capacity_type   = "ON_DEMAND"
+  ami_type        = "AL2023_x86_64_STANDARD"
+  labels          = { "cosmotech.io/workload" = "stateful" }
+  launch_template {
+    id      = aws_launch_template.nodes.id
+    version = aws_launch_template.nodes.latest_version
+  }
+  scaling_config {
+    min_size     = 0
+    desired_size = var.desired_stateful_nodes
+    max_size     = 1
+  }
+  update_config {
+    max_unavailable = 1
+    update_strategy = "MINIMAL"
+  }
+  depends_on = [aws_iam_role_policy_attachment.nodes, aws_route.egress]
+}

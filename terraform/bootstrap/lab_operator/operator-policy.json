@@ -358,7 +358,10 @@
       "Effect": "Allow",
       "Action": [
         "dynamodb:DescribeTable",
-        "dynamodb:DescribeContinuousBackups"
+        "dynamodb:DescribeContinuousBackups",
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:Query"
       ],
       "Resource": [
         "arn:aws:dynamodb:us-east-1:414053644145:table/aws-eks-istio-lab-dev-orders-data",

@@ -146,22 +146,26 @@ variable "desired_nodes" {
   }
 }
 module "standby" {
-  count                    = var.enable_standby ? 1 : 0
-  source                   = "../../modules/dr_standby"
-  providers                = { aws = aws.standby }
-  account_id               = "414053644145"
-  region                   = var.standby_region
-  name                     = "cosmotech-dr"
-  cluster_version          = var.cluster_version
-  admin_cidrs              = var.admin_cidrs
-  admin_role_arn           = var.admin_role_arn
-  desired_nodes            = var.desired_nodes
-  max_nodes                = var.max_nodes
-  permissions_boundary_arn = var.permissions_boundary_arn
-  queue_arn                = module.standby_sqs[0].orders_queue_arn
-  restored_table_name      = "cosmotech-dr-orders-restored"
-  enable_recovery_host     = var.enable_recovery_host
-  recovery_host_ami        = var.recovery_host_ami
+  count                        = var.enable_standby ? 1 : 0
+  source                       = "../../modules/dr_standby"
+  providers                    = { aws = aws.standby }
+  account_id                   = "414053644145"
+  region                       = var.standby_region
+  name                         = "cosmotech-dr"
+  cluster_version              = var.cluster_version
+  admin_cidrs                  = var.admin_cidrs
+  admin_role_arn               = var.admin_role_arn
+  desired_nodes                = var.desired_nodes
+  max_nodes                    = var.max_nodes
+  permissions_boundary_arn     = var.permissions_boundary_arn
+  manage_restored_orders_table = var.manage_restored_orders_table
+  restored_volumes             = var.restored_volumes
+  enable_stateful_pool         = var.enable_stateful_pool
+  desired_stateful_nodes       = var.desired_stateful_nodes
+  queue_arn                    = module.standby_sqs[0].orders_queue_arn
+  restored_table_name          = "cosmotech-dr-orders-restored"
+  enable_recovery_host         = var.enable_recovery_host
+  recovery_host_ami            = var.recovery_host_ami
 }
 output "standby" {
   value = module.standby
@@ -203,7 +207,7 @@ variable "max_nodes" {
   default     = 2
   validation {
     condition = contains([1, 2, 3], var.max_nodes) && (!var.enable_standby || (
-      2 * var.max_nodes + (var.enable_recovery_host ? 2 : 0) + var.reserved_vcpus <= var.verified_vcpu_quota
+      2 * var.max_nodes + (var.enable_stateful_pool ? 2 : 0) + (var.enable_recovery_host ? 2 : 0) + var.reserved_vcpus <= var.verified_vcpu_quota
     ))
     error_message = "Peak nodes plus optional host and existing usage exceed the observed On-Demand vCPU quota."
   }
@@ -216,5 +220,37 @@ variable "permissions_boundary_arn" {
   validation {
     condition     = !var.enable_standby || var.permissions_boundary_arn == "arn:aws:iam::414053644145:policy/cosmotech-dr-runtime-boundary"
     error_message = "Use the reviewed bootstrap-owned DR runtime boundary."
+  }
+}
+
+variable "manage_restored_orders_table" {
+  description = "Requires a completed isolated restore and import; never create an empty substitute."
+  type        = bool
+  default     = false
+}
+
+variable "restored_volumes" {
+  description = "Verified completed restores, adopted into this isolated DR owner."
+  type = map(object({
+    volume_id         = string
+    snapshot_id       = string
+    size_gib          = number
+    availability_zone = string
+    source_volume     = string
+    csi_managed       = bool
+  }))
+  default = {}
+}
+
+variable "enable_stateful_pool" {
+  type    = bool
+  default = false
+}
+variable "desired_stateful_nodes" {
+  type    = number
+  default = 0
+  validation {
+    condition     = contains([0, 1], var.desired_stateful_nodes) && (var.enable_stateful_pool || var.desired_stateful_nodes == 0)
+    error_message = "Only a reviewed zero/one-node stateful pool is permitted."
   }
 }

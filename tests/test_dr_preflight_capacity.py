@@ -23,6 +23,11 @@ class CapacityBudgetTests(unittest.TestCase):
     def test_full_topology_requires_six_vcpus(self):
         self.assertEqual(preflight.capacity_budget(6, 0, 2, 2, True)["proposed_vcpus"], 6)
 
+    def test_zonal_pool_is_reserved_in_addition_to_general_pool(self):
+        with self.assertRaisesRegex(ValueError, "Insufficient quota"):
+            preflight.capacity_budget(5, 0, 2, 2, False, True)
+        self.assertEqual(preflight.capacity_budget(16, 0, 1, 2, False, True)["proposed_vcpus"], 4)
+
 
 if __name__ == "__main__":
     unittest.main()

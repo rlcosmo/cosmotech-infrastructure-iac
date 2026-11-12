@@ -1,9 +1,8 @@
 {
   "istio-base": {},
   "istiod": {
-    "pilot": {
-      "replicaCount": 1
-    }
+    "replicaCount": 1,
+    "autoscaleEnabled": false
   },
   "istio-ingress": {
     "replicaCount": 1,
@@ -12,6 +11,9 @@
     },
     "labels": {
       "istio": "dr-ingress"
+    },
+    "autoscaling": {
+      "enabled": false
     }
   },
   "argocd": {
@@ -39,29 +41,42 @@
       "persistence": {
         "enabled": true,
         "storageClassName": "gp3-retain",
-        "size": "10Gi"
+        "size": "5Gi",
+        "existingClaim": "dr-grafana-restored"
       },
       "sidecar": {
         "dashboards": {
           "enabled": true,
           "label": "grafana_dashboard",
           "searchNamespace": "observability"
+        },
+        "image": {
+          "tag": "2.14.1"
+        },
+        "datasources": {
+          "name": "prometheus-aws-eks-istio-lab-dev"
         }
       },
       "additionalDataSources": [
         {
-          "name": "Loki DR",
+          "name": "Loki",
+          "uid": "loki",
           "type": "loki",
           "url": "http://loki.observability.svc.cluster.local:3100",
           "access": "proxy"
         },
         {
-          "name": "Tempo DR",
+          "name": "Tempo",
+          "uid": "P214B5B846CF3925F",
           "type": "tempo",
           "url": "http://tempo.observability.svc.cluster.local:3200",
           "access": "proxy"
         }
-      ]
+      ],
+      "defaultDashboardsEnabled": false,
+      "nodeSelector": {
+        "cosmotech.io/workload": "stateful"
+      }
     },
     "prometheus": {
       "prometheusSpec": {
@@ -85,13 +100,39 @@
                 }
               }
             }
-          }
+          },
+          "disableMountSubPath": true
+        },
+        "image": {
+          "tag": "v3.15.1-distroless"
+        },
+        "nodeSelector": {
+          "cosmotech.io/workload": "stateful"
         }
       }
     },
     "alertmanager": {
       "alertmanagerSpec": {
-        "replicas": 1
+        "replicas": 1,
+        "storage": {
+          "disableMountSubPath": true,
+          "volumeClaimTemplate": {
+            "spec": {
+              "storageClassName": "gp3-retain",
+              "accessModes": [
+                "ReadWriteOnce"
+              ],
+              "resources": {
+                "requests": {
+                  "storage": "2Gi"
+                }
+              }
+            }
+          }
+        },
+        "nodeSelector": {
+          "cosmotech.io/workload": "stateful"
+        }
       }
     }
   },
@@ -166,6 +207,9 @@
       "compactor": {
         "retention_enabled": true,
         "delete_request_store": "filesystem"
+      },
+      "image": {
+        "tag": "3.7.9"
       }
     },
     "singleBinary": {
@@ -178,11 +222,14 @@
       },
       "persistence": {
         "enabled": true,
-        "size": "20Gi",
+        "size": "10Gi",
         "storageClass": "gp3-retain",
         "whenScaled": "Retain",
         "whenDeleted": "Retain",
         "enableStatefulSetAutoDeletePVC": false
+      },
+      "nodeSelector": {
+        "cosmotech.io/workload": "stateful"
       }
     },
     "read": {
@@ -211,6 +258,11 @@
     },
     "test": {
       "enabled": false
+    },
+    "sidecar": {
+      "image": {
+        "tag": "2.14.1"
+      }
     }
   },
   "tempo": {
@@ -218,7 +270,7 @@
     "persistence": {
       "enabled": true,
       "storageClassName": "gp3-retain",
-      "size": "20Gi"
+      "size": "10Gi"
     },
     "tempo": {
       "retention": "24h",
@@ -228,6 +280,9 @@
           "memory": "256Mi"
         }
       }
+    },
+    "nodeSelector": {
+      "cosmotech.io/workload": "stateful"
     }
   }
 }

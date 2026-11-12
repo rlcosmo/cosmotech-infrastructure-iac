@@ -222,6 +222,35 @@
       }
     },
     {
+      "Sid": "PullOnlyObservedManagedEKSAddonImages",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchGetImage"
+      ],
+      "Resource": [
+        "arn:aws:ecr:us-east-2:602401143452:repository/amazon-k8s-cni",
+        "arn:aws:ecr:us-east-2:602401143452:repository/amazon-k8s-cni-init",
+        "arn:aws:ecr:us-east-2:602401143452:repository/amazon/aws-network-policy-agent",
+        "arn:aws:ecr:us-east-2:602401143452:repository/eks/aws-ebs-csi-driver",
+        "arn:aws:ecr:us-east-2:602401143452:repository/eks/coredns",
+        "arn:aws:ecr:us-east-2:602401143452:repository/eks/csi-attacher",
+        "arn:aws:ecr:us-east-2:602401143452:repository/eks/csi-node-driver-registrar",
+        "arn:aws:ecr:us-east-2:602401143452:repository/eks/csi-provisioner",
+        "arn:aws:ecr:us-east-2:602401143452:repository/eks/csi-resizer",
+        "arn:aws:ecr:us-east-2:602401143452:repository/eks/csi-snapshotter",
+        "arn:aws:ecr:us-east-2:602401143452:repository/eks/eks-pod-identity-agent",
+        "arn:aws:ecr:us-east-2:602401143452:repository/eks/kube-proxy",
+        "arn:aws:ecr:us-east-2:602401143452:repository/eks/livenessprobe"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
       "Sid": "NeverIAMOrAccountAdministration",
       "Effect": "Deny",
       "Action": [

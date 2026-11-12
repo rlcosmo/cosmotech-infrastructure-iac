@@ -25,12 +25,11 @@
   "gitops_merge_commit": "65cce79928071d81979ae97bdf76d4810bb037e3",
   "infrastructure_pr": "https://github.com/rlcosmo/cosmotech-infrastructure-iac/pull/48",
   "remaining_gates": [
-    "Quota 16 verified; finish node group/add-on health and full-service activation tests",
-    "Complete destination copy and isolated restore including DynamoDB/outbox and management data; Ohio currently has no Backup vault",
-    "Finish scoped restore/copy roles, ECR image publication and GitOps activation; provisioner is created but resource writes are not yet exercised",
-    "Controlled primary journal rollout/replication, independently complete receipts and global fencing",
-    "Real application E2E, controlled failover/failback and measured RTO/RPO",
-    "Production routing/TLS and Zabbix destination recovery still need implementation and verification"
+    "Finish DR PV/PVC bindings and platform/application activation; nodegroup now ACTIVE with two Ready nodes",
+    "Restore consistent management data and complete regional host configuration",
+    "Deploy primary durable journal/replication, independently complete receipts and fencing",
+    "Execute real controlled failover/failback and record platform RTO/RPO",
+    "Validate regional routing/TLS, all critical applications and passive cost/resource inventory"
   ],
   "outbox": {
     "implemented_in_code": true,
@@ -66,5 +65,30 @@
     "observed_effective": 16,
     "support_case": "179445768400848"
   },
-  "dr_deployment_complete": false
+  "dr_deployment_complete": false,
+  "secondary_eks": {
+    "cluster": "cosmotech-dr",
+    "nodegroup_status": "ACTIVE",
+    "ready_nodes": 2,
+    "availability_zones": [
+      "us-east-2a",
+      "us-east-2b"
+    ],
+    "eks_version": "1.36",
+    "workers_desired_after_validation": 0
+  },
+  "restored_orders_2026_11_12": {
+    "backup_job": "99d75f97-aa1c-4c5a-9948-cee09800ae2e",
+    "copy_job": "82a2291e-9f4b-4466-9a3a-d757e2dd3047",
+    "restore_job": "851943e7-8bc7-4b8f-8ce8-42272dc477fc",
+    "status": "COMPLETED",
+    "source_count": 3418,
+    "destination_count": 3418,
+    "missing": 0,
+    "extra": 0,
+    "changed": 0,
+    "deletion_protection": true,
+    "pitr_days": 7,
+    "platform_rpo_certified": false
+  }
 }
