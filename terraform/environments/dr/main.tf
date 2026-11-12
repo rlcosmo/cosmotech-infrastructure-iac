@@ -159,6 +159,9 @@ module "standby" {
   max_nodes                    = var.max_nodes
   permissions_boundary_arn     = var.permissions_boundary_arn
   manage_restored_orders_table = var.manage_restored_orders_table
+  restored_volumes             = var.restored_volumes
+  enable_stateful_pool         = var.enable_stateful_pool
+  desired_stateful_nodes       = var.desired_stateful_nodes
   queue_arn                    = module.standby_sqs[0].orders_queue_arn
   restored_table_name          = "cosmotech-dr-orders-restored"
   enable_recovery_host         = var.enable_recovery_host
@@ -204,7 +207,7 @@ variable "max_nodes" {
   default     = 2
   validation {
     condition = contains([1, 2, 3], var.max_nodes) && (!var.enable_standby || (
-      2 * var.max_nodes + (var.enable_recovery_host ? 2 : 0) + var.reserved_vcpus <= var.verified_vcpu_quota
+      2 * var.max_nodes + (var.enable_stateful_pool ? 2 : 0) + (var.enable_recovery_host ? 2 : 0) + var.reserved_vcpus <= var.verified_vcpu_quota
     ))
     error_message = "Peak nodes plus optional host and existing usage exceed the observed On-Demand vCPU quota."
   }
@@ -224,4 +227,30 @@ variable "manage_restored_orders_table" {
   description = "Requires a completed isolated restore and import; never create an empty substitute."
   type        = bool
   default     = false
+}
+
+variable "restored_volumes" {
+  description = "Verified completed restores, adopted into this isolated DR owner."
+  type = map(object({
+    volume_id         = string
+    snapshot_id       = string
+    size_gib          = number
+    availability_zone = string
+    source_volume     = string
+    csi_managed       = bool
+  }))
+  default = {}
+}
+
+variable "enable_stateful_pool" {
+  type    = bool
+  default = false
+}
+variable "desired_stateful_nodes" {
+  type    = number
+  default = 0
+  validation {
+    condition     = contains([0, 1], var.desired_stateful_nodes) && (var.enable_stateful_pool || var.desired_stateful_nodes == 0)
+    error_message = "Only a reviewed zero/one-node stateful pool is permitted."
+  }
 }

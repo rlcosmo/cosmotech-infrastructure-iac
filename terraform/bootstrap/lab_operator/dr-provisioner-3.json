@@ -189,6 +189,81 @@
           "aws:RequestedRegion": "us-east-2"
         }
       }
+    },
+    {
+      "Sid": "InspectOhioRecoveredVolumes",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeVolumes",
+        "ec2:DescribeVolumeStatus",
+        "ec2:DescribeSnapshots",
+        "ec2:DescribeVolumesModifications"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "InitiallyTagOnlyRecordedRestoredVolumes",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateTags"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:414053644145:volume/vol-0aa23b64d8abce5c4",
+        "arn:aws:ec2:us-east-2:414053644145:volume/vol-0751079497db44939",
+        "arn:aws:ec2:us-east-2:414053644145:volume/vol-01f1a4cdc5e20f50f",
+        "arn:aws:ec2:us-east-2:414053644145:volume/vol-08f66c138b5c427ec",
+        "arn:aws:ec2:us-east-2:414053644145:volume/vol-0b7f11fedab035cea",
+        "arn:aws:ec2:us-east-2:414053644145:volume/vol-0d1bb9f87dac08455",
+        "arn:aws:ec2:us-east-2:414053644145:volume/vol-08e83f8bac7a9f1e7",
+        "arn:aws:ec2:us-east-2:414053644145:volume/vol-0184f553ed58cf951"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:RequestTag/Project": "CosmoTech",
+          "aws:RequestTag/Environment": "dr",
+          "aws:RequestTag/RecoveryOperation": "cosmotech-dr-20261112"
+        }
+      }
+    },
+    {
+      "Sid": "MaintainOnlyTaggedDRRestoreMetadata",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateTags"
+      ],
+      "Resource": "arn:aws:ec2:us-east-2:414053644145:volume/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "ec2:ResourceTag/Environment": "dr",
+          "ec2:ResourceTag/RecoveryOperation": "cosmotech-dr-20261112"
+        }
+      }
+    },
+    {
+      "Sid": "ScaleOnlyReviewedDRNodegroups",
+      "Effect": "Allow",
+      "Action": [
+        "eks:UpdateNodegroupConfig"
+      ],
+      "Resource": [
+        "arn:aws:eks:us-east-2:414053644145:nodegroup/cosmotech-dr/dr-ondemand/*",
+        "arn:aws:eks:us-east-2:414053644145:nodegroup/cosmotech-dr/dr-stateful-2b/*"
+      ]
+    },
+    {
+      "Sid": "ReadOnlyDRUpdateProgress",
+      "Effect": "Allow",
+      "Action": [
+        "eks:DescribeUpdate"
+      ],
+      "Resource": "arn:aws:eks:us-east-2:414053644145:cluster/cosmotech-dr"
     }
   ]
 }

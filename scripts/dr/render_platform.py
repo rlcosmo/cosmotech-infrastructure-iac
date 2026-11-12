@@ -24,7 +24,7 @@ def render(destination):
             config=folder/(chart['release']+'.json')
             config.write_text(json.dumps(values[chart['release']]))
             rendered=subprocess.check_output(['helm','template',chart['release'],str(archive),
-                '--namespace',chart['namespace'],'--kube-version','1.36.0','--include-crds','-f',str(config)])
+                '--namespace',chart['namespace'],'--kube-version','1.36.0','--include-crds','--skip-tests','-f',str(config)])
             (destination/(chart['release']+'.yaml')).write_bytes(rendered)
     print('PASS: pinned charts SHA256 verified and Helm templates rendered; no cluster contacted')
 

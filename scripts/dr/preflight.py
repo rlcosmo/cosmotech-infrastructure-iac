@@ -8,18 +8,18 @@ import subprocess
 
 
 def capacity_budget(quota: float, used_vcpus: int, max_nodes: int,
-                    node_vcpus: int, recovery_host: bool) -> dict:
+                    node_vcpus: int, recovery_host: bool, stateful_pool: bool = False) -> dict:
     """Conservatively reserve existing compute plus the whole proposed topology."""
     if max_nodes not in (1, 2, 3) or node_vcpus <= 0 or used_vcpus < 0:
         raise ValueError("Invalid capacity inputs")
-    required = max_nodes * node_vcpus + (node_vcpus if recovery_host else 0)
+    required = (max_nodes + int(recovery_host) + int(stateful_pool)) * node_vcpus
     if required + used_vcpus > quota:
         raise ValueError(f"Insufficient quota: {required} proposed + {used_vcpus} existing > {quota} vCPUs")
     return dict(vcpu_quota=quota, existing_vcpus_reserved=used_vcpus,
                 proposed_vcpus=required, remaining_vcpus=quota-used_vcpus-required)
 
 
-def inspect(release_reference, max_nodes=2, recovery_host=False):
+def inspect(release_reference, max_nodes=2, recovery_host=False, stateful_pool=False):
     if not release_reference or len(release_reference)<10:
         raise ValueError('Official account release reference is required; ACTIVE plan/credits are insufficient')
     def aws(service,operation,*args):
@@ -44,7 +44,7 @@ def inspect(release_reference, max_nodes=2, recovery_host=False):
     metadata=aws('ec2','describe-instance-types','--instance-types',*sorted(set(types+['t3.large'])))
     cpus={i['InstanceType']:i['VCpuInfo']['DefaultVCpus'] for i in metadata['InstanceTypes']}
     # All on-demand families are reserved conservatively, including separate quota pools.
-    budget=capacity_budget(standard,sum(cpus[t] for t in types),max_nodes,cpus['t3.large'],recovery_host)
+    budget=capacity_budget(standard,sum(cpus[t] for t in types),max_nodes,cpus['t3.large'],recovery_host,stateful_pool)
     return dict(observed_at=datetime.now(timezone.utc).isoformat(),account=identity['Account'],
         role=identity['Arn'],region='us-east-2',release_reference=release_reference,
         standard_version='1.36',reviewed_azs=sorted(locations),capacity=budget,
@@ -55,5 +55,6 @@ if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--aws-release-reference',required=True)
     p.add_argument('--max-nodes',type=int,default=2)
     p.add_argument('--recovery-host',action='store_true')
+    p.add_argument('--stateful-pool',action='store_true')
     args=p.parse_args()
-    print(json.dumps(inspect(args.aws_release_reference,args.max_nodes,args.recovery_host),indent=2))
+    print(json.dumps(inspect(args.aws_release_reference,args.max_nodes,args.recovery_host,args.stateful_pool),indent=2))

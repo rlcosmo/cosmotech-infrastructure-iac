@@ -136,3 +136,19 @@ run "reject_missing_runtime_boundary" {
   }
   expect_failures = [var.permissions_boundary_arn]
 }
+
+run "quota_five_rejects_two_nodes_plus_zonal_pool" {
+  command   = plan
+  providers = { aws.standby = aws }
+  variables {
+    enable_standby             = true
+    account_restricted         = false
+    release_evidence           = "MOCK-NOT-AWS-RELEASE"
+    monthly_budget_usd         = 500
+    estimated_monthly_cost_usd = 150
+    admin_cidrs                = ["192.0.2.10/32"]
+    admin_role_arn             = "arn:aws:iam::414053644145:role/cosmotech-lab-operator"
+    enable_stateful_pool       = true
+  }
+  expect_failures = [var.max_nodes]
+}

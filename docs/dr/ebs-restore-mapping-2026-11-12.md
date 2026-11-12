@@ -12,4 +12,10 @@ Copied points verified COMPLETED, owned by 414053644145, encrypted, with KMS key
 | tempo | vol-083afcbd83df50607 | snap-0b2b93b9cd47c39ac | cosmotech-recovery-tempo-20261111-1b / observability/cosmotech-recovery-tempo-20261111 | us-east-2b | 10 | 0.80 |
 | zabbix_root | vol-030290eae0dc50960 | snap-0e89b80997e9a7349 | EC2 root; no PV/PVC | us-east-2b | 120 | 9.60 |
 
-An additional 50-GiB ITSM source volume contains freshly completed GLPI/Kestra logical dumps; its separate backup/copy is in progress and is not included in this first seven-volume batch. Logical integrity and mount/application compatibility will be tested after restore.
+## ITSM extension, validated before restore
+
+| Component | Source volume | Copied Ohio snapshot | Source PV / PVC | Target AZ | GiB | USD/month |
+| --- | --- | --- | --- | --- | ---: | ---: |
+| GLPI/Kestra logical dumps and data | vol-001ef2ffb9310ec4c | snap-09e3d2b614fee9b1b | EC2 root; no PV/PVC | us-east-2b | 50 | 4.00 |
+
+Copy job 5a2cce71-f7d4-40bd-81a2-306b822b911a completed. DescribeSnapshots verified owner 414053644145, completed state, 50 GiB, encryption and the destination CMK before restore. Logical backup service completed successfully at 20261112T051322Z before the source EBS backup. The copied restore metadata still names the primary KMS key; explicitly replace it with the verified Ohio CMK and set the actual destination AZ. Restore as a data copy; do not boot the primary root or enable copied schedules/notifications. Eight retained data volumes total 247 GiB / USD 19.76 monthly, plus backups and any clean compute/root disks. Application-level logical integrity remains to be tested.

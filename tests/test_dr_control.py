@@ -162,3 +162,19 @@ class SnapshotArnTests(unittest.TestCase):
                     'arn:aws:ec2:us-east-2:414053644145:snapshot/snap-abcd']:
             with self.subTest(arn=arn):
                 self.assertFalse(valid_recovery_point_arn(arn, 'EBS'))
+
+
+class RestoredVolumePlanTests(unittest.TestCase):
+    def test_imported_volume_metadata_only_updates_are_allowed(self):
+        before = dict(id='vol-abcd', region='us-east-2', size=5, snapshot_id='snap-abcd', tags_all={})
+        after = {**before, 'tags_all': {'Environment': 'dr', 'Project': 'CosmoTech'}}
+        change = dict(address='module.standby[0].aws_ebs_volume.restored["grafana"]',
+                      type='aws_ebs_volume', change=dict(actions=['update'], before=before, after=after))
+        self.assertTrue(checker.check_plan({'resource_changes': [change]}))
+        for field, value in [('final_snapshot', False), ('final_snapshot', True), ('size', 10), ('snapshot_id', 'snap-other'), ('region', 'us-east-1')]:
+            bad = {**change, 'change': {**change['change'], 'after': {**after, field: value}}}
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                checker.check_plan({'resource_changes': [bad]})
+        create = {**change, 'change': {**change['change'], 'actions': ['create'], 'before': None}}
+        with self.assertRaises(ValueError):
+            checker.check_plan({'resource_changes': [create]})

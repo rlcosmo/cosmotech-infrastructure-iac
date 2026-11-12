@@ -6,7 +6,7 @@ import json
 import math
 
 ALLOWED = {
-    "aws_instance", "aws_security_group", "aws_iam_instance_profile", "aws_vpc", "aws_subnet", "aws_internet_gateway", "aws_route_table", "aws_route",
+    "aws_ebs_volume", "aws_instance", "aws_security_group", "aws_iam_instance_profile", "aws_vpc", "aws_subnet", "aws_internet_gateway", "aws_route_table", "aws_route",
     "aws_route_table_association", "aws_eks_cluster", "aws_eks_node_group", "aws_eks_addon",
     "aws_eks_access_entry", "aws_eks_access_policy_association", "aws_eks_pod_identity_association",
     "aws_iam_role", "aws_iam_role_policy", "aws_iam_role_policy_attachment", "aws_launch_template",
@@ -35,6 +35,16 @@ def check_plan(plan, *, require_provisioning=False):
         if (change["type"] not in ALLOWED or "delete" in change["change"]["actions"]
                 or not change["address"].startswith(("module.standby[0].", "module.standby_sqs[0]."))):
             raise ValueError("Plan contains out-of-scope/destructive resource: " + change["address"])
+        if change["type"] == "aws_ebs_volume":
+            before = change["change"].get("before") or {}
+            after = change["change"].get("after") or {}
+            changed = {key for key in before.keys() | after.keys()
+                       if before.get(key) != after.get(key)}
+            if (change["change"]["actions"] != ["update"] or not before.get("id")
+                    or changed - {"tags", "tags_all"}
+                    or after.get("tags_all", {}).get("Environment") != "dr"
+                    or after.get("tags_all", {}).get("Project") != "CosmoTech"):
+                raise ValueError("Only metadata updates on imported DR volumes are permitted")
         after = change["change"].get("after") or {}
         region = after.get("region")
         if region and region != "us-east-2":
