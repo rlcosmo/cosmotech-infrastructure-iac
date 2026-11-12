@@ -8,5 +8,9 @@
   "estimated_monthly_cost_usd": 117.05,
   "admin_role_arn": "",
   "admin_cidrs": [],
-  "enable_recovery_host": false
+  "enable_recovery_host": false,
+  "max_nodes": 2,
+  "verified_vcpu_quota": 0,
+  "reserved_vcpus": 0,
+  "permissions_boundary_arn": "arn:aws:iam::414053644145:policy/cosmotech-dr-runtime-boundary"
 }

@@ -1,0 +1,219 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "RegionalMetadata",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:Describe*",
+        "eks:DescribeCluster",
+        "eks-auth:AssumeRoleForPodIdentity",
+        "autoscaling:DescribeAutoScalingGroups"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "ClusterAndCNINetwork",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateNetworkInterface",
+        "ec2:DeleteNetworkInterface",
+        "ec2:AttachNetworkInterface",
+        "ec2:DetachNetworkInterface",
+        "ec2:AssignPrivateIpAddresses",
+        "ec2:UnassignPrivateIpAddresses",
+        "ec2:AssignIpv6Addresses",
+        "ec2:UnassignIpv6Addresses",
+        "ec2:ModifyNetworkInterfaceAttribute",
+        "ec2:CreateTags",
+        "ec2:CreateSecurityGroup",
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:RevokeSecurityGroupIngress",
+        "ec2:AuthorizeSecurityGroupEgress",
+        "ec2:RevokeSecurityGroupEgress"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:414053644145:instance/*",
+        "arn:aws:ec2:us-east-2:414053644145:network-interface/*",
+        "arn:aws:ec2:us-east-2:414053644145:subnet/*",
+        "arn:aws:ec2:us-east-2:414053644145:security-group/*",
+        "arn:aws:ec2:us-east-2:414053644145:vpc/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "ManagedCSIStorage",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateVolume",
+        "ec2:CreateSnapshot",
+        "ec2:AttachVolume",
+        "ec2:DetachVolume",
+        "ec2:ModifyVolume",
+        "ec2:DescribeVolumesModifications",
+        "ec2:CreateTags"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:414053644145:volume/*",
+        "arn:aws:ec2:us-east-2:414053644145:snapshot/*",
+        "arn:aws:ec2:us-east-2:414053644145:instance/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "OnlyDRQueueData",
+      "Effect": "Allow",
+      "Action": [
+        "sqs:SendMessage",
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:ChangeMessageVisibility",
+        "sqs:GetQueueAttributes",
+        "sqs:GetQueueUrl"
+      ],
+      "Resource": [
+        "arn:aws:sqs:us-east-2:414053644145:cosmotech-dr-passive-orders",
+        "arn:aws:sqs:us-east-2:414053644145:cosmotech-dr-passive-orders-dlq"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "OnlyDRTableData",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:Query",
+        "dynamodb:Scan",
+        "dynamodb:DescribeTable",
+        "dynamodb:CreateBackup",
+        "dynamodb:DescribeBackup",
+        "dynamodb:DescribeContinuousBackups",
+        "dynamodb:DescribeTimeToLive",
+        "dynamodb:ListTagsOfResource"
+      ],
+      "Resource": [
+        "arn:aws:dynamodb:us-east-2:414053644145:table/cosmotech-dr-*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "ECRAuth",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:GetAuthorizationToken"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "OnlyDRImagePull",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchGetImage"
+      ],
+      "Resource": [
+        "arn:aws:ecr:us-east-2:414053644145:repository/aws-eks-istio-lab-dev-orders-api",
+        "arn:aws:ecr:us-east-2:414053644145:repository/aws-eks-istio-lab-dev-orders-worker",
+        "arn:aws:ecr:us-east-2:414053644145:repository/cosmotech-dr-orders-outbox"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "RegionalServiceKeyUse",
+      "Effect": "Allow",
+      "Action": [
+        "kms:Decrypt",
+        "kms:Encrypt",
+        "kms:ReEncryptFrom",
+        "kms:ReEncryptTo",
+        "kms:GenerateDataKey",
+        "kms:GenerateDataKeyWithoutPlaintext",
+        "kms:DescribeKey",
+        "kms:CreateGrant",
+        "kms:ListGrants"
+      ],
+      "Resource": "arn:aws:kms:us-east-2:414053644145:key/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "BackupDDBRegionalMetadata",
+      "Effect": "Allow",
+      "Action": [
+        "backup:DescribeBackupJob",
+        "backup:DescribeRecoveryPoint",
+        "backup:ListTags",
+        "tag:GetResources",
+        "dynamodb:ListTables",
+        "dynamodb:ListBackups"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "OnlyDRFileRead",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:GetObjectVersion"
+      ],
+      "Resource": "arn:aws:s3:::cosmotech-dr-414053644145-us-east-2/itsm/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "NeverIAMOrAccountAdministration",
+      "Effect": "Deny",
+      "Action": [
+        "iam:*",
+        "account:*",
+        "organizations:*"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

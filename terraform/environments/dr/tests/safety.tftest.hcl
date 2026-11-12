@@ -1,4 +1,8 @@
 mock_provider "aws" {}
+variables {
+  verified_vcpu_quota      = 5
+  permissions_boundary_arn = "arn:aws:iam::414053644145:policy/cosmotech-dr-runtime-boundary"
+}
 
 run "hold_blocks_full_standby" {
   command   = plan
@@ -68,4 +72,67 @@ run "runtime_cannot_target_an_unreviewed_region" {
     admin_role_arn             = "arn:aws:iam::414053644145:role/cosmotech-dr-operator"
   }
   expect_failures = [var.enable_standby]
+}
+
+run "quota_five_rejects_three_nodes" {
+  command   = plan
+  providers = { aws.standby = aws }
+  variables {
+    enable_standby             = true
+    account_restricted         = false
+    release_evidence           = "MOCK-NOT-AWS-RELEASE"
+    monthly_budget_usd         = 500
+    estimated_monthly_cost_usd = 150
+    admin_cidrs                = ["192.0.2.10/32"]
+    admin_role_arn             = "arn:aws:iam::414053644145:role/cosmotech-lab-operator"
+    max_nodes                  = 3
+  }
+  expect_failures = [var.max_nodes]
+}
+run "quota_five_includes_other_usage" {
+  command   = plan
+  providers = { aws.standby = aws }
+  variables {
+    enable_standby             = true
+    account_restricted         = false
+    release_evidence           = "MOCK-NOT-AWS-RELEASE"
+    monthly_budget_usd         = 500
+    estimated_monthly_cost_usd = 150
+    admin_cidrs                = ["192.0.2.10/32"]
+    admin_role_arn             = "arn:aws:iam::414053644145:role/cosmotech-lab-operator"
+    reserved_vcpus             = 2
+  }
+  expect_failures = [var.max_nodes]
+}
+run "quota_five_rejects_two_nodes_plus_host" {
+  command   = plan
+  providers = { aws.standby = aws }
+  variables {
+    enable_standby             = true
+    account_restricted         = false
+    release_evidence           = "MOCK-NOT-AWS-RELEASE"
+    monthly_budget_usd         = 500
+    estimated_monthly_cost_usd = 150
+    admin_cidrs                = ["192.0.2.10/32"]
+    admin_role_arn             = "arn:aws:iam::414053644145:role/cosmotech-lab-operator"
+    enable_recovery_host       = true
+    recovery_host_ami          = "ami-0123456789abcdef0"
+  }
+  expect_failures = [var.max_nodes]
+}
+
+run "reject_missing_runtime_boundary" {
+  command   = plan
+  providers = { aws.standby = aws }
+  variables {
+    enable_standby             = true
+    account_restricted         = false
+    release_evidence           = "MOCK-NOT-AWS-RELEASE"
+    monthly_budget_usd         = 500
+    estimated_monthly_cost_usd = 150
+    admin_cidrs                = ["192.0.2.10/32"]
+    admin_role_arn             = "arn:aws:iam::414053644145:role/cosmotech-lab-operator"
+    permissions_boundary_arn   = ""
+  }
+  expect_failures = [var.permissions_boundary_arn]
 }

@@ -1,0 +1,103 @@
+{
+  "observed_at": "2026-11-12T04:35:43.931812+00:00",
+  "account": "414053644145",
+  "s3_current_status": "functional",
+  "historical_not_signed_up_last_observed_utc": "2026-11-11T22:38:01Z",
+  "first_success_in_bounded_sample_utc": "2026-11-11T22:39:00Z",
+  "historical_sampling_truncated": true,
+  "backend": {
+    "source_key": "aws-serverless-lab/dev/terraform.tfstate",
+    "version_id": "VkGP7NWfofaRRdt_Ks98IL6URxW1fx9z",
+    "etag": "\"8efa766571088d2674323b57bc67b645\"",
+    "format_version": 4,
+    "terraform_version": "1.17.1",
+    "lineage": "d8f04c08-f16f-dbab-dd6d-52997f781bf2",
+    "serial": 107,
+    "resource_blocks": 185,
+    "state_modified": false
+  },
+  "s3_state_request_id_after_permission_fix": "see private probe evidence",
+  "ohio_quota_vcpus": 5,
+  "existing_ohio_instances": 0,
+  "capacity": {
+    "max_nodes": 2,
+    "vcpus_per_node": 2,
+    "standby_desired_nodes": 0,
+    "with_optional_host_vcpus": 6,
+    "minimum_optional_host_quota": 6
+  },
+  "quota_requests": [
+    {
+      "Id": "86fbc06d37884306a4eef095dfff4ce19UHurkGO",
+      "DesiredValue": 8.0,
+      "Status": "NOT_APPROVED",
+      "CaseId": null
+    },
+    {
+      "Id": "1f2f6bbec17c47f180557ba330534d7e2LWElFnT",
+      "DesiredValue": 6.0,
+      "Status": "NOT_APPROVED",
+      "CaseId": null
+    },
+    {
+      "Id": "232a009f82d94d50856e96c9b050d420F6pqNZpo",
+      "DesiredValue": 8.0,
+      "Status": "CASE_CLOSED",
+      "CaseId": "179445768400848"
+    }
+  ],
+  "iam": {
+    "provisioner_role_arn": "arn:aws:iam::414053644145:role/cosmotech-dr-provisioner",
+    "trust_principal": "arn:aws:iam::414053644145:role/cosmotech-lab-operator",
+    "runtime_boundary_arn": "arn:aws:iam::414053644145:policy/cosmotech-dr-runtime-boundary",
+    "access_analyzer_findings": 0,
+    "root_used": false
+  },
+  "terraform_plan": {
+    "real_cloud_plan": true,
+    "mocks": false,
+    "lock": false,
+    "creates": 77,
+    "updates": 0,
+    "deletes": 0,
+    "primary_changes": 0,
+    "applied": false,
+    "known_dr_state_key_exists": false
+  },
+  "backups": {
+    "primary_vault": "cosmotech-itsm-dev-vault",
+    "primary_recovery_points": 31,
+    "primary_ec2_completed": 19,
+    "primary_ebs_completed": 12,
+    "ohio_vaults": 0,
+    "cross_region_restore_tested": false
+  },
+  "cost": {
+    "currency": "USD",
+    "hours_per_month": 730,
+    "t3_large_ohio_usd_hour": 0.0832,
+    "compute_rate_verified_via_price_list": "2026-11-12",
+    "other_rates_from_versioned_quote": "2026-11-08",
+    "estimated_passive_monthly": 117.6,
+    "estimated_active_two_nodes_monthly": 278.15,
+    "estimate_is_allocation_scenario_not_measured_bill": true,
+    "owner_numeric_monthly_ceiling": null,
+    "private_plan_internal_ceiling": 300,
+    "internal_ceiling_is_not_owner_numeric_approval": true,
+    "ohio_infrastructure_spend_started": false
+  },
+  "real_failover": false,
+  "real_failback": false,
+  "rto_seconds": null,
+  "rpo_seconds": null,
+  "tests": {
+    "dr_unittest": 55,
+    "terraform_safety_tests": 13,
+    "failures": 0,
+    "all_unit_tests": 124,
+    "unit_tests_skipped": 2,
+    "live_iam_simulations": 6
+  },
+  "support_case_detail_api": "SubscriptionRequiredException",
+  "temporary_support_permission_physically_removed": true
+}

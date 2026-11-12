@@ -141,25 +141,27 @@ variable "desired_nodes" {
   type    = number
   default = 0
   validation {
-    condition     = contains([0, 1, 2, 3], var.desired_nodes)
-    error_message = "At most three DR nodes."
+    condition     = contains([0, 1, 2, 3], var.desired_nodes) && var.desired_nodes <= var.max_nodes
+    error_message = "Desired nodes must not exceed the reviewed maximum."
   }
 }
 module "standby" {
-  count                = var.enable_standby ? 1 : 0
-  source               = "../../modules/dr_standby"
-  providers            = { aws = aws.standby }
-  account_id           = "414053644145"
-  region               = var.standby_region
-  name                 = "cosmotech-dr"
-  cluster_version      = var.cluster_version
-  admin_cidrs          = var.admin_cidrs
-  admin_role_arn       = var.admin_role_arn
-  desired_nodes        = var.desired_nodes
-  queue_arn            = module.standby_sqs[0].orders_queue_arn
-  restored_table_name  = "cosmotech-dr-orders-restored"
-  enable_recovery_host = var.enable_recovery_host
-  recovery_host_ami    = var.recovery_host_ami
+  count                    = var.enable_standby ? 1 : 0
+  source                   = "../../modules/dr_standby"
+  providers                = { aws = aws.standby }
+  account_id               = "414053644145"
+  region                   = var.standby_region
+  name                     = "cosmotech-dr"
+  cluster_version          = var.cluster_version
+  admin_cidrs              = var.admin_cidrs
+  admin_role_arn           = var.admin_role_arn
+  desired_nodes            = var.desired_nodes
+  max_nodes                = var.max_nodes
+  permissions_boundary_arn = var.permissions_boundary_arn
+  queue_arn                = module.standby_sqs[0].orders_queue_arn
+  restored_table_name      = "cosmotech-dr-orders-restored"
+  enable_recovery_host     = var.enable_recovery_host
+  recovery_host_ami        = var.recovery_host_ami
 }
 output "standby" {
   value = module.standby
@@ -175,4 +177,44 @@ variable "enable_recovery_host" {
 variable "recovery_host_ami" {
   type    = string
   default = ""
+}
+
+variable "verified_vcpu_quota" {
+  description = "Fresh observed Ohio Standard On-Demand vCPU quota; zero blocks standby provisioning."
+  type        = number
+  default     = 0
+  validation {
+    condition     = var.verified_vcpu_quota >= 0
+    error_message = "Quota must not be negative."
+  }
+}
+variable "reserved_vcpus" {
+  description = "Observed non-standby Standard On-Demand vCPUs, including pending instances."
+  type        = number
+  default     = 0
+  validation {
+    condition     = var.reserved_vcpus >= 0
+    error_message = "Reserved vCPUs must not be negative."
+  }
+}
+variable "max_nodes" {
+  description = "Two t3.large nodes use four vCPUs; optional t3.large recovery host uses two more. MINIMAL updates avoid surge."
+  type        = number
+  default     = 2
+  validation {
+    condition = contains([1, 2, 3], var.max_nodes) && (!var.enable_standby || (
+      2 * var.max_nodes + (var.enable_recovery_host ? 2 : 0) + var.reserved_vcpus <= var.verified_vcpu_quota
+    ))
+    error_message = "Peak nodes plus optional host and existing usage exceed the observed On-Demand vCPU quota."
+  }
+}
+
+variable "permissions_boundary_arn" {
+  description = "Bootstrap-owned runtime boundary; mandatory on every DR service/application role."
+  type        = string
+  default     = ""
+  validation {
+    condition     = !var.enable_standby || var.permissions_boundary_arn == "arn:aws:iam::414053644145:policy/cosmotech-dr-runtime-boundary"
+    error_message = "Use the reviewed bootstrap-owned DR runtime boundary."
+  }
 }

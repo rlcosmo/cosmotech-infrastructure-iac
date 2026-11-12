@@ -1,0 +1,246 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DRS3",
+      "Effect": "Allow",
+      "Action": [
+        "s3:CreateBucket",
+        "s3:GetAccelerateConfiguration",
+        "s3:GetBucketAcl",
+        "s3:GetBucketCORS",
+        "s3:GetBucketLocation",
+        "s3:GetBucketLogging",
+        "s3:GetBucketObjectLockConfiguration",
+        "s3:GetBucketPolicy",
+        "s3:GetBucketPublicAccessBlock",
+        "s3:GetBucketRequestPayment",
+        "s3:GetBucketTagging",
+        "s3:GetBucketVersioning",
+        "s3:GetBucketWebsite",
+        "s3:GetEncryptionConfiguration",
+        "s3:GetLifecycleConfiguration",
+        "s3:GetObjectTagging",
+        "s3:GetObjectVersionTagging",
+        "s3:GetReplicationConfiguration",
+        "s3:ListBucket",
+        "s3:PutBucketPolicy",
+        "s3:PutBucketPublicAccessBlock",
+        "s3:PutBucketTagging",
+        "s3:PutBucketVersioning",
+        "s3:PutEncryptionConfiguration",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging"
+      ],
+      "Resource": [
+        "arn:aws:s3:::cosmotech-dr-414053644145-us-east-2"
+      ]
+    },
+    {
+      "Sid": "DRSqs",
+      "Effect": "Allow",
+      "Action": [
+        "sqs:CreateQueue",
+        "sqs:GetQueueAttributes",
+        "sqs:ListQueueTags",
+        "sqs:SetQueueAttributes",
+        "sqs:TagQueue"
+      ],
+      "Resource": [
+        "arn:aws:sqs:us-east-2:414053644145:cosmotech-dr-passive-orders",
+        "arn:aws:sqs:us-east-2:414053644145:cosmotech-dr-passive-orders-dlq"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "CreateTaggedDRKey",
+      "Effect": "Allow",
+      "Action": [
+        "kms:CreateKey"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:RequestTag/Environment": "dr",
+          "aws:RequestTag/Project": "CosmoTech"
+        }
+      }
+    },
+    {
+      "Sid": "ManageOnlyDRKey",
+      "Effect": "Allow",
+      "Action": [
+        "kms:DescribeKey",
+        "kms:EnableKeyRotation",
+        "kms:GetKeyPolicy",
+        "kms:GetKeyRotationStatus",
+        "kms:ListResourceTags",
+        "kms:PutKeyPolicy",
+        "kms:TagResource"
+      ],
+      "Resource": "arn:aws:kms:us-east-2:414053644145:key/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceTag/Environment": "dr",
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "ServiceGrantOnly",
+      "Effect": "Allow",
+      "Action": [
+        "kms:CreateGrant"
+      ],
+      "Resource": "arn:aws:kms:us-east-2:414053644145:key/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceTag/Environment": "dr",
+          "aws:RequestedRegion": "us-east-2"
+        },
+        "Bool": {
+          "kms:GrantIsForAWSResource": "true"
+        }
+      }
+    },
+    {
+      "Sid": "CreateBoundedDRRoles",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::414053644145:role/cosmotech-dr-api",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-cluster",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-cni",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-ebs",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-metrics",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-nodes",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-outbox-backup",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-publisher",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-reconciler",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-worker"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "iam:PermissionsBoundary": "arn:aws:iam::414053644145:policy/cosmotech-dr-runtime-boundary"
+        }
+      }
+    },
+    {
+      "Sid": "ManageOnlyPlannedRoles",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetRole",
+        "iam:GetRolePolicy",
+        "iam:ListAttachedRolePolicies",
+        "iam:ListRolePolicies",
+        "iam:ListRoleTags",
+        "iam:PutRolePolicy",
+        "iam:TagRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::414053644145:role/cosmotech-dr-api",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-cluster",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-cni",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-ebs",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-metrics",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-nodes",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-outbox-backup",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-publisher",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-reconciler",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-worker"
+      ]
+    },
+    {
+      "Sid": "AttachReviewedManagedPolicies",
+      "Effect": "Allow",
+      "Action": [
+        "iam:AttachRolePolicy"
+      ],
+      "Resource": [
+        "arn:aws:iam::414053644145:role/cosmotech-dr-api",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-cluster",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-cni",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-ebs",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-metrics",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-nodes",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-outbox-backup",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-publisher",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-reconciler",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-worker"
+      ],
+      "Condition": {
+        "ArnEquals": {
+          "iam:PolicyARN": [
+            "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy",
+            "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
+            "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPullOnly",
+            "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy",
+            "arn:aws:iam::aws:policy/AmazonEBSCSIDriverPolicyV2",
+            "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "PassOnlyPlannedRoles",
+      "Effect": "Allow",
+      "Action": [
+        "iam:PassRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::414053644145:role/cosmotech-dr-api",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-cluster",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-cni",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-ebs",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-metrics",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-nodes",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-outbox-backup",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-publisher",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-reconciler",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-worker"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": [
+            "eks.amazonaws.com",
+            "pods.eks.amazonaws.com",
+            "ec2.amazonaws.com",
+            "backup.amazonaws.com"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "BackendMetadata",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetBucketLocation"
+      ],
+      "Resource": "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1"
+    },
+    {
+      "Sid": "BackendWorkspaceDiscovery",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket"
+      ],
+      "Resource": "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1",
+      "Condition": {
+        "StringLike": {
+          "s3:prefix": [
+            "env:/",
+            "env:/*",
+            "aws-serverless-lab/dr/*"
+          ]
+        }
+      }
+    }
+  ]
+}
