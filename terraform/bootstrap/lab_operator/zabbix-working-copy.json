@@ -1,0 +1,132 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CreateOnlyTaggedEncryptedZabbixWorkingCopy",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateVolume"
+      ],
+      "Resource": "arn:aws:ec2:us-east-2:414053644145:volume/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:RequestTag/Project": "CosmoTech",
+          "aws:RequestTag/Environment": "dr",
+          "aws:RequestTag/DRComponent": "zabbix_working_root",
+          "ec2:AvailabilityZone": "us-east-2b",
+          "ec2:VolumeType": "gp3"
+        },
+        "NumericEquals": {
+          "ec2:VolumeSize": "120"
+        },
+        "Bool": {
+          "ec2:Encrypted": "true"
+        }
+      }
+    },
+    {
+      "Sid": "UseOnlyVerifiedZabbixSnapshot",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateVolume"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2::snapshot/snap-0e89b80997e9a7349",
+        "arn:aws:ec2:us-east-2:414053644145:snapshot/snap-0e89b80997e9a7349"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "TagOnlyNewWorkingCopy",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateTags"
+      ],
+      "Resource": "arn:aws:ec2:us-east-2:414053644145:volume/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:RequestTag/Project": "CosmoTech",
+          "aws:RequestTag/Environment": "dr",
+          "aws:RequestTag/DRComponent": "zabbix_working_root",
+          "ec2:CreateAction": "CreateVolume"
+        }
+      }
+    },
+    {
+      "Sid": "AttachOnlyTaggedWorkingCopy",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:AttachVolume"
+      ],
+      "Resource": "arn:aws:ec2:us-east-2:414053644145:volume/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "ec2:ResourceTag/Project": "CosmoTech",
+          "ec2:ResourceTag/Environment": "dr",
+          "ec2:ResourceTag/DRComponent": "zabbix_working_root"
+        }
+      }
+    },
+    {
+      "Sid": "AttachOnlyToCleanRecoveryHost",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:AttachVolume"
+      ],
+      "Resource": "arn:aws:ec2:us-east-2:414053644145:instance/i-0ef16232880370903"
+    },
+    {
+      "Sid": "UseOnlyRecoveryEncryptionKey",
+      "Effect": "Allow",
+      "Action": [
+        "kms:Decrypt",
+        "kms:GenerateDataKeyWithoutPlaintext",
+        "kms:ReEncryptFrom",
+        "kms:ReEncryptTo"
+      ],
+      "Resource": "arn:aws:kms:us-east-2:414053644145:key/046b703a-8dea-4fdc-be67-beb14fe1a077",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "kms:ViaService": "ec2.us-east-2.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "ReadOnlyRecoveryKeyMetadata",
+      "Effect": "Allow",
+      "Action": [
+        "kms:DescribeKey"
+      ],
+      "Resource": "arn:aws:kms:us-east-2:414053644145:key/046b703a-8dea-4fdc-be67-beb14fe1a077",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "GrantOnlyEBSServiceUse",
+      "Effect": "Allow",
+      "Action": [
+        "kms:CreateGrant"
+      ],
+      "Resource": "arn:aws:kms:us-east-2:414053644145:key/046b703a-8dea-4fdc-be67-beb14fe1a077",
+      "Condition": {
+        "Bool": {
+          "kms:GrantIsForAWSResource": "true"
+        },
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    }
+  ]
+}

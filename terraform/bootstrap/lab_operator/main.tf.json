@@ -48,6 +48,18 @@
         "lifecycle": {
           "prevent_destroy": true
         }
+      },
+      "source_outbox_publisher": {
+        "name": "cosmotech-source-outbox-publisher",
+        "permissions_boundary": "${aws_iam_policy.source_outbox_boundary.arn}",
+        "assume_role_policy": "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Principal\": {\"Service\": \"pods.eks.amazonaws.com\"}, \"Action\": [\"sts:AssumeRole\", \"sts:TagSession\"], \"Condition\": {\"StringEquals\": {\"aws:SourceAccount\": \"414053644145\", \"aws:RequestTag/kubernetes-namespace\": \"orders-api\", \"aws:RequestTag/kubernetes-service-account\": \"orders-outbox-publisher\"}, \"ArnEquals\": {\"aws:SourceArn\": \"arn:aws:eks:us-east-1:414053644145:cluster/aws-eks-istio-lab-dev\"}}}]}",
+        "max_session_duration": 3600,
+        "tags": {
+          "Environment": "dr-preparation"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
       }
     },
     "aws_iam_role_policy": {
@@ -139,6 +151,56 @@
         "lifecycle": {
           "prevent_destroy": true
         }
+      },
+      "source_dr_operations": {
+        "name": "cosmotech-lab-source-dr-operations",
+        "policy": "${file(\"${path.module}/source-dr-operations.json\")}",
+        "tags": {
+          "Environment": "dr"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      },
+      "source_outbox_producer": {
+        "name": "cosmotech-orders-outbox-producer",
+        "policy": "${file(\"${path.module}/source-outbox-producer.json\")}",
+        "tags": {
+          "Environment": "dr-preparation"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      },
+      "source_outbox_publisher": {
+        "name": "cosmotech-orders-outbox-publisher",
+        "policy": "${file(\"${path.module}/source-outbox-publisher.json\")}",
+        "tags": {
+          "Environment": "dr-preparation"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      },
+      "source_outbox_boundary": {
+        "name": "cosmotech-source-outbox-runtime-boundary",
+        "policy": "${file(\"${path.module}/source-outbox-boundary.json\")}",
+        "tags": {
+          "Environment": "dr-preparation"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      },
+      "zabbix_working_copy": {
+        "name": "cosmotech-lab-zabbix-working-copy",
+        "policy": "${file(\"${path.module}/zabbix-working-copy.json\")}",
+        "tags": {
+          "Environment": "dr"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
       }
     },
     "aws_iam_role_policy_attachment": {
@@ -161,6 +223,42 @@
       "dr_provisioner_5": {
         "role": "${aws_iam_role.dr_provisioner.name}",
         "policy_arn": "${aws_iam_policy.dr_provisioner_5.arn}"
+      },
+      "source_dr_operations": {
+        "role": "${aws_iam_role.operator.name}",
+        "policy_arn": "${aws_iam_policy.source_dr_operations.arn}"
+      },
+      "source_outbox_producer": {
+        "role": "aws-eks-istio-lab-dev-orders-api-role",
+        "policy_arn": "${aws_iam_policy.source_outbox_producer.arn}"
+      },
+      "source_outbox_publisher": {
+        "role": "${aws_iam_role.source_outbox_publisher.name}",
+        "policy_arn": "${aws_iam_policy.source_outbox_publisher.arn}"
+      },
+      "operator_dr_recovery_ssm": {
+        "role": "${aws_iam_role.operator.name}",
+        "policy_arn": "${aws_iam_policy.dr_provisioner_5.arn}"
+      },
+      "zabbix_working_copy": {
+        "role": "${aws_iam_role.operator.name}",
+        "policy_arn": "${aws_iam_policy.zabbix_working_copy.arn}"
+      },
+      "operator_dr_scope_1": {
+        "role": "${aws_iam_role.operator.name}",
+        "policy_arn": "${aws_iam_policy.dr_provisioner_1.arn}"
+      },
+      "operator_dr_scope_2": {
+        "role": "${aws_iam_role.operator.name}",
+        "policy_arn": "${aws_iam_policy.dr_provisioner_2.arn}"
+      },
+      "operator_dr_scope_3": {
+        "role": "${aws_iam_role.operator.name}",
+        "policy_arn": "${aws_iam_policy.dr_provisioner_3.arn}"
+      },
+      "operator_dr_scope_4": {
+        "role": "${aws_iam_role.operator.name}",
+        "policy_arn": "${aws_iam_policy.dr_provisioner_4.arn}"
       }
     }
   },

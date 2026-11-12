@@ -1,0 +1,210 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "OnlyDedicatedSourceDRStates",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:GetObjectVersion",
+        "s3:PutObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1/aws-serverless-lab/orders-outbox-source/terraform.tfstate",
+        "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1/aws-serverless-lab/orders-outbox-source/terraform.tfstate.tflock",
+        "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1/aws-serverless-lab/dr-backup-source/terraform.tfstate",
+        "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1/aws-serverless-lab/dr-backup-source/terraform.tfstate.tflock"
+      ]
+    },
+    {
+      "Sid": "OnlyTransientSourceDRLocks",
+      "Effect": "Allow",
+      "Action": [
+        "s3:DeleteObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1/aws-serverless-lab/orders-outbox-source/terraform.tfstate.tflock",
+        "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1/aws-serverless-lab/dr-backup-source/terraform.tfstate.tflock"
+      ]
+    },
+    {
+      "Sid": "DiscoverOnlyDedicatedDRStateNamespaces",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket"
+      ],
+      "Resource": "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1",
+      "Condition": {
+        "StringLike": {
+          "s3:prefix": [
+            "aws-serverless-lab/orders-outbox-source/*",
+            "aws-serverless-lab/dr-backup-source/*",
+            "env:/*"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "CreateOnlyTaggedLabDRBackupPlan",
+      "Effect": "Allow",
+      "Action": [
+        "backup:CreateBackupPlan"
+      ],
+      "Resource": "arn:aws:backup:us-east-1:414053644145:backup-plan:*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1",
+          "aws:RequestTag/Project": "CosmoTech",
+          "aws:RequestTag/Environment": "dr"
+        }
+      }
+    },
+    {
+      "Sid": "SelectOnlyTaggedLabDRBackupPlan",
+      "Effect": "Allow",
+      "Action": [
+        "backup:CreateBackupSelection",
+        "backup:TagResource"
+      ],
+      "Resource": "arn:aws:backup:us-east-1:414053644145:backup-plan:*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1",
+          "aws:ResourceTag/Project": "CosmoTech",
+          "aws:ResourceTag/Environment": "dr"
+        }
+      }
+    },
+    {
+      "Sid": "ReadSourceBackupPlanMetadata",
+      "Effect": "Allow",
+      "Action": [
+        "backup:GetBackupPlan",
+        "backup:GetBackupSelection",
+        "backup:ListTags"
+      ],
+      "Resource": "arn:aws:backup:us-east-1:414053644145:backup-plan:*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    },
+    {
+      "Sid": "PassExistingLabBackupRoleOnly",
+      "Effect": "Allow",
+      "Action": [
+        "iam:PassRole"
+      ],
+      "Resource": "arn:aws:iam::414053644145:role/cosmotech-itsm-dev-backup-role",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "backup.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "CreateOnlyNewPrimaryOutbox",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:CreateTable"
+      ],
+      "Resource": "arn:aws:dynamodb:us-east-1:414053644145:table/cosmotech-orders-outbox",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1",
+          "aws:RequestTag/Project": "CosmoTech",
+          "aws:RequestTag/Environment": "dr-preparation"
+        }
+      }
+    },
+    {
+      "Sid": "ProtectAndReadOnlyNewPrimaryOutbox",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:DescribeTable",
+        "dynamodb:DescribeContinuousBackups",
+        "dynamodb:DescribeTimeToLive",
+        "dynamodb:ListTagsOfResource",
+        "dynamodb:UpdateContinuousBackups",
+        "dynamodb:TagResource"
+      ],
+      "Resource": "arn:aws:dynamodb:us-east-1:414053644145:table/cosmotech-orders-outbox",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    },
+    {
+      "Sid": "InspectOnlyPrimaryOrdersPodIdentity",
+      "Effect": "Allow",
+      "Action": [
+        "eks:ListPodIdentityAssociations",
+        "eks:DescribePodIdentityAssociation"
+      ],
+      "Resource": [
+        "arn:aws:eks:us-east-1:414053644145:cluster/aws-eks-istio-lab-dev",
+        "arn:aws:eks:us-east-1:414053644145:podidentityassociation/aws-eks-istio-lab-dev/*"
+      ]
+    },
+    {
+      "Sid": "AssociateOnlyBoundedSourcePublisher",
+      "Effect": "Allow",
+      "Action": [
+        "eks:CreatePodIdentityAssociation"
+      ],
+      "Resource": "arn:aws:eks:us-east-1:414053644145:cluster/aws-eks-istio-lab-dev"
+    },
+    {
+      "Sid": "PassOnlySourcePublisherToPodIdentity",
+      "Effect": "Allow",
+      "Action": [
+        "iam:PassRole"
+      ],
+      "Resource": "arn:aws:iam::414053644145:role/cosmotech-source-outbox-publisher",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "pods.eks.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "TagOnlyNewSourcePublisherIdentity",
+      "Effect": "Allow",
+      "Action": [
+        "eks:TagResource"
+      ],
+      "Resource": "arn:aws:eks:us-east-1:414053644145:podidentityassociation/aws-eks-istio-lab-dev/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/DRPublisher": "source-outbox",
+          "aws:RequestTag/Project": "CosmoTech",
+          "aws:RequestTag/Environment": "dr-preparation"
+        }
+      }
+    },
+    {
+      "Sid": "ReadOnlySourcePublisherRole",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetRole"
+      ],
+      "Resource": "arn:aws:iam::414053644145:role/cosmotech-source-outbox-publisher"
+    },
+    {
+      "Sid": "InspectSourceDRBackupJobMetadata",
+      "Effect": "Allow",
+      "Action": [
+        "backup:ListBackupJobs",
+        "backup:ListCopyJobs"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    }
+  ]
+}

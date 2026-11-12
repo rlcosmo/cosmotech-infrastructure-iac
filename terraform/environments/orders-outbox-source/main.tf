@@ -71,15 +71,20 @@ resource "aws_dynamodb_table" "journal" {
   server_side_encryption { enabled = true }
   lifecycle { prevent_destroy = true }
 }
+variable "manage_application_policies" {
+  description = "False when the permanent IAM bootstrap owns the reviewed producer/publisher policies."
+  type        = bool
+  default     = false
+}
 resource "aws_iam_policy" "producer" {
-  count = var.enabled ? 1 : 0
+  count = var.enabled && var.manage_application_policies ? 1 : 0
   name  = "cosmotech-orders-outbox-producer"
   policy = jsonencode({ Version = "2012-10-17", Statement = [{
     Effect = "Allow", Action = ["dynamodb:GetItem", "dynamodb:PutItem"], Resource = aws_dynamodb_table.journal[0].arn
   }] })
 }
 resource "aws_iam_policy" "publisher" {
-  count = var.enabled ? 1 : 0
+  count = var.enabled && var.manage_application_policies ? 1 : 0
   name  = "cosmotech-orders-outbox-publisher"
   policy = jsonencode({ Version = "2012-10-17", Statement = [
     { Effect = "Allow", Action = ["dynamodb:Query", "dynamodb:UpdateItem"], Resource = [aws_dynamodb_table.journal[0].arn, "${aws_dynamodb_table.journal[0].arn}/index/dispatch-due"] },
@@ -89,3 +94,22 @@ resource "aws_iam_policy" "publisher" {
 # Policies are deliberately NOT attached to existing roles by this root.
 # Bind via the real role owner's reviewed rollout after release/effective-access tests.
 output "journal_arn" { value = try(aws_dynamodb_table.journal[0].arn, null) }
+
+variable "publisher_role_arn" {
+  description = "Reviewed bounded role from the permanent IAM bootstrap; association is opt-in."
+  type        = string
+  default     = ""
+  validation {
+    condition     = contains(["", "arn:aws:iam::414053644145:role/cosmotech-source-outbox-publisher"], var.publisher_role_arn)
+    error_message = "Only the dedicated bounded source publisher role may be associated."
+  }
+}
+resource "aws_eks_pod_identity_association" "publisher" {
+  count                = var.enabled && var.publisher_role_arn != "" ? 1 : 0
+  cluster_name         = "aws-eks-istio-lab-dev"
+  namespace            = "orders-api"
+  service_account      = "orders-outbox-publisher"
+  role_arn             = var.publisher_role_arn
+  disable_session_tags = false
+  tags                 = { DRPublisher = "source-outbox" }
+}
