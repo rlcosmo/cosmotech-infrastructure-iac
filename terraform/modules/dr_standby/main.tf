@@ -613,3 +613,20 @@ resource "aws_eks_node_group" "stateful" {
   }
   depends_on = [aws_iam_role_policy_attachment.nodes, aws_route.egress]
 }
+
+# Independent filesystem replay copy; the first restored Zabbix disk remains untouched.
+resource "aws_volume_attachment" "recovery_working_data" {
+  for_each = var.enable_recovery_host ? {
+    for name, volume in var.restored_volumes : name => volume if name == "zabbix_working_root"
+  } : {}
+  device_name = "/dev/sdh"
+  volume_id   = each.value.volume_id
+  instance_id = aws_instance.recovery[0].id
+  lifecycle {
+    prevent_destroy = true
+    precondition {
+      condition     = each.value.availability_zone == "us-east-2b"
+      error_message = "The independent working disk must share the clean recovery host's real AZ."
+    }
+  }
+}

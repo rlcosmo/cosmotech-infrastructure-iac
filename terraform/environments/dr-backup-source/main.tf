@@ -64,8 +64,30 @@ variable "estimate_usd" {
   type    = number
   default = 0
 }
+variable "existing_source_vault_name" {
+  description = "Reuse the verified lab vault/role together; avoids duplicate backup foundations."
+  type        = string
+  default     = ""
+  validation {
+    condition = (var.existing_source_vault_name == "" && var.existing_source_role_arn == "") || (
+      var.existing_source_vault_name == "cosmotech-itsm-dev-vault" &&
+      var.existing_source_role_arn == "arn:aws:iam::414053644145:role/cosmotech-itsm-dev-backup-role"
+    )
+    error_message = "Reuse only the verified lab vault/role pair, or leave both empty."
+  }
+}
+variable "existing_source_role_arn" {
+  type    = string
+  default = ""
+}
+locals {
+  reuse_foundation  = var.existing_source_vault_name != ""
+  create_foundation = var.enabled && !local.reuse_foundation
+  source_vault_name = local.reuse_foundation ? var.existing_source_vault_name : try(aws_backup_vault.source[0].name, "")
+  source_role_arn   = local.reuse_foundation ? var.existing_source_role_arn : try(aws_iam_role.backup[0].arn, "")
+}
 resource "aws_kms_key" "backup" {
-  count                   = var.enabled ? 1 : 0
+  count                   = local.create_foundation ? 1 : 0
   provider                = aws.source
   description             = "CosmoTech source backup vault only"
   enable_key_rotation     = true
@@ -73,14 +95,14 @@ resource "aws_kms_key" "backup" {
   lifecycle { prevent_destroy = true }
 }
 resource "aws_backup_vault" "source" {
-  count       = var.enabled ? 1 : 0
+  count       = local.create_foundation ? 1 : 0
   provider    = aws.source
   name        = "cosmotech-dr-source"
   kms_key_arn = aws_kms_key.backup[0].arn
   lifecycle { prevent_destroy = true }
 }
 resource "aws_iam_role" "backup" {
-  count    = var.enabled ? 1 : 0
+  count    = local.create_foundation ? 1 : 0
   provider = aws.source
   name     = "cosmotech-dr-backup-source"
   assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{
@@ -90,7 +112,7 @@ resource "aws_iam_role" "backup" {
   }] })
 }
 resource "aws_iam_role_policy_attachment" "backup" {
-  count      = var.enabled ? 1 : 0
+  count      = local.create_foundation ? 1 : 0
   provider   = aws.source
   role       = aws_iam_role.backup[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup"
@@ -98,7 +120,7 @@ resource "aws_iam_role_policy_attachment" "backup" {
 # AWS standard backup role requires service-specific read/snapshot permissions.
 # Explicit deny prevents its use to modify protected primary configuration/data.
 resource "aws_iam_role_policy" "safety" {
-  count    = var.enabled ? 1 : 0
+  count    = local.create_foundation ? 1 : 0
   provider = aws.source
   role     = aws_iam_role.backup[0].id
   policy = jsonencode({ Version = "2012-10-17", Statement = [{
@@ -118,7 +140,7 @@ resource "aws_backup_plan" "hourly" {
   name     = "cosmotech-dr-hourly"
   rule {
     rule_name         = "hourly-to-ohio"
-    target_vault_name = aws_backup_vault.source[0].name
+    target_vault_name = local.source_vault_name
     schedule          = "cron(0 * * * ? *)"
     start_window      = 60
     completion_window = 180
@@ -134,8 +156,8 @@ resource "aws_backup_selection" "orders" {
   provider     = aws.source
   name         = "explicit-lab-data-only"
   plan_id      = aws_backup_plan.hourly[0].id
-  iam_role_arn = aws_iam_role.backup[0].arn
-  resources    = concat(["arn:aws:dynamodb:us-east-1:414053644145:table/aws-eks-istio-lab-dev-orders-data"], var.volume_arns, var.include_primary_outbox ? ["arn:aws:dynamodb:us-east-1:414053644145:table/cosmotech-orders-outbox"] : [])
+  iam_role_arn = local.source_role_arn
+  resources    = concat(["arn:aws:dynamodb:us-east-1:414053644145:table/aws-eks-istio-lab-dev-orders-data"], var.volume_arns)
   depends_on   = [aws_iam_role_policy_attachment.backup, aws_iam_role_policy.safety]
 }
 
@@ -147,4 +169,14 @@ variable "primary_outbox_ready" {
   description = "Verified new source journal ownership/readiness; no implicit creation or role change."
   type        = bool
   default     = false
+}
+
+# Add the new journal without replacing the already active Orders/EBS selection.
+resource "aws_backup_selection" "outbox" {
+  count        = var.enabled && var.include_primary_outbox ? 1 : 0
+  provider     = aws.source
+  name         = "new-source-outbox-only"
+  plan_id      = aws_backup_plan.hourly[0].id
+  iam_role_arn = local.source_role_arn
+  resources    = ["arn:aws:dynamodb:us-east-1:414053644145:table/cosmotech-orders-outbox"]
 }
