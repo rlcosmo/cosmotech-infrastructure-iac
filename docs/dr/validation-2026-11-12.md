@@ -132,5 +132,7 @@ prepared. Update the complete quote before provisioning a larger architecture.
 
 Local tests cover configuration safety only. No real failover/failback occurred.
 
-Validation: 55 local DR unit tests and 13 Terraform mock safety tests passed.
+Validation: 124 local unit tests (2 skipped), including 55 DR tests, and 13
+Terraform mock safety tests passed. Six live IAM policy simulations verified
+primary-state/role/boundary protection and the required CreateRole boundary.
 Terraform formatting and DR/bootstrap validation passed. These do not measure RTO/RPO.

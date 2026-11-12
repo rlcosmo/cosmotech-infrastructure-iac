@@ -1,0 +1,48 @@
+{
+  "role": "arn:aws:iam::414053644145:role/cosmotech-dr-provisioner",
+  "method": "live IAM policy simulation; not resource creation or restore proof",
+  "checks": [
+    {
+      "check": "no_primary_state_write",
+      "action": "s3:PutObject",
+      "resource": "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1/aws-serverless-lab/dev/terraform.tfstate",
+      "decision": "implicitDeny",
+      "expected": "implicitDeny"
+    },
+    {
+      "check": "dr_state_write",
+      "action": "s3:PutObject",
+      "resource": "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1/aws-serverless-lab/dr/terraform.tfstate",
+      "decision": "allowed",
+      "expected": "allowed"
+    },
+    {
+      "check": "cannot_modify_operator",
+      "action": "iam:PutRolePolicy",
+      "resource": "arn:aws:iam::414053644145:role/cosmotech-lab-operator",
+      "decision": "implicitDeny",
+      "expected": "implicitDeny"
+    },
+    {
+      "check": "cannot_edit_boundary",
+      "action": "iam:CreatePolicyVersion",
+      "resource": "arn:aws:iam::414053644145:policy/cosmotech-dr-runtime-boundary",
+      "decision": "implicitDeny",
+      "expected": "implicitDeny"
+    },
+    {
+      "check": "role_requires_boundary",
+      "action": "iam:CreateRole",
+      "resource": "arn:aws:iam::414053644145:role/cosmotech-dr-api",
+      "decision": "implicitDeny",
+      "expected": "implicitDeny"
+    },
+    {
+      "check": "role_with_boundary",
+      "action": "iam:CreateRole",
+      "resource": "arn:aws:iam::414053644145:role/cosmotech-dr-api",
+      "decision": "allowed",
+      "expected": "allowed"
+    }
+  ]
+}
