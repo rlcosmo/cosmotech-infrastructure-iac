@@ -286,6 +286,19 @@
           "ec2:ResourceTag/Name": "cosmotech-dr-itsm-recovery"
         }
       }
+    },
+    {
+      "Sid": "EncryptOnlyRecoveryHostRoot",
+      "Effect": "Allow",
+      "Action": [
+        "kms:GenerateDataKeyWithoutPlaintext"
+      ],
+      "Resource": "arn:aws:kms:us-east-2:414053644145:key/046b703a-8dea-4fdc-be67-beb14fe1a077",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
     }
   ]
 }

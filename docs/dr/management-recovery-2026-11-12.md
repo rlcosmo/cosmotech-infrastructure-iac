@@ -68,3 +68,10 @@ Stop this host when the controlled exercise ends. Retain recoverable data/backup
 Provisioning, filesystem integrity, logical database restore, application health,
 notification fencing and real regional failover/failback each need live evidence.
 This plan alone does not establish any of those outcomes.
+
+First launch i-044b5eecfd4d6bb33 terminated before becoming operational with
+Client.InvalidKMSKey.InvalidState and no attached disks. DescribeKey confirmed the
+CMK remained Enabled. The provisioner lacked GenerateDataKeyWithoutPlaintext, which
+[EBS requires for a new encrypted volume](https://docs.aws.amazon.com/ebs/latest/userguide/ebs-encryption-requirements.html).
+Add that single action on the exact Ohio CMK, then refresh/replan the failed host;
+do not disable encryption, change the key policy or modify restored disks.
