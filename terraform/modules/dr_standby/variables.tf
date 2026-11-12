@@ -15,3 +15,9 @@ variable "enable_recovery_host" {
   type    = bool
   default = false
 }
+
+variable "max_nodes" {
+  type = number
+}
+
+variable "permissions_boundary_arn" { type = string }

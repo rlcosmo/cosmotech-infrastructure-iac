@@ -231,6 +231,105 @@
           "iam:PassedToService": "backup.amazonaws.com"
         }
       }
+    },
+    {
+      "Sid": "ReadOwnRoleAuthorization",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetRole",
+        "iam:ListRolePolicies",
+        "iam:GetRolePolicy",
+        "iam:ListAttachedRolePolicies",
+        "iam:SimulatePrincipalPolicy"
+      ],
+      "Resource": "arn:aws:iam::414053644145:role/cosmotech-lab-operator"
+    },
+    {
+      "Sid": "ReadExistingBackendState",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:GetObjectVersion"
+      ],
+      "Resource": [
+        "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1/aws-serverless-lab/dev/terraform.tfstate",
+        "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1/aws-serverless-lab/dr/terraform.tfstate"
+      ]
+    },
+    {
+      "Sid": "AuditBackendConfiguration",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetBucketVersioning",
+        "s3:GetEncryptionConfiguration",
+        "s3:GetBucketPolicy",
+        "s3:GetBucketPolicyStatus",
+        "s3:ListBucketVersions"
+      ],
+      "Resource": "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1"
+    },
+    {
+      "Sid": "ReadDRCompatibility",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeVpcs",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeRouteTables",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeInstanceTypes",
+        "ec2:DescribeInstanceTypeOfferings",
+        "ec2:DescribeAvailabilityZones",
+        "eks:DescribeClusterVersions",
+        "eks:DescribeAddonVersions",
+        "eks:ListClusters",
+        "servicequotas:ListServiceQuotas",
+        "dynamodb:ListTables",
+        "sqs:ListQueues",
+        "ecr:DescribeRepositories",
+        "pricing:GetProducts"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": [
+            "us-east-1",
+            "us-east-2"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "AssumeOnlyDRProvisioner",
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Resource": "arn:aws:iam::414053644145:role/cosmotech-dr-provisioner"
+    },
+    {
+      "Sid": "RequestOnlyOhioStandardCapacity",
+      "Effect": "Allow",
+      "Action": [
+        "servicequotas:RequestServiceQuotaIncrease"
+      ],
+      "Resource": "arn:aws:servicequotas:us-east-2:414053644145:ec2/L-1216C47A",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "ReadOhioQuotaRequests",
+      "Effect": "Allow",
+      "Action": [
+        "servicequotas:GetRequestedServiceQuotaChange",
+        "servicequotas:ListRequestedServiceQuotaChangeHistoryByQuota"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
     }
   ]
 }

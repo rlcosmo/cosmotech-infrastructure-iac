@@ -3,7 +3,7 @@
   "account": "414053644145",
   "primary_region": "us-east-1",
   "secondary_region": "us-east-2",
-  "aws_release_confirmed": false,
+  "aws_release_confirmed": true,
   "support_case": "179418083900558",
   "provisioned_dr_resources": [],
   "real_chaos_executed": false,
@@ -15,13 +15,12 @@
   "gitops_merge_commit": "65cce79928071d81979ae97bdf76d4810bb037e3",
   "infrastructure_pr": "https://github.com/rlcosmo/cosmotech-infrastructure-iac/pull/48",
   "remaining_gates": [
-    "S3 service still returns NotSignedUp to an authorized role; canonical backend and DR copy dependencies unavailable",
-    "reviewed spending limit and fresh estimate",
-    "scoped deployment IAM and verified live state owners",
-    "completed cross-region backup and isolated restore",
-    "controlled primary journal rollout/replication, independently complete receipts and global fencing",
-    "real application E2E and secondary chaos certification",
-    "production routing/TLS and Zabbix recovery not implemented in this phase"
+    "Ohio quota: five observed; two nodes fit four, optional host requires six; authorized eight-vCPU support-assisted request pending",
+    "Complete destination copy and isolated restore including DynamoDB/outbox and management data; Ohio currently has no Backup vault",
+    "Finish scoped restore/copy roles, ECR image publication and GitOps activation; provisioner is created but resource writes are not yet exercised",
+    "Controlled primary journal rollout/replication, independently complete receipts and global fencing",
+    "Real application E2E, controlled failover/failback and measured RTO/RPO",
+    "Production routing/TLS and Zabbix destination recovery still need implementation and verification"
   ],
   "outbox": {
     "implemented_in_code": true,
@@ -47,5 +46,7 @@
     "production_failover_executed": false,
     "production_failback_executed": false,
     "rto_rpo_certified": false
-  }
+  },
+  "current_validation": "docs/dr/validation-2026-11-12.json",
+  "s3_current_status": "functional; historical NotSignedUp not reproduced 2026-11-12; backend GetObject IAM omission corrected"
 }

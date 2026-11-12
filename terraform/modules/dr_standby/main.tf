@@ -34,7 +34,8 @@ resource "aws_route_table_association" "standby" {
   route_table_id = aws_route_table.standby.id
 }
 resource "aws_iam_role" "cluster" {
-  name = "${var.name}-cluster"
+  permissions_boundary = var.permissions_boundary_arn
+  name                 = "${var.name}-cluster"
   assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{
     Effect = "Allow", Principal = { Service = "eks.amazonaws.com" }, Action = "sts:AssumeRole"
   }] })
@@ -79,7 +80,8 @@ resource "aws_eks_access_policy_association" "operator" {
   access_scope { type = "cluster" }
 }
 resource "aws_iam_role" "nodes" {
-  name = "${var.name}-nodes"
+  permissions_boundary = var.permissions_boundary_arn
+  name                 = "${var.name}-nodes"
   assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{
     Effect = "Allow", Principal = { Service = "ec2.amazonaws.com" }, Action = "sts:AssumeRole"
   }] })
@@ -129,15 +131,19 @@ resource "aws_eks_node_group" "standby" {
   scaling_config {
     min_size     = 0
     desired_size = var.desired_nodes
-    max_size     = 3
+    max_size     = var.max_nodes
   }
-  update_config { max_unavailable = 1 }
+  update_config {
+    max_unavailable = 1
+    update_strategy = "MINIMAL"
+  }
   depends_on = [aws_iam_role_policy_attachment.nodes, aws_route.egress]
 }
 # Separate CNI identity; applications cannot inherit node IAM via IMDS.
 resource "aws_iam_role" "pod" {
-  for_each = toset(["cni", "api", "worker", "ebs", "publisher", "metrics", "reconciler"])
-  name     = "${var.name}-${each.key}"
+  permissions_boundary = var.permissions_boundary_arn
+  for_each             = toset(["cni", "api", "worker", "ebs", "publisher", "metrics", "reconciler"])
+  name                 = "${var.name}-${each.key}"
   assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{
     Effect = "Allow", Principal = { Service = "pods.eks.amazonaws.com" },
     Action = ["sts:AssumeRole", "sts:TagSession"],
@@ -151,7 +157,7 @@ resource "aws_iam_role_policy_attachment" "cni" {
 }
 resource "aws_iam_role_policy_attachment" "ebs" {
   role       = aws_iam_role.pod["ebs"].name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicyV2"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEBSCSIDriverPolicyV2"
 }
 resource "aws_iam_role_policy" "orders" {
   for_each = toset(["api", "worker"])
@@ -256,8 +262,9 @@ resource "aws_security_group" "recovery" {
   }
 }
 resource "aws_iam_role" "recovery" {
-  count = var.enable_recovery_host ? 1 : 0
-  name  = "${var.name}-itsm-recovery"
+  permissions_boundary = var.permissions_boundary_arn
+  count                = var.enable_recovery_host ? 1 : 0
+  name                 = "${var.name}-itsm-recovery"
   assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{
     Effect = "Allow", Principal = { Service = "ec2.amazonaws.com" }, Action = "sts:AssumeRole"
   }] })
@@ -364,7 +371,8 @@ resource "aws_iam_role_policy" "publisher_queue" {
   ] })
 }
 resource "aws_iam_role" "outbox_backup" {
-  name = "${var.name}-outbox-backup"
+  permissions_boundary = var.permissions_boundary_arn
+  name                 = "${var.name}-outbox-backup"
   assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{
     Effect = "Allow", Principal = { Service = "backup.amazonaws.com" }, Action = "sts:AssumeRole",
     Condition = { StringEquals = { "aws:SourceAccount" = var.account_id },

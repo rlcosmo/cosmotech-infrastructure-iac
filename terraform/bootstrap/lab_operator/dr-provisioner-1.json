@@ -1,0 +1,253 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "RegionalEC2Metadata",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstanceTypes",
+        "ec2:DescribeInternetGateways",
+        "ec2:DescribeLaunchTemplateVersions",
+        "ec2:DescribeLaunchTemplates",
+        "ec2:DescribeNetworkAcls",
+        "ec2:DescribeNetworkInterfaces",
+        "ec2:DescribeRouteTables",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeTags",
+        "ec2:DescribeVpcAttribute",
+        "ec2:DescribeVpcs"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "CreateTaggedDRNetwork",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateInternetGateway",
+        "ec2:CreateLaunchTemplate",
+        "ec2:CreateRouteTable",
+        "ec2:CreateSubnet",
+        "ec2:CreateVpc"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:414053644145:vpc/*",
+        "arn:aws:ec2:us-east-2:414053644145:subnet/*",
+        "arn:aws:ec2:us-east-2:414053644145:internet-gateway/*",
+        "arn:aws:ec2:us-east-2:414053644145:route-table/*",
+        "arn:aws:ec2:us-east-2:414053644145:launch-template/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/Environment": "dr",
+          "aws:RequestTag/Project": "CosmoTech"
+        }
+      }
+    },
+    {
+      "Sid": "ModifyOnlyDRNetwork",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:AssociateRouteTable",
+        "ec2:AttachInternetGateway",
+        "ec2:CreateRoute",
+        "ec2:ModifySubnetAttribute",
+        "ec2:ModifyVpcAttribute"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:414053644145:vpc/*",
+        "arn:aws:ec2:us-east-2:414053644145:subnet/*",
+        "arn:aws:ec2:us-east-2:414053644145:internet-gateway/*",
+        "arn:aws:ec2:us-east-2:414053644145:route-table/*",
+        "arn:aws:ec2:us-east-2:414053644145:launch-template/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "ec2:ResourceTag/Environment": "dr"
+        }
+      }
+    },
+    {
+      "Sid": "TagOnlyDRNetwork",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateTags"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:414053644145:vpc/*",
+        "arn:aws:ec2:us-east-2:414053644145:subnet/*",
+        "arn:aws:ec2:us-east-2:414053644145:internet-gateway/*",
+        "arn:aws:ec2:us-east-2:414053644145:route-table/*",
+        "arn:aws:ec2:us-east-2:414053644145:launch-template/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "ec2:ResourceTag/Environment": "dr"
+        }
+      }
+    },
+    {
+      "Sid": "TagOnDRCreation",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateTags"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:414053644145:vpc/*",
+        "arn:aws:ec2:us-east-2:414053644145:subnet/*",
+        "arn:aws:ec2:us-east-2:414053644145:internet-gateway/*",
+        "arn:aws:ec2:us-east-2:414053644145:route-table/*",
+        "arn:aws:ec2:us-east-2:414053644145:launch-template/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "ec2:CreateAction": [
+            "CreateVpc",
+            "CreateSubnet",
+            "CreateInternetGateway",
+            "CreateRouteTable",
+            "CreateLaunchTemplate"
+          ],
+          "aws:RequestTag/Environment": "dr"
+        }
+      }
+    },
+    {
+      "Sid": "DRBackup",
+      "Effect": "Allow",
+      "Action": [
+        "backup:CreateBackupPlan",
+        "backup:CreateBackupSelection",
+        "backup:CreateBackupVault",
+        "backup:DescribeBackupVault",
+        "backup:GetBackupPlan",
+        "backup:GetBackupSelection",
+        "backup:ListTags",
+        "backup:TagResource"
+      ],
+      "Resource": [
+        "arn:aws:backup:us-east-2:414053644145:backup-plan:*",
+        "arn:aws:backup:us-east-2:414053644145:backup-vault:cosmotech-dr"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "DRDynamodb",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:CreateTable",
+        "dynamodb:DescribeContinuousBackups",
+        "dynamodb:DescribeTable",
+        "dynamodb:DescribeTimeToLive",
+        "dynamodb:ListTagsOfResource",
+        "dynamodb:TagResource",
+        "dynamodb:UpdateContinuousBackups",
+        "dynamodb:UpdateTable",
+        "dynamodb:UpdateTimeToLive"
+      ],
+      "Resource": [
+        "arn:aws:dynamodb:us-east-2:414053644145:table/cosmotech-dr-outbox",
+        "arn:aws:dynamodb:us-east-2:414053644145:table/cosmotech-dr-outbox/index/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "DREcr",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:CreateRepository",
+        "ecr:DescribeRepositories",
+        "ecr:ListTagsForResource",
+        "ecr:TagResource"
+      ],
+      "Resource": [
+        "arn:aws:ecr:us-east-2:414053644145:repository/aws-eks-istio-lab-dev-orders-api",
+        "arn:aws:ecr:us-east-2:414053644145:repository/aws-eks-istio-lab-dev-orders-worker",
+        "arn:aws:ecr:us-east-2:414053644145:repository/cosmotech-dr-orders-outbox"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "DREks",
+      "Effect": "Allow",
+      "Action": [
+        "eks:AssociateAccessPolicy",
+        "eks:CreateAccessEntry",
+        "eks:CreateAddon",
+        "eks:CreateCluster",
+        "eks:CreateNodegroup",
+        "eks:CreatePodIdentityAssociation",
+        "eks:DescribeAccessEntry",
+        "eks:DescribeAddon",
+        "eks:DescribeCluster",
+        "eks:DescribeNodegroup",
+        "eks:DescribePodIdentityAssociation",
+        "eks:ListAssociatedAccessPolicies",
+        "eks:ListTagsForResource",
+        "eks:TagResource"
+      ],
+      "Resource": [
+        "arn:aws:eks:us-east-2:414053644145:cluster/cosmotech-dr",
+        "arn:aws:eks:us-east-2:414053644145:nodegroup/cosmotech-dr/*/*",
+        "arn:aws:eks:us-east-2:414053644145:addon/cosmotech-dr/*/*",
+        "arn:aws:eks:us-east-2:414053644145:podidentityassociation/cosmotech-dr/*",
+        "arn:aws:eks:us-east-2:414053644145:access-entry/cosmotech-dr/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "LogGroupDiscovery",
+      "Effect": "Allow",
+      "Action": [
+        "logs:DescribeLogGroups"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "DRLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:ListTagsForResource",
+        "logs:PutRetentionPolicy",
+        "logs:TagLogGroup",
+        "logs:TagResource"
+      ],
+      "Resource": [
+        "arn:aws:logs:us-east-2:414053644145:log-group:/aws/eks/cosmotech-dr/cluster",
+        "arn:aws:logs:us-east-2:414053644145:log-group:/aws/eks/cosmotech-dr/cluster:*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    }
+  ]
+}

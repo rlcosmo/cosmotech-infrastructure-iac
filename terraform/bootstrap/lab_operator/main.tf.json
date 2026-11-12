@@ -36,6 +36,18 @@
         "lifecycle": {
           "prevent_destroy": true
         }
+      },
+      "dr_provisioner": {
+        "name": "cosmotech-dr-provisioner",
+        "max_session_duration": 3600,
+        "assume_role_policy": "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Principal\": {\"AWS\": \"arn:aws:iam::414053644145:role/cosmotech-lab-operator\"}, \"Action\": \"sts:AssumeRole\"}]}",
+        "tags": {
+          "Environment": "dr",
+          "Purpose": "isolated-Ohio-provisioning"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
       }
     },
     "aws_iam_role_policy": {
@@ -64,11 +76,75 @@
           "aws_eks_access_entry.operator"
         ]
       }
+    },
+    "aws_iam_policy": {
+      "dr_runtime_boundary": {
+        "name": "cosmotech-dr-runtime-boundary",
+        "description": "Maximum destination-only application/service privileges; no IAM/account administration.",
+        "policy": "${file(\"${path.module}/dr-runtime-boundary.json\")}",
+        "tags": {
+          "Environment": "dr",
+          "Purpose": "regional-runtime-boundary"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      },
+      "dr_provisioner_1": {
+        "name": "cosmotech-dr-provisioner-1",
+        "policy": "${file(\"${path.module}/dr-provisioner-1.json\")}",
+        "tags": {
+          "Environment": "dr"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      },
+      "dr_provisioner_2": {
+        "name": "cosmotech-dr-provisioner-2",
+        "policy": "${file(\"${path.module}/dr-provisioner-2.json\")}",
+        "tags": {
+          "Environment": "dr"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      },
+      "dr_provisioner_3": {
+        "name": "cosmotech-dr-provisioner-3",
+        "policy": "${file(\"${path.module}/dr-provisioner-3.json\")}",
+        "tags": {
+          "Environment": "dr"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    },
+    "aws_iam_role_policy_attachment": {
+      "dr_provisioner_1": {
+        "role": "${aws_iam_role.dr_provisioner.name}",
+        "policy_arn": "${aws_iam_policy.dr_provisioner_1.arn}"
+      },
+      "dr_provisioner_2": {
+        "role": "${aws_iam_role.dr_provisioner.name}",
+        "policy_arn": "${aws_iam_policy.dr_provisioner_2.arn}"
+      },
+      "dr_provisioner_3": {
+        "role": "${aws_iam_role.dr_provisioner.name}",
+        "policy_arn": "${aws_iam_policy.dr_provisioner_3.arn}"
+      }
     }
   },
   "output": {
     "operator_role_arn": {
       "value": "${aws_iam_role.operator.arn}"
+    },
+    "dr_runtime_boundary_arn": {
+      "value": "${aws_iam_policy.dr_runtime_boundary.arn}"
+    },
+    "dr_provisioner_role_arn": {
+      "value": "${aws_iam_role.dr_provisioner.arn}"
     }
   }
 }
