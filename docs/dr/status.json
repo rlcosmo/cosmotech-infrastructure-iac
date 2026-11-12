@@ -15,7 +15,7 @@
   "gitops_merge_commit": "65cce79928071d81979ae97bdf76d4810bb037e3",
   "infrastructure_pr": "https://github.com/rlcosmo/cosmotech-infrastructure-iac/pull/48",
   "remaining_gates": [
-    "Ohio quota remains five; requests for six/eight not automatically approved; authorized case 179445768400848 closed without an applied increase; Support detail API requires Premium subscription; inspect closure in Support Center",
+    "Ohio Standard On-Demand quota verified at 16 vCPUs on 2026-11-12; full-service capacity still requires activation tests",
     "Complete destination copy and isolated restore including DynamoDB/outbox and management data; Ohio currently has no Backup vault",
     "Finish scoped restore/copy roles, ECR image publication and GitOps activation; provisioner is created but resource writes are not yet exercised",
     "Controlled primary journal rollout/replication, independently complete receipts and global fencing",
@@ -48,5 +48,12 @@
     "rto_rpo_certified": false
   },
   "current_validation": "docs/dr/validation-2026-11-12.json",
-  "s3_current_status": "functional; historical NotSignedUp not reproduced 2026-11-12; backend GetObject IAM omission corrected"
+  "s3_current_status": "functional; historical NotSignedUp not reproduced 2026-11-12; backend GetObject IAM omission corrected",
+  "quota_update_2026_11_12": {
+    "owner_supplied_official_approval": true,
+    "requested": 8,
+    "approved": 16,
+    "observed_effective": 16,
+    "support_case": "179445768400848"
+  }
 }

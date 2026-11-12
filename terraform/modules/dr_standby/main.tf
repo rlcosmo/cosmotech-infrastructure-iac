@@ -431,3 +431,34 @@ output "outbox_protection" {
     index_projection    = one(aws_dynamodb_table.outbox.global_secondary_index).projection_type
   }
 }
+
+# Dedicated Backup restore identity: destination-only data creation, no source
+# permissions or destructive cleanup. All restored resources are retained.
+resource "aws_iam_role" "restore" {
+  name                 = "${var.name}-restore"
+  permissions_boundary = var.permissions_boundary_arn
+  assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{
+    Effect = "Allow", Principal = { Service = "backup.amazonaws.com" }, Action = "sts:AssumeRole",
+    Condition = { StringEquals = { "aws:SourceAccount" = var.account_id },
+    ArnLike = { "aws:SourceArn" = "arn:aws:backup:${var.region}:${var.account_id}:*" } }
+  }] })
+}
+resource "aws_iam_role_policy" "restore" {
+  role = aws_iam_role.restore.id
+  policy = jsonencode({ Version = "2012-10-17", Statement = [
+    { Effect   = "Allow", Action = ["dynamodb:RestoreTableFromAwsBackup", "dynamodb:RestoreTableFromBackup", "dynamodb:DescribeTable", "dynamodb:TagResource"],
+      Resource = ["arn:aws:dynamodb:${var.region}:${var.account_id}:table/cosmotech-dr-*-restored*"],
+    Condition = { StringEquals = { "aws:RequestedRegion" = var.region } } },
+    { Effect = "Allow", Action = ["ec2:DescribeVolumes", "ec2:DescribeSnapshots", "ec2:DescribeAvailabilityZones"], Resource = "*",
+    Condition = { StringEquals = { "aws:RequestedRegion" = var.region } } },
+    { Effect   = "Allow", Action = ["ec2:CreateVolume", "ec2:CreateTags"],
+      Resource = ["arn:aws:ec2:${var.region}:${var.account_id}:volume/*", "arn:aws:ec2:${var.region}::snapshot/*"],
+    Condition = { StringEquals = { "aws:RequestedRegion" = var.region } } },
+    { Effect   = "Allow", Action = ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey", "kms:GenerateDataKeyWithoutPlaintext", "kms:ReEncryptFrom", "kms:ReEncryptTo", "kms:DescribeKey"],
+      Resource = "arn:aws:kms:${var.region}:${var.account_id}:key/*",
+    Condition = { StringEquals = { "aws:RequestedRegion" = var.region } } },
+    { Effect = "Allow", Action = ["kms:CreateGrant"], Resource = "arn:aws:kms:${var.region}:${var.account_id}:key/*",
+    Condition = { Bool = { "kms:GrantIsForAWSResource" = "true" }, StringEquals = { "aws:RequestedRegion" = var.region } } }
+  ] })
+}
+output "restore_role_arn" { value = aws_iam_role.restore.arn }

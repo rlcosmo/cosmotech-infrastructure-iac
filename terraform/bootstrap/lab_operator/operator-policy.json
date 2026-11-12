@@ -330,6 +330,38 @@
           "aws:RequestedRegion": "us-east-2"
         }
       }
+    },
+    {
+      "Sid": "ReadBackupRegionReadiness",
+      "Effect": "Allow",
+      "Action": [
+        "backup:DescribeRegionSettings",
+        "backup:ListCopyJobs",
+        "backup:DescribeRecoveryPoint",
+        "backup:DescribeCopyJob",
+        "dynamodb:ListBackups"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": [
+            "us-east-1",
+            "us-east-2"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "ReadSourceOrdersProtection",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:DescribeTable",
+        "dynamodb:DescribeContinuousBackups"
+      ],
+      "Resource": [
+        "arn:aws:dynamodb:us-east-1:414053644145:table/aws-eks-istio-lab-dev-orders-data",
+        "arn:aws:dynamodb:us-east-1:414053644145:table/cosmotech-orders-outbox"
+      ]
     }
   ]
 }

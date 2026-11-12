@@ -151,3 +151,14 @@ class QuoteEvidenceTests(unittest.TestCase):
             self.assertTrue(region['compute'][0]['sku'])
 
 if __name__ == '__main__': unittest.main()
+
+
+class SnapshotArnTests(unittest.TestCase):
+    def test_only_real_ohio_snapshot_arn_format_is_accepted(self):
+        from src.disaster_recovery.restore import valid_recovery_point_arn
+        self.assertTrue(valid_recovery_point_arn('arn:aws:ec2:us-east-2::snapshot/snap-abcd', 'EBS'))
+        for arn in ['arn:aws:ec2:us-east-1::snapshot/snap-abcd',
+                    'arn:aws:ec2:us-east-2:999999999999:snapshot/snap-abcd',
+                    'arn:aws:ec2:us-east-2:414053644145:snapshot/snap-abcd']:
+            with self.subTest(arn=arn):
+                self.assertFalse(valid_recovery_point_arn(arn, 'EBS'))

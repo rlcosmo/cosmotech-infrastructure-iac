@@ -24,7 +24,10 @@ def backup_readiness(client, expected_arns, *, now=None, max_age_seconds=3600):
             stamp=point.get('CreationDate')
             if not stamp or stamp.tzinfo is None or not 0<=(now-stamp).total_seconds()<=max_age_seconds:continue
             arn=point['RecoveryPointArn']
-            if ':us-east-2:414053644145:' not in arn or point.get('IsEncrypted') is not True:continue
+            from .restore import valid_recovery_point_arn
+            if (not valid_recovery_point_arn(arn, point.get('ResourceType', ''))
+                    or point.get('BackupVaultArn') != f'arn:aws:backup:{REGION}:414053644145:backup-vault:{VAULT}'
+                    or point.get('IsEncrypted') is not True):continue
             if resource not in found or stamp>found[resource]['CreationDate']:found[resource]=point
     missing=sorted(set(expected_arns)-set(found))
     return {'ready':not missing,'missing_or_stale':missing,'points':found,
@@ -47,7 +50,8 @@ def execute_restore_plan(backup, plan, *, release_gate, role_arn, checkpoint=Non
     for intent in plan['intents']:
         validate_intent(intent)
         observed=backup.describe_recovery_point(BackupVaultName=VAULT,RecoveryPointArn=intent['arn'])
-        if observed.get('Status')!='COMPLETED' or observed.get('IsEncrypted') is not True:
+        if (observed.get('Status')!='COMPLETED' or observed.get('IsEncrypted') is not True
+                or observed.get('BackupVaultArn') != f'arn:aws:backup:{REGION}:414053644145:backup-vault:{VAULT}'):
             raise ValueError('Recovery point not completed/encrypted')
     jobs=[]
     for intent in plan['intents']:

@@ -124,7 +124,8 @@
         "arn:aws:iam::414053644145:role/cosmotech-dr-outbox-backup",
         "arn:aws:iam::414053644145:role/cosmotech-dr-publisher",
         "arn:aws:iam::414053644145:role/cosmotech-dr-reconciler",
-        "arn:aws:iam::414053644145:role/cosmotech-dr-worker"
+        "arn:aws:iam::414053644145:role/cosmotech-dr-worker",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-restore"
       ],
       "Condition": {
         "StringEquals": {
@@ -154,7 +155,8 @@
         "arn:aws:iam::414053644145:role/cosmotech-dr-outbox-backup",
         "arn:aws:iam::414053644145:role/cosmotech-dr-publisher",
         "arn:aws:iam::414053644145:role/cosmotech-dr-reconciler",
-        "arn:aws:iam::414053644145:role/cosmotech-dr-worker"
+        "arn:aws:iam::414053644145:role/cosmotech-dr-worker",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-restore"
       ]
     },
     {
@@ -173,7 +175,8 @@
         "arn:aws:iam::414053644145:role/cosmotech-dr-outbox-backup",
         "arn:aws:iam::414053644145:role/cosmotech-dr-publisher",
         "arn:aws:iam::414053644145:role/cosmotech-dr-reconciler",
-        "arn:aws:iam::414053644145:role/cosmotech-dr-worker"
+        "arn:aws:iam::414053644145:role/cosmotech-dr-worker",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-restore"
       ],
       "Condition": {
         "ArnEquals": {
@@ -204,7 +207,8 @@
         "arn:aws:iam::414053644145:role/cosmotech-dr-outbox-backup",
         "arn:aws:iam::414053644145:role/cosmotech-dr-publisher",
         "arn:aws:iam::414053644145:role/cosmotech-dr-reconciler",
-        "arn:aws:iam::414053644145:role/cosmotech-dr-worker"
+        "arn:aws:iam::414053644145:role/cosmotech-dr-worker",
+        "arn:aws:iam::414053644145:role/cosmotech-dr-restore"
       ],
       "Condition": {
         "StringEquals": {
