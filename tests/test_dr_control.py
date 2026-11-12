@@ -196,3 +196,21 @@ class RecoveryAttachmentPlanTests(unittest.TestCase):
             checker.check_plan({**plan, 'variables': {}})
         with self.assertRaises(ValueError):
             checker.check_plan({**plan, 'resource_changes': [{**change, 'change': {**change['change'], 'actions': ['delete']}}]})
+
+
+class RegionalCertificateScopeTests(unittest.TestCase):
+    def test_certificate_cannot_expand_domains_export_keys_or_replace_existing(self):
+        after = dict(region='us-east-2', domain_name='*.cosmotechsolutions.com.br',
+                     subject_alternative_names=['*.cosmotechsolutions.com.br'],
+                     validation_method='DNS', options=[{'export': 'DISABLED'}])
+        change = dict(address='module.standby[0].aws_acm_certificate.regional[0]',
+                      type='aws_acm_certificate', change=dict(actions=['create'], after=after))
+        self.assertTrue(checker.check_plan({'resource_changes': [change]}))
+        for field, value in [('region', 'us-east-1'), ('domain_name', '*.example.com'),
+                             ('subject_alternative_names', ['external.example.com']),
+                             ('options', [{'export': 'ENABLED'}])]:
+            bad = {**change, 'change': {'actions': ['create'], 'after': {**after, field: value}}}
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                checker.check_plan({'resource_changes': [bad]})
+        with self.assertRaises(ValueError):
+            checker.check_plan({'resource_changes': [{**change, 'change': {'actions': ['delete', 'create'], 'after': after}}]})

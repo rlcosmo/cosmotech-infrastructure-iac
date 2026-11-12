@@ -166,6 +166,7 @@ module "standby" {
   restored_table_name          = "cosmotech-dr-orders-restored"
   enable_recovery_host         = var.enable_recovery_host
   recovery_host_ami            = var.recovery_host_ami
+  prepare_dr_tls               = var.prepare_dr_tls
 }
 output "standby" {
   value = module.standby
@@ -252,5 +253,14 @@ variable "desired_stateful_nodes" {
   validation {
     condition     = contains([0, 1], var.desired_stateful_nodes) && (var.enable_stateful_pool || var.desired_stateful_nodes == 0)
     error_message = "Only a reviewed zero/one-node stateful pool is permitted."
+  }
+}
+
+variable "prepare_dr_tls" {
+  type    = bool
+  default = false
+  validation {
+    condition     = !var.prepare_dr_tls || (var.enable_standby && var.standby_region == "us-east-2")
+    error_message = "TLS preparation requires the released isolated Ohio standby."
   }
 }
