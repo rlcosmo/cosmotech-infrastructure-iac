@@ -6,7 +6,7 @@ import json
 import math
 
 ALLOWED = {
-    "aws_volume_attachment",
+    "aws_acm_certificate", "aws_volume_attachment",
     "aws_ebs_volume", "aws_instance", "aws_security_group", "aws_iam_instance_profile", "aws_vpc", "aws_subnet", "aws_internet_gateway", "aws_route_table", "aws_route",
     "aws_route_table_association", "aws_eks_cluster", "aws_eks_node_group", "aws_eks_addon",
     "aws_eks_access_entry", "aws_eks_access_policy_association", "aws_eks_pod_identity_association",
@@ -36,6 +36,14 @@ def check_plan(plan, *, require_provisioning=False):
         if (change["type"] not in ALLOWED or "delete" in change["change"]["actions"]
                 or not change["address"].startswith(("module.standby[0].", "module.standby_sqs[0]."))):
             raise ValueError("Plan contains out-of-scope/destructive resource: " + change["address"])
+        if change["type"] == "aws_acm_certificate":
+            certificate = change["change"].get("after") or {}
+            if (change["change"]["actions"] != ["create"]
+                    or certificate.get("domain_name") != "*.cosmotechsolutions.com.br"
+                    or certificate.get("validation_method") != "DNS"
+                    or certificate.get("options", [{}])[0].get("export") != "DISABLED"
+                    or set(certificate.get("subject_alternative_names", [])) - {"*.cosmotechsolutions.com.br"}):
+                raise ValueError("Only the existing lab wildcard may be requested in Ohio")
         if change["type"] == "aws_ebs_volume":
             before = change["change"].get("before") or {}
             after = change["change"].get("after") or {}

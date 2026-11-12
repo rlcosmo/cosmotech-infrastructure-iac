@@ -1,0 +1,54 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "RequestOnlyNonExportableLabWildcardOhio",
+      "Effect": "Allow",
+      "Action": [
+        "acm:RequestCertificate"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "acm:ValidationMethod": "DNS",
+          "acm:KeyAlgorithm": "RSA_2048",
+          "acm:Export": "DISABLED",
+          "aws:RequestTag/Project": "CosmoTech",
+          "aws:RequestTag/Environment": "dr"
+        },
+        "ForAllValues:StringEquals": {
+          "acm:DomainNames": [
+            "*.cosmotechsolutions.com.br"
+          ]
+        },
+        "Null": {
+          "acm:DomainNames": "false"
+        }
+      }
+    },
+    {
+      "Sid": "ReadOnlyOhioCertificateMetadata",
+      "Effect": "Allow",
+      "Action": [
+        "acm:DescribeCertificate",
+        "acm:ListTagsForCertificate"
+      ],
+      "Resource": "arn:aws:acm:us-east-2:414053644145:certificate/*"
+    },
+    {
+      "Sid": "TagOnlyOhioLabCertificate",
+      "Effect": "Allow",
+      "Action": [
+        "acm:AddTagsToCertificate"
+      ],
+      "Resource": "arn:aws:acm:us-east-2:414053644145:certificate/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/Project": "CosmoTech",
+          "aws:RequestTag/Environment": "dr"
+        }
+      }
+    }
+  ]
+}
