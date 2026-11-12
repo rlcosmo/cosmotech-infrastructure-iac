@@ -23,8 +23,11 @@ Requests without automatic Support case creation:
 
 Owner authorized opening a technical case. Request submitted with
 SupportCaseAllowed=true: 232a009f82d94d50856e96c9b050d420F6pqNZpo.
-AWS case: **179445768400848**, status CASE_OPENED. The quota request opened the
-case; this detailed context is prepared, not separately transmitted.
+AWS case: **179445768400848**, latest status CASE_CLOSED; effective quota still 5.
+The quota request opened the case; this detailed context is prepared, not
+separately transmitted. The case-detail API returned SubscriptionRequiredException,
+so the closure rationale is not known. Consult Support Center; no paid support
+plan or billing change was made. Temporary Support permissions were removed.
 
 Please review the requested regional quota and indicate whether any remaining
 account eligibility restriction requires action. We will retain zero standby

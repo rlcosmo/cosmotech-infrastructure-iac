@@ -1,5 +1,5 @@
 {
-  "observed_at": "2026-11-12T04:32:26.350590+00:00",
+  "observed_at": "2026-11-12T04:35:43.931812+00:00",
   "account": "414053644145",
   "s3_current_status": "functional",
   "historical_not_signed_up_last_observed_utc": "2026-11-11T22:38:01Z",
@@ -42,7 +42,7 @@
     {
       "Id": "232a009f82d94d50856e96c9b050d420F6pqNZpo",
       "DesiredValue": 8.0,
-      "Status": "CASE_OPENED",
+      "Status": "CASE_CLOSED",
       "CaseId": "179445768400848"
     }
   ],
@@ -97,5 +97,7 @@
     "all_unit_tests": 124,
     "unit_tests_skipped": 2,
     "live_iam_simulations": 6
-  }
+  },
+  "support_case_detail_api": "SubscriptionRequiredException",
+  "temporary_support_permission_physically_removed": true
 }

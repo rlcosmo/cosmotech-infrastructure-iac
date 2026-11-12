@@ -68,8 +68,12 @@ owner-supplied numeric monthly authorization.
 Automatic requests for 8 and then 6 vCPUs were NOT_APPROVED without a Support
 case. The owner subsequently authorized a technical Support case; an 8-vCPU
 request was submitted with SupportCaseAllowed=true. Case **179445768400848** is
-CASE_OPENED. The detailed technical context is prepared in the companion Support
-document; it was not sent as a separate case communication. No quota increase is assumed until GetServiceQuota
+now CASE_CLOSED; GetServiceQuota still returns five. DescribeCases returned
+SubscriptionRequiredException after a narrowly time-bounded temporary Support
+permission propagated. That permission was physically removed. The detailed
+technical context remains prepared in the companion document; it was not sent
+as a separate case communication. Reviewing the closure rationale requires
+Support Center access; no paid Support plan was enabled. No quota increase is assumed until GetServiceQuota
 confirms it. AWS documents this flag in the
 [RequestServiceQuotaIncrease API](https://docs.aws.amazon.com/servicequotas/2019-06-24/apireference/API_RequestServiceQuotaIncrease.html).
 
