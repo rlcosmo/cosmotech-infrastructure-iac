@@ -134,6 +134,15 @@
           "cosmotech.io/workload": "stateful"
         }
       }
+    },
+    "kubeControllerManager": {
+      "enabled": false
+    },
+    "kubeScheduler": {
+      "enabled": false
+    },
+    "kubeEtcd": {
+      "enabled": false
     }
   },
   "otel": {

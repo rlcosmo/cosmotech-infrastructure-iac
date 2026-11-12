@@ -6,6 +6,7 @@ import json
 import math
 
 ALLOWED = {
+    "aws_volume_attachment",
     "aws_ebs_volume", "aws_instance", "aws_security_group", "aws_iam_instance_profile", "aws_vpc", "aws_subnet", "aws_internet_gateway", "aws_route_table", "aws_route",
     "aws_route_table_association", "aws_eks_cluster", "aws_eks_node_group", "aws_eks_addon",
     "aws_eks_access_entry", "aws_eks_access_policy_association", "aws_eks_pod_identity_association",
@@ -45,6 +46,18 @@ def check_plan(plan, *, require_provisioning=False):
                     or after.get("tags_all", {}).get("Environment") != "dr"
                     or after.get("tags_all", {}).get("Project") != "CosmoTech"):
                 raise ValueError("Only metadata updates on imported DR volumes are permitted")
+        if change["type"] == "aws_volume_attachment":
+            variables = plan.get("variables", {})
+            volumes = variables.get("restored_volumes", {}).get("value", {})
+            allowed = {v["volume_id"] for name, v in volumes.items()
+                       if name in {"itsm_root", "zabbix_root"}
+                       and v.get("availability_zone") == "us-east-2b"}
+            after = change["change"].get("after") or {}
+            if (change["change"]["actions"] != ["create"]
+                    or variables.get("enable_recovery_host", {}).get("value") is not True
+                    or after.get("volume_id") not in allowed
+                    or not change["address"].startswith("module.standby[0].aws_volume_attachment.recovery_data[")):
+                raise ValueError("Only verified management data copies may attach to the clean recovery host")
         after = change["change"].get("after") or {}
         region = after.get("region")
         if region and region != "us-east-2":

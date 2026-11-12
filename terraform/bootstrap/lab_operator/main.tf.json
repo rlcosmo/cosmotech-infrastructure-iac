@@ -119,6 +119,26 @@
         "lifecycle": {
           "prevent_destroy": true
         }
+      },
+      "dr_provisioner_4": {
+        "name": "cosmotech-dr-provisioner-4",
+        "policy": "${file(\"${path.module}/dr-provisioner-4.json\")}",
+        "tags": {
+          "Environment": "dr"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      },
+      "dr_provisioner_5": {
+        "name": "cosmotech-dr-provisioner-5",
+        "policy": "${file(\"${path.module}/dr-provisioner-5.json\")}",
+        "tags": {
+          "Environment": "dr"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
       }
     },
     "aws_iam_role_policy_attachment": {
@@ -133,6 +153,14 @@
       "dr_provisioner_3": {
         "role": "${aws_iam_role.dr_provisioner.name}",
         "policy_arn": "${aws_iam_policy.dr_provisioner_3.arn}"
+      },
+      "dr_provisioner_4": {
+        "role": "${aws_iam_role.dr_provisioner.name}",
+        "policy_arn": "${aws_iam_policy.dr_provisioner_4.arn}"
+      },
+      "dr_provisioner_5": {
+        "role": "${aws_iam_role.dr_provisioner.name}",
+        "policy_arn": "${aws_iam_policy.dr_provisioner_5.arn}"
       }
     }
   },

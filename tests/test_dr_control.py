@@ -178,3 +178,21 @@ class RestoredVolumePlanTests(unittest.TestCase):
         create = {**change, 'change': {**change['change'], 'actions': ['create'], 'before': None}}
         with self.assertRaises(ValueError):
             checker.check_plan({'resource_changes': [create]})
+
+class RecoveryAttachmentPlanTests(unittest.TestCase):
+    def test_only_recorded_zonal_management_copies_can_be_attached(self):
+        change = dict(address='module.standby[0].aws_volume_attachment.recovery_data["itsm_root"]',
+                      type='aws_volume_attachment', change=dict(actions=['create'], before=None,
+                      after=dict(volume_id='vol-abcd', device_name='/dev/sdf')))
+        variables = {'enable_recovery_host': {'value': True}, 'restored_volumes': {'value': {
+            'itsm_root': {'volume_id': 'vol-abcd', 'availability_zone': 'us-east-2b'}}}}
+        plan = dict(resource_changes=[change], variables=variables)
+        self.assertTrue(checker.check_plan(plan))
+        for key, replacement in [('volume_id', 'vol-foreign')]:
+            bad = {**change, 'change': {**change['change'], 'after': {**change['change']['after'], key: replacement}}}
+            with self.assertRaises(ValueError):
+                checker.check_plan({**plan, 'resource_changes': [bad]})
+        with self.assertRaises(ValueError):
+            checker.check_plan({**plan, 'variables': {}})
+        with self.assertRaises(ValueError):
+            checker.check_plan({**plan, 'resource_changes': [{**change, 'change': {**change['change'], 'actions': ['delete']}}]})

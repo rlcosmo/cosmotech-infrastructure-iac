@@ -1,0 +1,304 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "HostEC2ReadMetadata",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstances",
+        "ec2:DescribeImages",
+        "ec2:DescribeInstanceAttribute",
+        "ec2:DescribeIamInstanceProfileAssociations",
+        "ec2:DescribeInstanceCreditSpecifications"
+      ],
+      "Resource": [
+        "*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "HostSecurityGroupParent",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateSecurityGroup"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:414053644145:vpc/vpc-05d2495819861cb90"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "HostSecurityGroupCreation",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateSecurityGroup"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:414053644145:security-group/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:RequestTag/Project": "CosmoTech",
+          "aws:RequestTag/Environment": "dr",
+          "aws:RequestTag/Name": "cosmotech-dr-itsm-recovery"
+        }
+      }
+    },
+    {
+      "Sid": "HostSecurityGroupEgress",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:AuthorizeSecurityGroupEgress",
+        "ec2:RevokeSecurityGroupEgress"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:414053644145:security-group/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "ec2:ResourceTag/Name": "cosmotech-dr-itsm-recovery"
+        }
+      }
+    },
+    {
+      "Sid": "HostSecurityGroupTags",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateTags"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:414053644145:security-group/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "ec2:CreateAction": "CreateSecurityGroup",
+          "aws:RequestTag/Environment": "dr"
+        }
+      }
+    },
+    {
+      "Sid": "CreateOnlyBoundedRecoveryRole",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::414053644145:role/cosmotech-dr-itsm-recovery"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "iam:PermissionsBoundary": "arn:aws:iam::414053644145:policy/cosmotech-dr-runtime-boundary"
+        }
+      }
+    },
+    {
+      "Sid": "ReadAndConfigureRecoveryRole",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetRole",
+        "iam:GetRolePolicy",
+        "iam:ListAttachedRolePolicies",
+        "iam:ListRolePolicies",
+        "iam:ListRoleTags",
+        "iam:ListInstanceProfilesForRole",
+        "iam:TagRole",
+        "iam:PutRolePolicy"
+      ],
+      "Resource": [
+        "arn:aws:iam::414053644145:role/cosmotech-dr-itsm-recovery"
+      ]
+    },
+    {
+      "Sid": "AttachOnlySSMAgentPolicy",
+      "Effect": "Allow",
+      "Action": [
+        "iam:AttachRolePolicy"
+      ],
+      "Resource": [
+        "arn:aws:iam::414053644145:role/cosmotech-dr-itsm-recovery"
+      ],
+      "Condition": {
+        "ArnEquals": {
+          "iam:PolicyARN": "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+        }
+      }
+    },
+    {
+      "Sid": "RecoveryInstanceProfile",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateInstanceProfile",
+        "iam:GetInstanceProfile",
+        "iam:TagInstanceProfile",
+        "iam:ListInstanceProfileTags",
+        "iam:AddRoleToInstanceProfile"
+      ],
+      "Resource": [
+        "arn:aws:iam::414053644145:instance-profile/cosmotech-dr-itsm-recovery"
+      ]
+    },
+    {
+      "Sid": "PassOnlyRecoveryRoleToEC2",
+      "Effect": "Allow",
+      "Action": [
+        "iam:PassRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::414053644145:role/cosmotech-dr-itsm-recovery"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "ec2.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "LaunchOnlyRecoveryHost",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:RunInstances"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:414053644145:instance/*"
+      ],
+      "Condition": {
+        "ArnEquals": {
+          "ec2:InstanceProfile": "arn:aws:iam::414053644145:instance-profile/cosmotech-dr-itsm-recovery"
+        },
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:RequestTag/Project": "CosmoTech",
+          "aws:RequestTag/Environment": "dr",
+          "ec2:InstanceType": "t3.large"
+        }
+      }
+    },
+    {
+      "Sid": "RecoveryLaunchDependencies",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:RunInstances"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:414053644145:volume/*",
+        "arn:aws:ec2:us-east-2:414053644145:network-interface/*",
+        "arn:aws:ec2:us-east-2:414053644145:subnet/subnet-0511048293b21e0d6",
+        "arn:aws:ec2:us-east-2::image/ami-096d6538c463eb1db"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "RecoveryLaunchSecurityGroup",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:RunInstances"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:414053644145:security-group/*",
+        "arn:aws:ec2:us-east-2:414053644145:launch-template/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "ec2:ResourceTag/Name": "cosmotech-dr-itsm-recovery"
+        }
+      }
+    },
+    {
+      "Sid": "RecoveryLaunchTags",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateTags"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:414053644145:instance/*",
+        "arn:aws:ec2:us-east-2:414053644145:volume/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:RequestTag/Project": "CosmoTech",
+          "aws:RequestTag/Environment": "dr",
+          "ec2:CreateAction": "RunInstances"
+        }
+      }
+    },
+    {
+      "Sid": "AttachOnlyRecoveredManagementDisks",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:AttachVolume"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:414053644145:volume/vol-0184f553ed58cf951",
+        "arn:aws:ec2:us-east-2:414053644145:volume/vol-08e83f8bac7a9f1e7"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "AttachOnlyToRecoveryHost",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:AttachVolume"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:414053644145:instance/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "ec2:ResourceTag/Name": "cosmotech-dr-itsm-recovery"
+        }
+      }
+    },
+    {
+      "Sid": "StopStartOnlyRecoveryHost",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:StartInstances",
+        "ec2:StopInstances"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:414053644145:instance/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "ec2:ResourceTag/Name": "cosmotech-dr-itsm-recovery"
+        }
+      }
+    },
+    {
+      "Sid": "EncryptOnlyRecoveryHostRoot",
+      "Effect": "Allow",
+      "Action": [
+        "kms:GenerateDataKeyWithoutPlaintext"
+      ],
+      "Resource": "arn:aws:kms:us-east-2:414053644145:key/046b703a-8dea-4fdc-be67-beb14fe1a077",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    }
+  ]
+}

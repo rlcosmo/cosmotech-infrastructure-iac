@@ -233,16 +233,7 @@
         "arn:aws:ecr:us-east-2:602401143452:repository/amazon-k8s-cni",
         "arn:aws:ecr:us-east-2:602401143452:repository/amazon-k8s-cni-init",
         "arn:aws:ecr:us-east-2:602401143452:repository/amazon/aws-network-policy-agent",
-        "arn:aws:ecr:us-east-2:602401143452:repository/eks/aws-ebs-csi-driver",
-        "arn:aws:ecr:us-east-2:602401143452:repository/eks/coredns",
-        "arn:aws:ecr:us-east-2:602401143452:repository/eks/csi-attacher",
-        "arn:aws:ecr:us-east-2:602401143452:repository/eks/csi-node-driver-registrar",
-        "arn:aws:ecr:us-east-2:602401143452:repository/eks/csi-provisioner",
-        "arn:aws:ecr:us-east-2:602401143452:repository/eks/csi-resizer",
-        "arn:aws:ecr:us-east-2:602401143452:repository/eks/csi-snapshotter",
-        "arn:aws:ecr:us-east-2:602401143452:repository/eks/eks-pod-identity-agent",
-        "arn:aws:ecr:us-east-2:602401143452:repository/eks/kube-proxy",
-        "arn:aws:ecr:us-east-2:602401143452:repository/eks/livenessprobe"
+        "arn:aws:ecr:us-east-2:602401143452:repository/eks/*"
       ],
       "Condition": {
         "StringEquals": {
@@ -259,6 +250,44 @@
         "organizations:*"
       ],
       "Resource": "*"
+    },
+    {
+      "Sid": "OnlyRecoveryHostSSMAgent",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:DescribeAssociation",
+        "ssm:GetDeployablePatchSnapshotForInstance",
+        "ssm:GetDocument",
+        "ssm:DescribeDocument",
+        "ssm:GetManifest",
+        "ssm:ListAssociations",
+        "ssm:ListInstanceAssociations",
+        "ssm:PutInventory",
+        "ssm:PutComplianceItems",
+        "ssm:PutConfigurePackageResult",
+        "ssm:UpdateAssociationStatus",
+        "ssm:UpdateInstanceAssociationStatus",
+        "ssm:UpdateInstanceInformation",
+        "ssmmessages:CreateControlChannel",
+        "ssmmessages:CreateDataChannel",
+        "ssmmessages:OpenControlChannel",
+        "ssmmessages:OpenDataChannel",
+        "ec2messages:AcknowledgeMessage",
+        "ec2messages:DeleteMessage",
+        "ec2messages:FailMessage",
+        "ec2messages:GetEndpoint",
+        "ec2messages:GetMessages",
+        "ec2messages:SendReply"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "ArnEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::414053644145:role/cosmotech-dr-itsm-recovery"
+        },
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
     }
   ]
 }

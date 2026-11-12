@@ -256,6 +256,7 @@ resource "aws_security_group" "recovery" {
   name_prefix = "${var.name}-recovery-"
   description = "No ingress; clean ITSM recovery via SSM only"
   vpc_id      = aws_vpc.standby.id
+  tags        = { Name = "${var.name}-itsm-recovery" }
   egress {
     from_port   = 443
     to_port     = 443
@@ -281,26 +282,67 @@ resource "aws_iam_instance_profile" "recovery" {
   name  = "${var.name}-itsm-recovery"
   role  = aws_iam_role.recovery[0].name
 }
-resource "aws_instance" "recovery" {
-  count                  = var.enable_recovery_host ? 1 : 0
-  ami                    = var.recovery_host_ami
-  instance_type          = "t3.large"
-  subnet_id              = aws_subnet.standby[0].id
-  vpc_security_group_ids = [aws_security_group.recovery[0].id]
-  iam_instance_profile   = aws_iam_instance_profile.recovery[0].name
+resource "aws_launch_template" "recovery" {
+  count         = var.enable_recovery_host ? 1 : 0
+  name          = "${var.name}-itsm-recovery"
+  image_id      = var.recovery_host_ami
+  instance_type = "t3.large"
+  tags          = { Name = "${var.name}-itsm-recovery" }
+  iam_instance_profile { name = aws_iam_instance_profile.recovery[0].name }
   metadata_options {
-    http_endpoint = "enabled"
-    http_tokens   = "required"
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 1
   }
-  root_block_device {
-    volume_size           = 20
-    volume_type           = "gp3"
-    encrypted             = true
-    delete_on_termination = false
+  credit_specification { cpu_credits = "standard" }
+  block_device_mappings {
+    device_name = "/dev/sda1"
+    ebs {
+      volume_size           = 40
+      volume_type           = "gp3"
+      encrypted             = true
+      kms_key_id            = aws_kms_key.backup.arn
+      delete_on_termination = false
+    }
+  }
+  tag_specifications {
+    resource_type = "instance"
+    tags          = { Name = "${var.name}-itsm-recovery", Project = "CosmoTech", Environment = "dr", DRTarget = "true" }
+  }
+  tag_specifications {
+    resource_type = "volume"
+    tags          = { Name = "${var.name}-itsm-recovery-root", Project = "CosmoTech", Environment = "dr", DRTarget = "true" }
+  }
+}
+resource "aws_instance" "recovery" {
+  count                       = var.enable_recovery_host ? 1 : 0
+  subnet_id                   = aws_subnet.standby[1].id
+  vpc_security_group_ids      = [aws_security_group.recovery[0].id]
+  associate_public_ip_address = true
+  launch_template {
+    id      = aws_launch_template.recovery[0].id
+    version = aws_launch_template.recovery[0].latest_version
   }
   tags = { Name = "${var.name}-itsm-recovery", DRTarget = "true" }
   lifecycle { prevent_destroy = true }
+  depends_on = [aws_iam_role_policy_attachment.recovery, aws_route.egress]
 }
+resource "aws_volume_attachment" "recovery_data" {
+  for_each = var.enable_recovery_host ? {
+    for name, volume in var.restored_volumes : name => volume if contains(["itsm_root", "zabbix_root"], name)
+  } : {}
+  device_name = each.key == "itsm_root" ? "/dev/sdf" : "/dev/sdg"
+  volume_id   = each.value.volume_id
+  instance_id = aws_instance.recovery[0].id
+  lifecycle {
+    prevent_destroy = true
+    precondition {
+      condition     = each.value.availability_zone == "us-east-2b"
+      error_message = "Recovery data disks must have their real AZ equal to the clean host AZ."
+    }
+  }
+}
+output "recovery_instance_id" { value = try(aws_instance.recovery[0].id, null) }
 # Even if a CSI pod is compromised, its AWS calls cannot target the primary region.
 resource "aws_iam_role_policy" "regional_boundary" {
   for_each = aws_iam_role.pod
