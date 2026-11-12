@@ -253,7 +253,8 @@
       ],
       "Resource": [
         "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1/aws-serverless-lab/dev/terraform.tfstate",
-        "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1/aws-serverless-lab/dr/terraform.tfstate"
+        "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1/aws-serverless-lab/dr/terraform.tfstate",
+        "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1/aws-serverless-lab/dr-bootstrap/terraform.tfstate"
       ]
     },
     {
@@ -339,7 +340,8 @@
         "backup:ListCopyJobs",
         "backup:DescribeRecoveryPoint",
         "backup:DescribeCopyJob",
-        "dynamodb:ListBackups"
+        "dynamodb:ListBackups",
+        "backup:ListTags"
       ],
       "Resource": "*",
       "Condition": {
@@ -362,6 +364,64 @@
         "arn:aws:dynamodb:us-east-1:414053644145:table/aws-eks-istio-lab-dev-orders-data",
         "arn:aws:dynamodb:us-east-1:414053644145:table/cosmotech-orders-outbox"
       ]
+    },
+    {
+      "Sid": "CopyVerifiedOrdersBackup",
+      "Effect": "Allow",
+      "Action": [
+        "backup:StartCopyJob"
+      ],
+      "Resource": "arn:aws:backup:us-east-1:414053644145:recovery-point:*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1",
+          "aws:ResourceTag/Project": "CosmoTech",
+          "aws:ResourceTag/DRTest": "20261112"
+        }
+      }
+    },
+    {
+      "Sid": "DescribeOnlyDRCluster",
+      "Effect": "Allow",
+      "Action": [
+        "eks:DescribeCluster"
+      ],
+      "Resource": "arn:aws:eks:us-east-2:414053644145:cluster/cosmotech-dr"
+    },
+    {
+      "Sid": "CopyOnlyTaggedLabVolumeBackups",
+      "Effect": "Allow",
+      "Action": [
+        "backup:StartCopyJob"
+      ],
+      "Resource": "arn:aws:ec2:us-east-1::snapshot/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1",
+          "aws:ResourceTag/Project": "CosmoTech",
+          "aws:ResourceTag/DRTest": "20261112"
+        }
+      }
+    },
+    {
+      "Sid": "WriteOnlyExistingDRBootstrapStateNamespace",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1/aws-serverless-lab/dr-bootstrap/terraform.tfstate",
+        "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1/aws-serverless-lab/dr-bootstrap/terraform.tfstate.tflock"
+      ]
+    },
+    {
+      "Sid": "DeleteOnlyDRBootstrapTransientLock",
+      "Effect": "Allow",
+      "Action": [
+        "s3:DeleteObject"
+      ],
+      "Resource": "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1/aws-serverless-lab/dr-bootstrap/terraform.tfstate.tflock"
     }
   ]
 }

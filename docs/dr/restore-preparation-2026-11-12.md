@@ -35,3 +35,34 @@ cover valid EBS points, foreign vaults, and stable restore idempotency tokens.
 Checks: 125 local unit tests (2 skipped), 13 Terraform safety tests, 7 SDK Backup
 unit tests, real Terraform plan and IAM validation passed. These are preparation
 checks; no real failover, failback, or RTO/RPO result is claimed here.
+
+
+## First live deployment and dependency corrections
+
+The live apply created isolated DR resources and the EKS control plane. Initial
+IAM denials were corrected narrowly: CreateSubnet/CreateRouteTable must also
+be allowed on the tagged parent VPC; Backup vault creation requires the documented
+backup-storage:MountCapsule plus KMS crypto/grant operations on the DR key. The
+node group requires RunInstances/CreateTags for its custom launch template. Its
+launch authorization is restricted to the recorded DR template and t3.large.
+No AdministratorAccess or generic IAM administration was granted.
+
+The dedicated DR/bootstrap remote state namespace already declared by the
+repository was checked (404), initialized against the existing versioned backend
+and used only for its IAM observer/publisher resources. This is a new state object
+in the validated existing namespace, not a replacement backend or migration.
+The primary state key remains protected from write. Short-lived role credentials
+access the backend; the existing non-root maintenance identity performs only IAM
+bootstrap. No permanent keys were created.
+
+Orders backup 99d75f97-aa1c-4c5a-9948-cee09800ae2e completed; cross-region copy
+82a2291e-9f4b-4466-9a3a-d757e2dd3047 started. Seven fresh EBS backups (197 GiB
+allocated source volume sizes) also completed and their copies were requested.
+These are real AWS jobs, not restore/integrity proof. All have seven-day retention;
+source volumes, PVCs and older recovery points were preserved.
+
+A new main-only OIDC workflow copies the already reviewed Orders image digests
+with skopeo --all --preserve-digests. Source permissions are pull-only for the two
+Lab repositories; writes target only the three Ohio DR repositories. Auth files
+and 15-minute execution evidence live privately on the runner and are removed
+on exit. DR_AWS_RELEASE_CONFIRMED was set true only after live service checks.

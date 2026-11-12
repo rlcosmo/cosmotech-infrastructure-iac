@@ -5,7 +5,17 @@
   "secondary_region": "us-east-2",
   "aws_release_confirmed": true,
   "support_case": "179418083900558",
-  "provisioned_dr_resources": [],
+  "provisioned_dr_resources": [
+    "isolated VPC/subnets/routes",
+    "protected recovery S3 bucket",
+    "three ECR repositories",
+    "SQS/DLQ",
+    "KMS key and Backup vault",
+    "outbox table with PITR",
+    "scoped runtime roles and destination restore role",
+    "EKS control plane; node group/add-ons still being validated",
+    "OIDC observer and image publisher"
+  ],
   "real_chaos_executed": false,
   "measured_rto_seconds": null,
   "measured_rpo_seconds": null,
@@ -15,7 +25,7 @@
   "gitops_merge_commit": "65cce79928071d81979ae97bdf76d4810bb037e3",
   "infrastructure_pr": "https://github.com/rlcosmo/cosmotech-infrastructure-iac/pull/48",
   "remaining_gates": [
-    "Ohio Standard On-Demand quota verified at 16 vCPUs on 2026-11-12; full-service capacity still requires activation tests",
+    "Quota 16 verified; finish node group/add-on health and full-service activation tests",
     "Complete destination copy and isolated restore including DynamoDB/outbox and management data; Ohio currently has no Backup vault",
     "Finish scoped restore/copy roles, ECR image publication and GitOps activation; provisioner is created but resource writes are not yet exercised",
     "Controlled primary journal rollout/replication, independently complete receipts and global fencing",
@@ -55,5 +65,6 @@
     "approved": 16,
     "observed_effective": 16,
     "support_case": "179445768400848"
-  }
+  },
+  "dr_deployment_complete": false
 }
