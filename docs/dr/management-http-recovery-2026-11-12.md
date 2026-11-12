@@ -124,3 +124,8 @@ At 17:12 UTC, hourly source backup metadata showed 40 completed backups and 40
 completed Ohio copies since 13:00 UTC, with ten newer jobs still CREATED and no
 failed/aborted/expired jobs in that query. This proves scheduled copy progress,
 not a zero-RPO application-consistent failover cohort.
+
+Read-only routing discovery confirms Cloudflare authoritative DNS, an issued
+wildcard ACM certificate in us-east-1, and no certificate in us-east-2. Scoped
+operator metadata reads now cover ACM/ELB in those two regions only; no DNS write,
+load balancer mutation or certificate request is included in that discovery grant.
