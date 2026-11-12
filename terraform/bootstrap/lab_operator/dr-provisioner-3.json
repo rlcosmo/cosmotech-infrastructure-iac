@@ -21,6 +21,144 @@
         "s3:DeleteObject"
       ],
       "Resource": "arn:aws:s3:::aws-serverless-lab-414053644145-tfstate-use1/aws-serverless-lab/dr/terraform.tfstate.tflock"
+    },
+    {
+      "Sid": "MountOhioBackupCapsule",
+      "Effect": "Allow",
+      "Action": [
+        "backup-storage:MountCapsule"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "PrepareOnlyDRVaultEncryption",
+      "Effect": "Allow",
+      "Action": [
+        "kms:Decrypt",
+        "kms:GenerateDataKey",
+        "kms:RetireGrant"
+      ],
+      "Resource": "arn:aws:kms:us-east-2:414053644145:key/046b703a-8dea-4fdc-be67-beb14fe1a077",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "RestoreOnlyTaggedOhioCopies",
+      "Effect": "Allow",
+      "Action": [
+        "backup:StartRestoreJob"
+      ],
+      "Resource": [
+        "arn:aws:backup:us-east-2:414053644145:recovery-point:*",
+        "arn:aws:ec2:us-east-2::snapshot/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:ResourceTag/Project": "CosmoTech",
+          "aws:ResourceTag/DRTest": "20261112"
+        }
+      }
+    },
+    {
+      "Sid": "ReadOhioRestoreInventory",
+      "Effect": "Allow",
+      "Action": [
+        "backup:DescribeRecoveryPoint",
+        "backup:GetRecoveryPointRestoreMetadata",
+        "backup:ListRecoveryPointsByBackupVault"
+      ],
+      "Resource": [
+        "arn:aws:backup:us-east-2:414053644145:backup-vault:cosmotech-dr",
+        "arn:aws:backup:us-east-2:414053644145:recovery-point:*",
+        "arn:aws:ec2:us-east-2::snapshot/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "ReadOhioRestoreProgress",
+      "Effect": "Allow",
+      "Action": [
+        "backup:DescribeRestoreJob"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "LaunchOnlyReviewedDRNodeTemplate",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:RunInstances"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:414053644145:instance/*"
+      ],
+      "Condition": {
+        "ArnEquals": {
+          "ec2:LaunchTemplate": "arn:aws:ec2:us-east-2:414053644145:launch-template/lt-014da5cd1b7ed1b08"
+        },
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "ec2:InstanceType": "t3.large"
+        }
+      }
+    },
+    {
+      "Sid": "TagOnlyDRNodeLaunchResources",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateTags"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:414053644145:instance/*",
+        "arn:aws:ec2:us-east-2:414053644145:volume/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "ec2:CreateAction": "RunInstances",
+          "aws:RequestTag/Environment": "dr",
+          "aws:RequestTag/DRTarget": "true"
+        }
+      }
+    },
+    {
+      "Sid": "UseOnlyReviewedDRLaunchDependencies",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:RunInstances"
+      ],
+      "Resource": [
+        "arn:aws:ec2:us-east-2:414053644145:volume/*",
+        "arn:aws:ec2:us-east-2:414053644145:network-interface/*",
+        "arn:aws:ec2:us-east-2:414053644145:subnet/*",
+        "arn:aws:ec2:us-east-2:414053644145:security-group/*",
+        "arn:aws:ec2:us-east-2::image/*",
+        "arn:aws:ec2:us-east-2:414053644145:launch-template/lt-014da5cd1b7ed1b08"
+      ],
+      "Condition": {
+        "ArnEquals": {
+          "ec2:LaunchTemplate": "arn:aws:ec2:us-east-2:414053644145:launch-template/lt-014da5cd1b7ed1b08"
+        },
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
     }
   ]
 }

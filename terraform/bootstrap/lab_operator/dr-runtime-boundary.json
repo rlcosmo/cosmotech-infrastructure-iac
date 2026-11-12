@@ -65,7 +65,8 @@
       "Resource": [
         "arn:aws:ec2:us-east-2:414053644145:volume/*",
         "arn:aws:ec2:us-east-2:414053644145:snapshot/*",
-        "arn:aws:ec2:us-east-2:414053644145:instance/*"
+        "arn:aws:ec2:us-east-2:414053644145:instance/*",
+        "arn:aws:ec2:us-east-2::snapshot/*"
       ],
       "Condition": {
         "StringEquals": {
@@ -199,6 +200,21 @@
         "s3:GetObjectVersion"
       ],
       "Resource": "arn:aws:s3:::cosmotech-dr-414053644145-us-east-2/itsm/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "CreateOnlyRestoredDRTables",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:RestoreTableFromAwsBackup",
+        "dynamodb:RestoreTableFromBackup",
+        "dynamodb:TagResource"
+      ],
+      "Resource": "arn:aws:dynamodb:us-east-2:414053644145:table/cosmotech-dr-*-restored*",
       "Condition": {
         "StringEquals": {
           "aws:RequestedRegion": "us-east-2"

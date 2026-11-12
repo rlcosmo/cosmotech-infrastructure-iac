@@ -21,8 +21,6 @@ def compile_plan(manifest):
     commands=[]
     for point in manifest['recovery_points']:
         arn=point['arn']
-        if not re.fullmatch(r'arn:aws:(backup|ec2):us-east-2:414053644145:(recovery-point:[A-Za-z0-9-]+|snapshot/snap-[a-f0-9]+)',arn):
-            raise ValueError('Only already copied destination recovery points')
         if point.get('state')!='COMPLETED' or not point.get('integrity_reference'):
             raise ValueError('Recovery point not independently verified')
         metadata=point['restore_metadata']

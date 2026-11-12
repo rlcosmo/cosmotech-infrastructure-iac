@@ -98,15 +98,16 @@ resource "aws_iam_role" "image_publisher" {
   name                 = "cosmotech-dr-image-publisher"
   max_session_duration = 3600
   assume_role_policy   = aws_iam_role.observer[0].assume_role_policy
-  tags                 = { Project = "CosmoTech", Environment = "dr", Purpose = "outbox-image-only" }
+  tags                 = { Project = "CosmoTech", Environment = "dr", Purpose = "dr-image-publication-only" }
 }
 resource "aws_iam_role_policy" "image_publisher" {
   count = var.enabled ? 1 : 0
   role  = aws_iam_role.image_publisher[0].id
   policy = jsonencode({ Version = "2012-10-17", Statement = [
     { Effect = "Allow", Action = ["ecr:GetAuthorizationToken"], Resource = "*" },
-    { Effect = "Allow", Action = ["ecr:BatchCheckLayerAvailability", "ecr:InitiateLayerUpload", "ecr:UploadLayerPart", "ecr:CompleteLayerUpload", "ecr:PutImage", "ecr:DescribeImages", "ecr:BatchGetImage"], Resource = "arn:aws:ecr:us-east-2:414053644145:repository/cosmotech-dr-orders-outbox" },
-    { Effect = "Deny", Action = "*", Resource = "*", Condition = { StringNotEquals = { "aws:RequestedRegion" = "us-east-2" } } }
+    { Effect = "Allow", Action = ["ecr:BatchCheckLayerAvailability", "ecr:InitiateLayerUpload", "ecr:UploadLayerPart", "ecr:CompleteLayerUpload", "ecr:PutImage", "ecr:DescribeImages", "ecr:BatchGetImage"], Resource = ["arn:aws:ecr:us-east-2:414053644145:repository/cosmotech-dr-orders-outbox", "arn:aws:ecr:us-east-2:414053644145:repository/aws-eks-istio-lab-dev-orders-api", "arn:aws:ecr:us-east-2:414053644145:repository/aws-eks-istio-lab-dev-orders-worker"] },
+    { Effect = "Allow", Action = ["ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer", "ecr:BatchCheckLayerAvailability", "ecr:DescribeImages"], Resource = ["arn:aws:ecr:us-east-1:414053644145:repository/aws-eks-istio-lab-dev-orders-api", "arn:aws:ecr:us-east-1:414053644145:repository/aws-eks-istio-lab-dev-orders-worker"] },
+    { Effect = "Deny", Action = "*", Resource = "*", Condition = { StringNotEquals = { "aws:RequestedRegion" = ["us-east-1", "us-east-2"] } } }
   ] })
 }
 resource "aws_iam_role_policy" "observer_outbox_metadata" {

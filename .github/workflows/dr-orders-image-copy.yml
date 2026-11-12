@@ -1,0 +1,77 @@
+name: V2-003 copy pinned Orders images to Ohio
+on:
+  workflow_dispatch:
+    inputs:
+      aws_release_reference:
+        type: string
+        required: true
+        description: Verified official AWS release reference
+permissions: {contents: read}
+concurrency:
+  group: dr-orders-image-copy
+  cancel-in-progress: false
+jobs:
+  copy:
+    if: github.ref == 'refs/heads/main' && vars.DR_AWS_RELEASE_CONFIRMED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions: {contents: read, id-token: write}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: rlcosmo/cosmotech-gitops
+          ref: 8fd239b73354e9c186c0a4a6c713590cd0abcc91
+          path: .dr-fixtures/gitops
+          persist-credentials: false
+      - name: Verify recorded AWS release
+        env:
+          RELEASE_REFERENCE: ${{ inputs.aws_release_reference }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          assert json.load(open('docs/dr/status.json'))['aws_release_confirmed'] is True
+          assert len(os.environ['RELEASE_REFERENCE']) > 10
+          PY
+      - name: Install the existing digest-preserving copy dependency
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y skopeo
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::414053644145:role/cosmotech-dr-image-publisher
+          aws-region: us-east-2
+          role-session-name: DRImageCopy-${{ github.run_id }}
+      - name: Copy reviewed digests and verify the destination manifests
+        env:
+          RELEASE_REFERENCE: ${{ inputs.aws_release_reference }}
+        run: |
+          set -euo pipefail
+          umask 077
+          export REGISTRY_AUTH_FILE="$RUNNER_TEMP/dr-ecr-auth.json"
+          trap 'rm -f "$REGISTRY_AUTH_FILE" "$RUNNER_TEMP/dr-copy-evidence.json"' EXIT
+          aws ecr get-login-password --region us-east-1 | skopeo login --username AWS --password-stdin 414053644145.dkr.ecr.us-east-1.amazonaws.com
+          aws ecr get-login-password --region us-east-2 | skopeo login --username AWS --password-stdin 414053644145.dkr.ecr.us-east-2.amazonaws.com
+          python3 - <<'PY'
+          from datetime import datetime, timedelta, timezone
+          import json, os, pathlib
+          now = datetime.now(timezone.utc)
+          evidence = dict(account='414053644145', source_region='us-east-1', target_region='us-east-2',
+              environment='dr-test', observed_at=now.isoformat(), expires_at=(now+timedelta(minutes=15)).isoformat(),
+              account_released=True, aws_release_reference=os.environ['RELEASE_REFERENCE'])
+          (pathlib.Path(os.environ['RUNNER_TEMP'])/'dr-copy-evidence.json').write_text(json.dumps(evidence))
+          PY
+          python3 scripts/dr/copy_images.py .dr-fixtures/gitops/disaster-recovery/release-lock.json --execute --evidence "$RUNNER_TEMP/dr-copy-evidence.json"
+          python3 - <<'PY'
+          import json, subprocess
+          lock=json.load(open('.dr-fixtures/gitops/disaster-recovery/release-lock.json'))
+          for image in lock['images'].values():
+              repository=image.split('.amazonaws.com/')[1].split('@')[0]
+              digest=image.split('@')[1]
+              actual=subprocess.check_output(['aws','ecr','describe-images','--region','us-east-2',
+                  '--repository-name',repository,'--image-ids','imageDigest='+digest,
+                  '--query','imageDetails[0].imageDigest','--output','text'],text=True).strip()
+              assert actual==digest
+              print(repository, actual)
+          PY
+# No workload deployment, source push, queue operation or application promotion.
